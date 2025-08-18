@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,6 +48,8 @@ export default function OnboardingScreen() {
   ];
   
   const handleAuth = async () => {
+    console.log('handleAuth llamado - isNewUser:', isNewUser, 'email:', email);
+    
     if (!email || !password) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
@@ -61,18 +64,22 @@ export default function OnboardingScreen() {
     
     try {
       if (isNewUser) {
+        console.log('Intentando registrar nuevo usuario...');
         // Registrar nuevo usuario
         await signup(email, password, {
           country: 'UY',
           currency: 'UYU'
         });
+        console.log('Usuario registrado exitosamente');
       } else {
+        console.log('Intentando iniciar sesión...');
         // Iniciar sesión
         await login(email, password);
+        console.log('Sesión iniciada exitosamente');
       }
       setStep(2);
     } catch (error: any) {
-      console.error('Error en autenticación:', error);
+      console.error('Error detallado en autenticación:', error);
       
       // Manejar errores comunes
       if (error.message?.includes('already registered')) {
@@ -101,6 +108,8 @@ export default function OnboardingScreen() {
   };
   
   const handleCreateGoal = async () => {
+    console.log('handleCreateGoal llamado - goalName:', goalName, 'goalAmount:', goalAmount);
+    
     if (!goalName || !goalAmount) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
@@ -110,30 +119,40 @@ export default function OnboardingScreen() {
     
     try {
       // Obtener el usuario actual
+      console.log('Obteniendo usuario actual...');
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
-        Alert.alert('Error', 'No se encontró el usuario');
+        console.error('No se encontró usuario autenticado');
+        Alert.alert('Error', 'No se encontró el usuario. Por favor, intenta iniciar sesión nuevamente.');
         return;
       }
+      
+      console.log('Usuario encontrado:', currentUser.id);
       
       // Calcular fecha objetivo
       const targetDate = new Date();
       targetDate.setMonth(targetDate.getMonth() + parseInt(targetMonths));
       
-      // Crear la meta en Supabase
-      await GoalsService.createGoal({
+      const goalData = {
         user_id: currentUser.id,
         name: goalName,
         target_amount: parseFloat(goalAmount),
         target_date: targetDate.toISOString().split('T')[0],
-      });
+      };
+      
+      console.log('Creando meta con datos:', goalData);
+      
+      // Crear la meta en Supabase
+      const createdGoal = await GoalsService.createGoal(goalData);
+      
+      console.log('Meta creada exitosamente:', createdGoal);
       
       // Navegar al dashboard
       router.replace('/(tabs)');
     } catch (error: any) {
-      console.error('Error creando meta:', error);
-      Alert.alert('Error', 'No se pudo crear la meta. Intenta nuevamente.');
+      console.error('Error detallado creando meta:', error);
+      Alert.alert('Error', `No se pudo crear la meta: ${error.message || 'Error desconocido'}`);
     } finally {
       setIsLoading(false);
     }
@@ -318,22 +337,30 @@ export default function OnboardingScreen() {
           {step === 1 && (
             <>
               <View style={styles.toggleContainer}>
-                <View
+                <TouchableOpacity
                   style={[styles.toggleButton, isNewUser && styles.toggleButtonActive]}
-                  onTouchEnd={() => setIsNewUser(true)}
+                  onPress={() => {
+                    console.log('Cambiando a modo: Crear cuenta');
+                    setIsNewUser(true);
+                  }}
+                  disabled={isLoading}
                 >
                   <Text style={[styles.toggleText, isNewUser && styles.toggleTextActive]}>
                     Crear cuenta
                   </Text>
-                </View>
-                <View
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.toggleButton, !isNewUser && styles.toggleButtonActive]}
-                  onTouchEnd={() => setIsNewUser(false)}
+                  onPress={() => {
+                    console.log('Cambiando a modo: Ya tengo cuenta');
+                    setIsNewUser(false);
+                  }}
+                  disabled={isLoading}
                 >
                   <Text style={[styles.toggleText, !isNewUser && styles.toggleTextActive]}>
                     Ya tengo cuenta
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
               
               <TextInput
@@ -369,7 +396,12 @@ export default function OnboardingScreen() {
                     styles.goalOption,
                     goalType === option.value && styles.selectedGoal,
                   ]}
-                  onTouchEnd={() => !isLoading && setGoalType(option.value as any)}
+                  onPress={() => {
+                    if (!isLoading) {
+                      console.log('Seleccionando tipo de meta:', option.value);
+                      setGoalType(option.value as any);
+                    }
+                  }}
                 >
                   <View style={styles.goalOptionContent}>
                     <Text style={styles.goalOptionText}>{option.label}</Text>

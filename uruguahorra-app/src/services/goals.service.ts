@@ -71,16 +71,27 @@ export class GoalsService {
    */
   static async createGoal(goal: GoalInsert): Promise<Goal> {
     try {
+      console.log('GoalsService.createGoal - Datos a insertar:', goal);
+      
       const { data, error } = await supabase
         .from('goals')
         .insert(goal)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error de Supabase al crear meta:', error);
+        console.error('Código de error:', error.code);
+        console.error('Mensaje:', error.message);
+        console.error('Detalles:', error.details);
+        throw error;
+      }
+      
+      console.log('Meta creada exitosamente en Supabase:', data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creando meta:', error);
+      console.error('Tipo de error:', error.constructor.name);
       throw error;
     }
   }

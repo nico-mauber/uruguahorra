@@ -9,6 +9,8 @@ export class AuthService {
    */
   static async signUp(email: string, password: string, metadata?: { country?: string; currency?: string }) {
     try {
+      console.log('AuthService.signUp - Iniciando registro para:', email);
+      
       // 1. Crear cuenta en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -18,23 +20,88 @@ export class AuthService {
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('No se pudo crear el usuario');
+      if (authError) {
+        console.error('Error al crear usuario en Auth:', authError);
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error('No se pudo crear el usuario');
+      }
+      
+      console.log('Usuario creado en Auth con ID:', authData.user.id);
 
-      // 2. Crear perfil en tabla users (se hace automáticamente con el trigger)
-      // pero podemos actualizar con metadata adicional si es necesario
-      if (metadata && authData.user) {
-        const { error: profileError } = await supabase
+      // 2. Esperar un momento para que el trigger se ejecute (si existe)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // 3. Verificar si el perfil existe en la tabla users
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no existe
+      
+      if (checkError) {
+        console.error('Error verificando perfil existente:', checkError);
+      }
+      
+      // 4. Si no existe el perfil, crearlo manualmente
+      if (!existingProfile) {
+        console.log('Perfil no encontrado, creando manualmente...');
+        
+        const profileData = {
+          id: authData.user.id,
+          email: authData.user.email!,
+          country: metadata?.country || 'UY',
+          currency: metadata?.currency || 'UYU',
+          premium: false,
+        };
+        
+        const { data: newProfile, error: profileError } = await supabase
           .from('users')
-          .update({
-            country: metadata.country,
-            currency: metadata.currency,
-          })
-          .eq('id', authData.user.id);
+          .insert(profileData)
+          .select()
+          .single();
 
-        if (profileError) console.warn('Error actualizando perfil:', profileError);
+        if (profileError) {
+          console.error('Error creando perfil de usuario:', profileError);
+          // Si el error es porque ya existe, intentamos obtenerlo
+          if (profileError.code === '23505') { // Duplicate key
+            const { data: existingUser } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authData.user.id)
+              .single();
+            
+            if (existingUser) {
+              console.log('Perfil ya existía, usando el existente');
+            }
+          } else {
+            throw profileError;
+          }
+        } else {
+          console.log('Perfil creado exitosamente:', newProfile);
+        }
+      } else {
+        console.log('Perfil ya existía:', existingProfile);
+        
+        // Actualizar metadata si es necesario
+        if (metadata) {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              country: metadata.country || existingProfile.country,
+              currency: metadata.currency || existingProfile.currency,
+            })
+            .eq('id', authData.user.id);
+            
+          if (updateError) {
+            console.warn('Error actualizando metadata del perfil:', updateError);
+          }
+        }
       }
 
+      console.log('Registro completado exitosamente');
       return { user: authData.user, session: authData.session };
     } catch (error) {
       console.error('Error en signUp:', error);

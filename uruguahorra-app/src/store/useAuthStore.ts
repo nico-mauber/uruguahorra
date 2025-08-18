@@ -47,6 +47,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }),
   
   login: async (email, password) => {
+    console.log('useAuthStore.login - Iniciando sesión');
     set({ isLoading: true });
     try {
       // 1. Autenticar con Supabase
@@ -54,17 +55,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       if (!authUser) throw new Error('No se pudo autenticar');
       
+      console.log('Usuario autenticado:', authUser.id);
+      
       // 2. Obtener perfil del usuario
-      const profile = await AuthService.getUserProfile(authUser.id);
+      let profile = await AuthService.getUserProfile(authUser.id);
       
       if (!profile) {
+        console.log('Perfil no encontrado, creando uno nuevo...');
         // Si no existe perfil, crearlo
-        await supabase.from('users').insert({
-          id: authUser.id,
-          email: authUser.email!,
-          country: 'UY',
-          currency: 'UYU',
-        });
+        const { data: newProfile, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email: authUser.email!,
+            country: 'UY',
+            currency: 'UYU',
+          })
+          .select()
+          .single();
+          
+        if (insertError) {
+          console.error('Error creando perfil:', insertError);
+          throw insertError;
+        }
+        
+        profile = newProfile;
       }
       
       // 3. Verificar estado premium
@@ -102,6 +117,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
   
   signup: async (email, password, metadata) => {
+    console.log('useAuthStore.signup - Iniciando registro');
     set({ isLoading: true });
     try {
       // 1. Registrar con Supabase
@@ -109,16 +125,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       if (!authUser) throw new Error('No se pudo crear la cuenta');
       
-      // 2. Crear perfil inicial
-      const profile: UserProfile = {
-        id: authUser.id,
-        email: authUser.email!,
-        country: metadata?.country || 'UY',
-        currency: metadata?.currency || 'UYU',
-        premium: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      console.log('Usuario registrado, obteniendo perfil...');
+      
+      // 2. Intentar obtener el perfil creado
+      let profile = await AuthService.getUserProfile(authUser.id);
+      
+      // Si no existe perfil (no debería pasar con el código actualizado), usar valores por defecto
+      if (!profile) {
+        console.warn('Perfil no encontrado después del registro, usando valores por defecto');
+        profile = {
+          id: authUser.id,
+          email: authUser.email!,
+          country: metadata?.country || 'UY',
+          currency: metadata?.currency || 'UYU',
+          premium: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      
+      console.log('Perfil obtenido:', profile);
       
       // 3. Actualizar el store
       set({
@@ -133,8 +159,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isPremium: false,
         isLoading: false,
       });
-    } catch (error) {
-      console.error('Error en signup:', error);
+      
+      console.log('Store actualizado exitosamente');
+    } catch (error: any) {
+      console.error('Error detallado en signup:', error);
+      console.error('Mensaje:', error.message);
+      console.error('Código:', error.code);
       set({ isLoading: false });
       throw error;
     }

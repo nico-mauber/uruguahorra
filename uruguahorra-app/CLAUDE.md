@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Uruguahorra is a gamified savings mobile app for LATAM users built with React Native, Expo SDK 50, and TypeScript. The app uses Supabase for backend services and Zustand for state management.
+Uruguahorra is a gamified savings mobile app for LATAM users built with React Native, Expo SDK 53, and TypeScript. The app uses Supabase for backend services and Zustand for state management.
 
 ## Essential Commands
 

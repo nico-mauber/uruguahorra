@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { useTheme } from '@theme';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function TabLayout() {
+function TabLayoutContent() {
   const { theme } = useTheme();
 
   return (
@@ -59,4 +59,8 @@ export default function TabLayout() {
       />
     </Tabs>
   );
+}
+
+export default function TabLayout() {
+  return <TabLayoutContent />;
 }

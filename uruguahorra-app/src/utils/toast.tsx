@@ -1,5 +1,4 @@
 import Toast from 'react-native-toast-message';
-import React from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -328,20 +327,7 @@ export class ToastService {
   }
 }
 
-// Tipo para props del toast
-interface ToastProps {
-  text1?: string;
-  text2?: string;
-  onPress?: () => void;
-  [key: string]: unknown;
-}
-
-// Configuración de estilos para el toast
-export const toastConfig = {
-  success: (props: ToastProps) => <Toast {...props} />,
-  error: (props: ToastProps) => <Toast {...props} />,
-  info: (props: ToastProps) => <Toast {...props} />,
-  warning: (props: ToastProps) => <Toast {...props} />,
-};
+// Configuración básica para el toast (sin dependencias circulares)
+export const toastConfig = {};
 
 export default ToastService;

@@ -1,32 +1,52 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ThemeProvider } from '@theme';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@store/useAuthStore';
 import { View, ActivityIndicator } from 'react-native';
-import { useTheme } from '@theme';
 import { logger, LogModule } from '@/utils/logger';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '@/utils/toast';
 import { ErrorBoundary } from '@components';
 
+function LoadingScreen() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+      }}
+    >
+      <ActivityIndicator size="large" color="#007AFF" />
+    </View>
+  );
+}
+
 function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
-  const { theme } = useTheme();
-  const { isAuthenticated, isLoading, checkSession } = useAuthStore();
+  const { isAuthenticated, checkSession, isLoading } = useAuthStore();
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   useEffect(() => {
-    logger.info(
-      LogModule.NAV,
-      'RootLayout iniciado, verificando autenticación'
-    );
-    checkSession();
-  }, [checkSession]);
+    // Solo verificar sesión una vez
+    if (!hasCheckedSession) {
+      logger.info(
+        LogModule.NAV,
+        'RootLayout iniciado, verificando autenticación'
+      );
+      checkSession();
+      setHasCheckedSession(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar al montar
 
   useEffect(() => {
-    if (isLoading) return;
+    // No navegar mientras se está cargando o no se ha verificado la sesión
+    if (isLoading || !hasCheckedSession) return;
 
     const currentRoute = segments[0];
     const inAuthGroup = currentRoute === '(auth)';
@@ -34,6 +54,7 @@ function RootLayoutNav() {
     const modalRoutes = ['create-goal', 'import-csv', 'paywall'];
     const isModalRoute = modalRoutes.includes(currentRoute);
 
+    // Solo navegar si no estamos ya en la ruta correcta
     if (isAuthenticated && !inTabsGroup && !isModalRoute) {
       logger.info(LogModule.NAV, 'Redirigiendo a tabs');
       router.replace('/(tabs)');
@@ -41,22 +62,11 @@ function RootLayoutNav() {
       logger.info(LogModule.NAV, 'Redirigiendo a onboarding');
       router.replace('/(auth)/onboarding');
     }
-  }, [isAuthenticated, isLoading, segments, router]);
+  }, [hasCheckedSession, isLoading, isAuthenticated, segments, router]);
 
-  // Mostrar loading mientras se verifica la autenticación
+  // Mostrar pantalla de carga mientras se verifica la sesión
   if (isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: theme.background,
-        }}
-      >
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -95,16 +105,20 @@ function RootLayoutNav() {
   );
 }
 
+function AppContent() {
+  return <RootLayoutNav />;
+}
+
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
+    <ThemeProvider>
+      <ErrorBoundary>
         <SafeAreaProvider>
           <StatusBar style="auto" />
-          <RootLayoutNav />
+          <AppContent />
           <Toast config={toastConfig} />
         </SafeAreaProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }

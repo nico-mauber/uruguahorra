@@ -13,7 +13,10 @@
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
       "Bash(npx kill-port:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npm ls:*)",
+      "Bash(true)",
+      "Bash(npm start:*)"
     ],
     "defaultMode": "acceptEdits"
   }

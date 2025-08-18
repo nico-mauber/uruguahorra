@@ -1,0 +1,289 @@
+================================================================================
+RESUMEN CONSOLIDADO: APP URUGUAHORRA - AHORRO E INVERSIONES GAMIFICADA
+================================================================================
+Fecha: 18 de Agosto 2025
+Documentos fuente: Plan de Desarrollo + Prompts y Resumen Ejecutivo
+
+================================================================================
+1. VISIÓN GENERAL DEL PROYECTO
+================================================================================
+
+OBJETIVO PRINCIPAL:
+Aplicación móvil que ayuda a personas en Latinoamérica a empezar y mantener el hábito 
+de ahorrar e iniciarse en inversiones de forma simple y divertida, usando gamificación 
+para reforzar buenos hábitos financieros.
+
+PROBLEMA A RESOLVER:
+En LATAM muchas personas no ahorran ni invierten por tres motivos:
+1. Lo perciben como complicado
+2. No saben por dónde empezar  
+3. No logran mantener la constancia
+
+PROPUESTA DE VALOR:
+- Para usuarios: Claridad, motivación diaria y planes simples para ahorrar e iniciarse 
+  en inversiones sin miedo
+- Para empresas (futuro B2B): Bienestar financiero para empleados como beneficio corporativo
+
+USUARIOS OBJETIVO:
+- Jóvenes 18-30 que quieren empezar a ahorrar
+- Empleados 25-40 con poco tiempo que desean automatizar hábitos
+- Freelancers que buscan ordenarse y crear un colchón de emergencia
+
+================================================================================
+2. CARACTERÍSTICAS DEL MVP (4-6 SEMANAS)
+================================================================================
+
+QUÉ INCLUYE:
+✓ Onboarding por metas (colchón de emergencia / viaje / deudas / compras)
+✓ Microaportes manuales ($1/$2/$5) y "redondeo simulado" sobre compras registradas
+✓ Retos semanales gamificados y sistema de rachas
+✓ Ranking entre amigos y grupos de ahorro (squads)
+✓ Educación en cápsulas cortas (60-90 segundos) en español
+✓ Importación de movimientos por CSV (sin scraping ni custodia)
+✓ Paywall simple con modelo freemium → premium (mensual/anual)
+✓ Notificaciones push para recordatorios de rachas y metas
+
+QUÉ NO INCLUYE EL MVP:
+✗ Custodia de dinero real
+✗ Ejecución de inversiones
+✗ Asesoría financiera personalizada
+✗ Integración bancaria directa
+
+================================================================================
+3. ARQUITECTURA TÉCNICA
+================================================================================
+
+STACK TECNOLÓGICO:
+┌─────────────────┬────────────────────────────────┬──────────────────────────┐
+│ Capa            │ Tecnología                     │ Justificación            │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ App Móvil       │ React Native (Expo) + TypeScript│ Una base de código para  │
+│                 │                                │ iOS/Android              │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Backend         │ Supabase (Postgres + Auth +    │ BD confiable + auth +    │
+│                 │ Storage + Edge Functions)      │ funciones serverless     │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Pagos           │ Stripe / Mercado Pago / dLocal │ Suscripciones según país │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Analítica       │ PostHog                        │ Eventos y feature flags  │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Errores         │ Sentry                         │ Crash reporting          │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Notificaciones  │ Expo Notifications             │ Push notifications       │
+├─────────────────┼────────────────────────────────┼──────────────────────────┤
+│ Email           │ Resend                         │ Emails transaccionales   │
+└─────────────────┴────────────────────────────────┴──────────────────────────┘
+
+MODELO DE DATOS (13 TABLAS PRINCIPALES):
+1. users - Usuarios del sistema (email, país, moneda, premium, fechas)
+2. goals - Metas por usuario (monto objetivo, fecha objetivo, progreso)
+3. micro_contributions - Registros de microaportes (monto, fuente: manual/roundup)
+4. challenges - Catálogo de retos disponibles
+5. user_challenges - Progreso de retos por usuario
+6. squads - Grupos/equipos de ahorro
+7. squad_members - Miembros de cada squad
+8. transactions_raw - Datos importados de CSV para análisis
+9. learnings - Cápsulas educativas
+10. user_progress - Consumo de contenidos educativos
+11. subscriptions - Estado de suscripción (Stripe/MercadoPago)
+12. paywall_events - Analítica del paywall
+13. audit_logs - Trazabilidad y auditoría
+
+API ENDPOINTS PRINCIPALES:
+- POST /auth/login - Login con email OTP (magic link)
+- GET/POST /goals - Crear y listar metas
+- POST /contributions - Registrar microaporte
+- GET /challenges - Catálogo de retos
+- POST /challenges/{id}/complete - Completar reto
+- GET /leaderboard?squad_id= - Ranking
+- POST /transactions/upload-csv - Subir y parsear CSV
+- GET /reports/summary - Progreso del mes
+- POST /billing/checkout - Iniciar suscripción
+- POST /billing/webhooks - Recibir eventos de pago
+
+================================================================================
+4. SISTEMA DE GAMIFICACIÓN
+================================================================================
+
+MECÁNICAS DE XP:
+- Aporte: +2 XP por cada $1 (hasta 10 XP por evento)
+- Completar reto: +30 XP
+- Racha diaria: +5 XP
+- Niveles: nivel = floor(sqrt(totalXP)/2)
+
+SISTEMA DE RACHAS:
+- Se rompe si pasan 48h sin aporte o reto
+- 1 protección por mes disponible
+- Notificaciones de recordatorio a las 24h
+
+QUESTS Y RETOS:
+- Colecciones semanales de retos
+- Tipos: ahorro, educación, social
+- Puntos variables según dificultad
+
+================================================================================
+5. SEGURIDAD Y CUMPLIMIENTO
+================================================================================
+
+MEDIDAS DE SEGURIDAD:
+✓ Autenticación con email/OTP y 2FA opcional
+✓ Cifrado en tránsito (HTTPS) y datos sensibles en reposo
+✓ RLS (Row Level Security) en todas las tablas por user_id
+✓ Políticas de acceso mínimo y roles de servicio
+✓ Encriptación de datos sensibles (IPs con hash + salt)
+
+CUMPLIMIENTO LEGAL:
+✓ Mensaje legal: "Contenido educativo; no constituye asesoría financiera"
+✓ Protección de datos: consentimiento, borrado, exportación
+✓ Sin custodia de dinero en el MVP (solo educación y hábitos)
+✓ Integración futura solo con partners regulados
+
+================================================================================
+6. MODELO DE NEGOCIO
+================================================================================
+
+PLANES Y PRECIOS:
+┌─────────────────┬────────────────────────────────┬──────────────────────┐
+│ Plan            │ Incluye                        │ Precio               │
+├─────────────────┼────────────────────────────────┼──────────────────────┤
+│ Gratis          │ 1 meta, retos básicos,         │ USD 0                │
+│                 │ ranking, 10 cargas CSV/mes     │                      │
+├─────────────────┼────────────────────────────────┼──────────────────────┤
+│ Premium Mensual │ Metas ilimitadas, reportes,    │ USD 4.99/mes         │
+│                 │ pods de ahorro, contenido      │                      │
+│                 │ completo                       │                      │
+├─────────────────┼────────────────────────────────┼──────────────────────┤
+│ Premium Anual   │ Todo Premium con 2 meses       │ USD 39.99/año        │
+│                 │ de regalo                      │                      │
+└─────────────────┴────────────────────────────────┴──────────────────────┘
+
+COSTOS ESTIMADOS MVP:
+- Infraestructura (Supabase Pro): USD 25-85/mes según uso
+- Analítica (PostHog): Free tier, luego ~USD 0.00045 por evento
+- Errores (Sentry): Free tier, planes desde USD 26/mes
+- Pagos (Stripe): 2.9% + fee por transacción
+- Pagos (Mercado Pago/dLocal): ~3-6% por transacción
+- Otros (dominio, emails): USD 5-15/mes
+
+================================================================================
+7. ROADMAP DE DESARROLLO (4 SEMANAS)
+================================================================================
+
+SEMANA 1:
+- Wireframes y diseño de pantallas principales
+- Configuración del esquema de base de datos
+- Implementación de autenticación (email/OTP)
+- Funcionalidad básica de metas
+
+SEMANA 2:
+- Sistema de microaportes
+- Motor de gamificación (XP, niveles, rachas)
+- Implementación de retos y ranking
+- Cápsulas educativas básicas
+
+SEMANA 3:
+- Importación y categorización de CSV
+- Reportes y visualización de progreso
+- Implementación del paywall
+- Integración con analítica (PostHog)
+
+SEMANA 4:
+- Beta cerrada con 100-150 usuarios
+- Iteración basada en feedback
+- Corrección de bugs críticos
+- Preparación para lanzamiento
+
+================================================================================
+8. MÉTRICAS DE ÉXITO (PRIMEROS 3-6 MESES)
+================================================================================
+
+- Activación: ≥35% de usuarios crean 1 meta y realizan ≥3 microaportes en 7 días
+- Retención D30: ≥20%
+- Conversión a Premium (mes 1): 3-5%
+- NPS: ≥45
+- Usuarios activos semanales: Crecimiento 15-20% mes a mes
+
+================================================================================
+9. GO-TO-MARKET
+================================================================================
+
+ESTRATEGIAS DE ADQUISICIÓN:
+1. Contenido corto en redes sociales (tips y retos de ahorro)
+2. Desafíos por ciudad/país ("Reto LATAM 30 días")
+3. Embajadores (creadores de finanzas personales)
+4. Pilotos con universidades y empresas (beneficio laboral)
+5. Programa de referidos con incentivos
+
+================================================================================
+10. PROMPTS PARA CLAUDE (DESARROLLO)
+================================================================================
+
+El documento incluye 10 prompts detallados para acelerar el desarrollo:
+
+PROMPT 1: Proyecto base Expo + TypeScript
+- Configuración inicial con Expo Router, Zustand, ESLint, Prettier
+
+PROMPT 2: Supabase - esquema SQL + RLS + Seeds
+- Creación de todas las tablas con políticas de seguridad
+
+PROMPT 3: Auth y capa de datos en React Native
+- Implementación de login, hooks y servicios
+
+PROMPT 4: Motor de gamificación
+- Sistema de XP, rachas y quests
+
+PROMPT 5: Importación y categorización de CSV
+- Parser y categorización automática
+
+PROMPT 6: Paywall + Suscripciones
+- Integración con Stripe y Mercado Pago
+
+PROMPT 7: Analítica con PostHog
+- Eventos clave y tracking
+
+PROMPT 8: Notificaciones
+- Recordatorios de rachas con Expo
+
+PROMPT 9: Pruebas, seguridad y hardening
+- Tests unitarios y validaciones
+
+PROMPT 10: Deploy y beta cerrada
+- EAS Build y distribución para testing
+
+================================================================================
+11. EQUIPO MÍNIMO REQUERIDO
+================================================================================
+
+- Líder de producto: Priorizar funcionalidades, validar con usuarios
+- Dev móvil (React Native): Pantallas, navegación, lógica de gamificación
+- Dev backend: Supabase, funciones, webhooks de pago
+- Diseño/Contenido: UX simple, cápsulas educativas
+- Marketing: Contenido en redes, gestión de beta testers
+
+================================================================================
+12. RIESGOS Y MITIGACIONES
+================================================================================
+
+RIESGO: Regulación financiera
+MITIGACIÓN: Evitar custodiar dinero; integrar solo con partners regulados
+
+RIESGO: Baja adopción inicial
+MITIGACIÓN: Simplificar onboarding al máximo, ofrecer logros rápidos
+
+RIESGO: Problemas de retención
+MITIGACIÓN: Rachas y retos recurrentes, comunidad activa
+
+RIESGO: Monetización insuficiente
+MITIGACIÓN: Paywall claro, precio accesible, plan anual con descuento
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+
+NOTAS ADICIONALES:
+- El MVP está diseñado para ser completado en 4-6 semanas
+- Enfoque inicial en educación y hábitos, sin manejo de dinero real
+- Stack tecnológico simple pero robusto y escalable
+- Los prompts incluidos permiten desarrollo rápido con Claude
+- Modelo freemium con path claro a monetización
+- Diseñado específicamente para el contexto LATAM

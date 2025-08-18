@@ -172,7 +172,7 @@ export class LearningsService {
         LogModule.DB,
         `${data?.length || 0} registros de progreso obtenidos`
       );
-      return (data as any) || [];
+      return (data as unknown) || [];
     } catch (error) {
       logger.error(
         LogModule.DB,
@@ -370,7 +370,7 @@ export class LearningsService {
         throw progressError;
       }
 
-      const userProgress = (progress as any) || [];
+      const userProgress = (progress as unknown) || [];
 
       // Obtener total de contenidos disponibles
       const { count: totalContent, error: totalError } = await supabase
@@ -390,12 +390,12 @@ export class LearningsService {
       // Calcular estadísticas
       const completedContent = userProgress.length;
       const totalPointsEarned = userProgress.reduce(
-        (sum: number, p: any) => sum + (p.learning?.points || 0),
+        (sum: number, p: unknown) => sum + (p.learning?.points || 0),
         0
       );
 
       const totalTimeSpent = userProgress.reduce(
-        (sum: number, p: any) =>
+        (sum: number, p: unknown) =>
           sum + (p.time_spent_sec || p.learning?.duration_sec || 0),
         0
       );
@@ -403,13 +403,13 @@ export class LearningsService {
       const averageScore =
         userProgress.length > 0
           ? userProgress
-              .filter((p: any) => p.score !== null)
-              .reduce((sum: number, p: any) => sum + p.score, 0) /
-            userProgress.filter((p: any) => p.score !== null).length
+              .filter((p: unknown) => p.score !== null)
+              .reduce((sum: number, p: unknown) => sum + p.score, 0) /
+            userProgress.filter((p: unknown) => p.score !== null).length
           : 0;
 
       // Agrupar por categoría
-      const byCategory = userProgress.reduce((acc: any, p: any) => {
+      const byCategory = userProgress.reduce((acc: unknown, p: unknown) => {
         const category = p.learning?.category || 'unknown';
         if (!acc[category]) {
           acc[category] = { count: 0, points: 0, timeSpent: 0 };
@@ -422,7 +422,7 @@ export class LearningsService {
       }, {});
 
       // Agrupar por dificultad
-      const byDifficulty = userProgress.reduce((acc: any, p: any) => {
+      const byDifficulty = userProgress.reduce((acc: unknown, p: unknown) => {
         const difficulty = p.learning?.difficulty || 'unknown';
         if (!acc[difficulty]) {
           acc[difficulty] = { count: 0, points: 0 };
@@ -434,7 +434,7 @@ export class LearningsService {
 
       // Racha de aprendizaje (días consecutivos)
       const completionDates = userProgress
-        .map((p: any) => p.completed_at.split('T')[0])
+        .map((p: unknown) => p.completed_at.split('T')[0])
         .sort()
         .reverse();
 
@@ -617,12 +617,7 @@ export class LearningsService {
         category,
       });
 
-      // Obtener nivel del usuario basado en contenidos completados
-      const { data: userProgress } = await supabase
-        .from('user_progress')
-        .select('learning:learnings(difficulty)')
-        .eq('user_id', userId);
-
+      // Note: User level calculation could be implemented here if needed
 
       // Obtener contenidos recomendados
       const recommended = await this.getRecommendedLearnings(userId, 20);

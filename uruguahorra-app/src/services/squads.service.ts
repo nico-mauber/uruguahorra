@@ -91,7 +91,7 @@ export class SquadsService {
         throw error;
       }
 
-      const squads = (data || []).map((item: any) => ({
+      const squads = (data || []).map((item: unknown) => ({
         ...item.squad,
         memberRole: item.role,
         memberCount: item.squad.squad_members?.[0]?.count || 0,
@@ -221,7 +221,7 @@ export class SquadsService {
    */
   static async getSquadMembers(
     squadId: string
-  ): Promise<(SquadMember & { user: any })[]> {
+  ): Promise<(SquadMember & { user: unknown })[]> {
     try {
       logger.database(LogModule.DB, 'Obteniendo miembros del squad', {
         squadId,
@@ -251,7 +251,7 @@ export class SquadsService {
         LogModule.DB,
         `${data?.length || 0} miembros del squad obtenidos`
       );
-      return (data as any) || [];
+      return (data as unknown) || [];
     } catch (error) {
       logger.error(
         LogModule.DB,
@@ -462,7 +462,7 @@ export class SquadsService {
   /**
    * Obtener ranking de squads
    */
-  static async getSquadRankings(limit: number = 50): Promise<any[]> {
+  static async getSquadRankings(limit: number = 50): Promise<unknown[]> {
     try {
       logger.database(LogModule.DB, 'Obteniendo ranking de squads', { limit });
 

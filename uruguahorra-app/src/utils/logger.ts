@@ -174,52 +174,52 @@ class Logger {
   }
 
   // Métodos públicos por nivel
-  debug(module: LogModule, message: string, data?: any) {
+  debug(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.debug, data);
   }
 
-  info(module: LogModule, message: string, data?: any) {
+  info(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.INFO, module, message, emojis.info, data);
   }
 
-  warn(module: LogModule, message: string, data?: any) {
+  warn(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.WARN, module, message, emojis.warn, data);
   }
 
-  error(module: LogModule, message: string, data?: any) {
+  error(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.ERROR, module, message, emojis.error, data);
   }
 
   // Métodos especializados con emojis
-  start(module: LogModule, message: string, data?: any) {
+  start(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.INFO, module, message, emojis.start, data);
   }
 
-  end(module: LogModule, message: string, data?: any) {
+  end(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.INFO, module, message, emojis.end, data);
   }
 
-  success(module: LogModule, message: string, data?: any) {
+  success(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.INFO, module, message, emojis.success, data);
   }
 
-  network(module: LogModule, message: string, data?: any) {
+  network(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.network, data);
   }
 
-  database(module: LogModule, message: string, data?: any) {
+  database(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.database, data);
   }
 
-  user(module: LogModule, message: string, data?: any) {
+  user(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.INFO, module, message, emojis.user, data);
   }
 
-  loading(module: LogModule, message: string, data?: any) {
+  loading(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.loading, data);
   }
 
-  sync(module: LogModule, message: string, data?: any) {
+  sync(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.sync, data);
   }
 

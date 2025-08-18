@@ -361,25 +361,37 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          event_type: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          event_type:
+            | 'contribution'
+            | 'challenge_complete'
+            | 'daily_streak'
+            | 'quest_complete';
           xp_earned: number;
-          event_data: Record<string, any>;
+          event_data: Record<string, unknown>;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          event_type: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          event_type:
+            | 'contribution'
+            | 'challenge_complete'
+            | 'daily_streak'
+            | 'quest_complete';
           xp_earned: number;
-          event_data?: Record<string, any>;
+          event_data?: Record<string, unknown>;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          event_type?: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          event_type?:
+            | 'contribution'
+            | 'challenge_complete'
+            | 'daily_streak'
+            | 'quest_complete';
           xp_earned?: number;
-          event_data?: Record<string, any>;
+          event_data?: Record<string, unknown>;
           created_at?: string;
         };
       };

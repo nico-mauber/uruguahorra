@@ -237,7 +237,7 @@ export default function ChallengesScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={challenge.icon as any}
+                      name={challenge.icon as keyof typeof Ionicons.glyphMap}
                       size={24}
                       color={getTypeColor(challenge.type)}
                     />
@@ -287,7 +287,7 @@ export default function ChallengesScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={challenge.icon as any}
+                      name={challenge.icon as keyof typeof Ionicons.glyphMap}
                       size={24}
                       color={getTypeColor(challenge.type)}
                     />
@@ -337,7 +337,7 @@ export default function ChallengesScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={challenge.icon as any}
+                      name={challenge.icon as keyof typeof Ionicons.glyphMap}
                       size={24}
                       color={getTypeColor(challenge.type)}
                     />

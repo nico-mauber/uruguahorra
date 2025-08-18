@@ -167,7 +167,7 @@ export default function CreateGoalScreen() {
           },
         },
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.GOALS, 'Error creando meta', error);
 
       let errorMessage = 'No se pudo crear la meta';
@@ -437,7 +437,13 @@ export default function CreateGoalScreen() {
                       logger.debug(LogModule.UI, 'Tipo de meta seleccionado', {
                         type: option.value,
                       });
-                      setGoalType(option.value as any);
+                      setGoalType(
+                        option.value as
+                          | 'emergency'
+                          | 'travel'
+                          | 'debt'
+                          | 'purchase'
+                      );
                     }
                   }}
                   disabled={isLoading}

@@ -1,11 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import type { WeeklyQuest, QuestProgress } from '../types/gamification.types';
-import { 
-  calculateQuestProgress, 
-  isQuestCompleted, 
-  getWeekStartDate, 
-  isCurrentWeek 
+import {
+  calculateQuestProgress,
+  isQuestCompleted,
+  getWeekStartDate,
 } from '../utils/formulas';
 import { QUEST_SETTINGS } from '../utils/constants';
 import { XPService } from './xp.service';
@@ -14,7 +13,9 @@ export class QuestsService {
   /**
    * Evaluar y actualizar progreso de quests del usuario
    */
-  static async evaluateQuestCompletion(userId: string): Promise<QuestProgress[]> {
+  static async evaluateQuestCompletion(
+    userId: string
+  ): Promise<QuestProgress[]> {
     try {
       logger.start(LogModule.DB, 'Evaluando progreso de quests', { userId });
 
@@ -34,11 +35,11 @@ export class QuestsService {
 
         // Si se completó en esta evaluación, otorgar XP bonus
         if (updated.completed_at && !questProgress.completed_at) {
-          await XPService.awardXP(userId, 'quest_complete', { 
+          await XPService.awardXP(userId, 'quest_complete', {
             questId: updated.quest_id,
             bonusXP: QUEST_SETTINGS.QUEST_XP_BONUS,
           });
-          
+
           logger.success(LogModule.DB, 'Quest completado', {
             userId,
             questId: updated.quest_id,
@@ -50,13 +51,22 @@ export class QuestsService {
       return updatedQuests;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal evaluando quests', error);
-      
+
       // Si es error de tabla no encontrada, retornar array vacío
-      if (error instanceof Error && 
-          (error.message?.includes('relation "public.weekly_quests" does not exist') ||
-           error.message?.includes('relation "public.user_quest_progress" does not exist') ||
-           error.message?.includes('Could not find the table'))) {
-        logger.warn(LogModule.DB, 'Tablas de quests no existen, retornando array vacío');
+      if (
+        error instanceof Error &&
+        (error.message?.includes(
+          'relation "public.weekly_quests" does not exist'
+        ) ||
+          error.message?.includes(
+            'relation "public.user_quest_progress" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table'))
+      ) {
+        logger.warn(
+          LogModule.DB,
+          'Tablas de quests no existen, retornando array vacío'
+        );
         return [];
       }
       throw error;
@@ -71,7 +81,7 @@ export class QuestsService {
       logger.start(LogModule.DB, 'Generando quest semanal');
 
       const weekStartDate = getWeekStartDate();
-      
+
       // Verificar si ya existe quest para esta semana
       const { data: existingQuest, error: existingError } = await supabase
         .from('weekly_quests')
@@ -82,10 +92,17 @@ export class QuestsService {
 
       if (existingError && existingError.code !== 'PGRST116') {
         // Si es error de tabla no encontrada o RLS, retornar quest por defecto
-        if (existingError.message?.includes('relation "public.weekly_quests" does not exist') ||
-            existingError.message?.includes('Could not find the table') ||
-            existingError.code === '42501') {
-          logger.warn(LogModule.DB, 'No se puede acceder a weekly_quests, retornando quest por defecto');
+        if (
+          existingError.message?.includes(
+            'relation "public.weekly_quests" does not exist'
+          ) ||
+          existingError.message?.includes('Could not find the table') ||
+          existingError.code === '42501'
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'No se puede acceder a weekly_quests, retornando quest por defecto'
+          );
           return {
             id: 'default-quest',
             week_start_date: weekStartDate.toISOString().split('T')[0],
@@ -98,13 +115,15 @@ export class QuestsService {
       }
 
       if (existingQuest) {
-        logger.info(LogModule.DB, 'Quest semanal ya existe', { questId: existingQuest.id });
+        logger.info(LogModule.DB, 'Quest semanal ya existe', {
+          questId: existingQuest.id,
+        });
         return existingQuest;
       }
 
       // Obtener challenges activos aleatorios
       const challengeIds = await this.selectRandomChallenges();
-      
+
       const { data: newQuest, error: createError } = await supabase
         .from('weekly_quests')
         .insert({
@@ -117,12 +136,19 @@ export class QuestsService {
 
       if (createError) {
         logger.error(LogModule.DB, 'Error creando quest semanal', createError);
-        
+
         // Si es error de RLS o tabla no existe, retornar quest por defecto
-        if (createError.message?.includes('relation "public.weekly_quests" does not exist') ||
-            createError.message?.includes('Could not find the table') ||
-            createError.code === '42501') {
-          logger.warn(LogModule.DB, 'No se puede crear quest semanal, retornando quest por defecto');
+        if (
+          createError.message?.includes(
+            'relation "public.weekly_quests" does not exist'
+          ) ||
+          createError.message?.includes('Could not find the table') ||
+          createError.code === '42501'
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'No se puede crear quest semanal, retornando quest por defecto'
+          );
           return {
             id: 'default-quest',
             week_start_date: weekStartDate.toISOString().split('T')[0],
@@ -142,13 +168,20 @@ export class QuestsService {
       return newQuest;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal generando quest semanal', error);
-      
+
       // Si es error de tabla no encontrada o RLS, retornar quest por defecto
-      if (error instanceof Error && 
-          (error.message?.includes('relation "public.weekly_quests" does not exist') ||
-           error.message?.includes('Could not find the table') ||
-           (error as any).code === '42501')) {
-        logger.warn(LogModule.DB, 'Sistema de quests no disponible, retornando quest por defecto');
+      if (
+        error instanceof Error &&
+        (error.message?.includes(
+          'relation "public.weekly_quests" does not exist'
+        ) ||
+          error.message?.includes('Could not find the table') ||
+          (error as { code?: string }).code === '42501')
+      ) {
+        logger.warn(
+          LogModule.DB,
+          'Sistema de quests no disponible, retornando quest por defecto'
+        );
         return {
           id: 'default-quest',
           week_start_date: getWeekStartDate().toISOString().split('T')[0],
@@ -166,52 +199,74 @@ export class QuestsService {
    */
   static async getUserActiveQuests(userId: string): Promise<QuestProgress[]> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo quests activos del usuario', { userId });
+      logger.database(LogModule.DB, 'Obteniendo quests activos del usuario', {
+        userId,
+      });
 
       // Primero asegurar que exista quest para semana actual (con manejo de errores)
       try {
         await this.generateWeeklyQuest();
       } catch (error) {
-        logger.warn(LogModule.DB, 'No se pudo generar quest semanal, continuando sin ella', error);
+        logger.warn(
+          LogModule.DB,
+          'No se pudo generar quest semanal, continuando sin ella',
+          error
+        );
       }
 
       const { data, error } = await supabase
         .from('user_quest_progress')
-        .select(`
+        .select(
+          `
           *,
           quest:weekly_quests(*)
-        `)
+        `
+        )
         .eq('user_id', userId);
 
       if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo quests del usuario', error);
-        
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo quests del usuario',
+          error
+        );
+
         // Si es error de tabla no encontrada o columna no existe, retornar array vacío
-        if (error.message?.includes('relation "public.user_quest_progress" does not exist') ||
-            error.message?.includes('relation "public.weekly_quests" does not exist') ||
-            error.message?.includes('Could not find the table') ||
-            error.message?.includes('column') && error.message?.includes('does not exist') ||
-            error.code === '42703') {
-          logger.warn(LogModule.DB, 'Tablas o columnas de quests no existen, retornando array vacío');
+        if (
+          error.message?.includes(
+            'relation "public.user_quest_progress" does not exist'
+          ) ||
+          error.message?.includes(
+            'relation "public.weekly_quests" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table') ||
+          (error.message?.includes('column') &&
+            error.message?.includes('does not exist')) ||
+          error.code === '42703'
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'Tablas o columnas de quests no existen, retornando array vacío'
+          );
           return [];
         }
         throw error;
       }
 
-      const quests = (data as any) || [];
-      
+      const quests: QuestProgress[] = data || [];
+
       // Ordenar por fecha de inicio de la quest (más reciente primero)
-      quests.sort((a: any, b: any) => {
+      quests.sort((a: QuestProgress, b: QuestProgress) => {
         const dateA = a.quest?.week_start_date || a.created_at || '';
         const dateB = b.quest?.week_start_date || b.created_at || '';
         return dateB.localeCompare(dateA);
       });
-      
+
       // Filtrar solo quests de semana actual y anteriores (últimas 4 semanas)
       const fourWeeksAgo = new Date();
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
-      const activeQuests = quests.filter((q: any) => {
+      const activeQuests = quests.filter((q: QuestProgress) => {
         const questDate = new Date(q.quest.week_start_date);
         return questDate >= fourWeeksAgo;
       });
@@ -219,30 +274,53 @@ export class QuestsService {
       // Crear progreso para quest actual si no existe (con manejo de errores)
       try {
         const currentWeekQuest = await this.getCurrentWeekQuest();
-        const hasCurrentWeekProgress = activeQuests.some((q: any) => 
-          q.quest_id === currentWeekQuest.id
+        const hasCurrentWeekProgress = activeQuests.some(
+          (q: QuestProgress) => q.quest_id === currentWeekQuest.id
         );
 
         if (!hasCurrentWeekProgress) {
-          const newProgress = await this.createQuestProgress(userId, currentWeekQuest.id);
+          const newProgress = await this.createQuestProgress(
+            userId,
+            currentWeekQuest.id
+          );
           activeQuests.unshift(newProgress);
         }
       } catch (error) {
-        logger.warn(LogModule.DB, 'No se pudo crear progreso para quest actual', error);
+        logger.warn(
+          LogModule.DB,
+          'No se pudo crear progreso para quest actual',
+          error
+        );
       }
 
-      logger.success(LogModule.DB, `${activeQuests.length} quests activos obtenidos`);
+      logger.success(
+        LogModule.DB,
+        `${activeQuests.length} quests activos obtenidos`
+      );
       return activeQuests;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error fatal obteniendo quests activos', error);
-      
+      logger.error(
+        LogModule.DB,
+        'Error fatal obteniendo quests activos',
+        error
+      );
+
       // Si es error de tabla no encontrada o RLS, retornar array vacío
-      if (error instanceof Error && 
-          (error.message?.includes('relation "public.weekly_quests" does not exist') ||
-           error.message?.includes('relation "public.user_quest_progress" does not exist') ||
-           error.message?.includes('Could not find the table') ||
-           (error as any).code === '42501')) {
-        logger.warn(LogModule.DB, 'Sistema de quests no disponible, retornando array vacío');
+      if (
+        error instanceof Error &&
+        (error.message?.includes(
+          'relation "public.weekly_quests" does not exist'
+        ) ||
+          error.message?.includes(
+            'relation "public.user_quest_progress" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table') ||
+          (error as { code?: string }).code === '42501')
+      ) {
+        logger.warn(
+          LogModule.DB,
+          'Sistema de quests no disponible, retornando array vacío'
+        );
         return [];
       }
       throw error;
@@ -254,7 +332,10 @@ export class QuestsService {
    */
   static async completeQuest(userId: string, questId: string): Promise<void> {
     try {
-      logger.info(LogModule.DB, 'Marcando quest como completado', { userId, questId });
+      logger.info(LogModule.DB, 'Marcando quest como completado', {
+        userId,
+        questId,
+      });
 
       const { error } = await supabase
         .from('user_quest_progress')
@@ -270,7 +351,10 @@ export class QuestsService {
         throw error;
       }
 
-      logger.success(LogModule.DB, 'Quest marcado como completado exitosamente');
+      logger.success(
+        LogModule.DB,
+        'Quest marcado como completado exitosamente'
+      );
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal completando quest', error);
       throw error;
@@ -287,24 +371,36 @@ export class QuestsService {
     averageProgress: number;
   }> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo estadísticas globales de quests');
+      logger.database(
+        LogModule.DB,
+        'Obteniendo estadísticas globales de quests'
+      );
 
       const { data, error } = await supabase
         .from('user_quest_progress')
         .select('completion_percentage, completed_at');
 
       if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo estadísticas de quests', error);
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo estadísticas de quests',
+          error
+        );
         throw error;
       }
 
       const progresses = data || [];
       const totalQuests = progresses.length;
-      const completedQuests = progresses.filter(p => p.completed_at !== null).length;
-      const completionRate = totalQuests > 0 ? (completedQuests / totalQuests) * 100 : 0;
-      const averageProgress = totalQuests > 0 
-        ? progresses.reduce((sum, p) => sum + p.completion_percentage, 0) / totalQuests
-        : 0;
+      const completedQuests = progresses.filter(
+        (p) => p.completed_at !== null
+      ).length;
+      const completionRate =
+        totalQuests > 0 ? (completedQuests / totalQuests) * 100 : 0;
+      const averageProgress =
+        totalQuests > 0
+          ? progresses.reduce((sum, p) => sum + p.completion_percentage, 0) /
+            totalQuests
+          : 0;
 
       const stats = {
         totalQuests,
@@ -313,10 +409,18 @@ export class QuestsService {
         averageProgress: Math.round(averageProgress * 10) / 10,
       };
 
-      logger.success(LogModule.DB, 'Estadísticas globales de quests calculadas', stats);
+      logger.success(
+        LogModule.DB,
+        'Estadísticas globales de quests calculadas',
+        stats
+      );
       return stats;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error calculando estadísticas globales', error);
+      logger.error(
+        LogModule.DB,
+        'Error calculando estadísticas globales',
+        error
+      );
       throw error;
     }
   }
@@ -327,7 +431,7 @@ export class QuestsService {
    * Actualizar progreso individual de una quest
    */
   private static async updateQuestProgress(
-    userId: string, 
+    userId: string,
     questProgress: QuestProgress
   ): Promise<QuestProgress> {
     try {
@@ -343,11 +447,19 @@ export class QuestsService {
         throw challengesError;
       }
 
-      const completedChallengeIds = (userChallenges || []).map(uc => uc.challenge_id);
+      const completedChallengeIds = (userChallenges || []).map(
+        (uc) => uc.challenge_id
+      );
       const totalChallengeIds = questProgress.quest?.challenge_ids || [];
-      
-      const newCompletionPercentage = calculateQuestProgress(completedChallengeIds, totalChallengeIds);
-      const isCompleted = isQuestCompleted(completedChallengeIds, totalChallengeIds);
+
+      const newCompletionPercentage = calculateQuestProgress(
+        completedChallengeIds,
+        totalChallengeIds
+      );
+      const isCompleted = isQuestCompleted(
+        completedChallengeIds,
+        totalChallengeIds
+      );
 
       // Actualizar solo si cambió el progreso
       if (
@@ -367,17 +479,19 @@ export class QuestsService {
           .from('user_quest_progress')
           .update(updates)
           .eq('id', questProgress.id)
-          .select(`
+          .select(
+            `
             *,
             quest:weekly_quests(*)
-          `)
+          `
+          )
           .single();
 
         if (updateError) {
           throw updateError;
         }
 
-        return updated as any;
+        return updated as QuestProgress;
       }
 
       return questProgress;
@@ -402,7 +516,7 @@ export class QuestsService {
     }
 
     const availableChallenges = challenges || [];
-    
+
     if (availableChallenges.length < QUEST_SETTINGS.CHALLENGES_PER_QUEST) {
       logger.warn(LogModule.DB, 'Pocos challenges disponibles para quest', {
         available: availableChallenges.length,
@@ -413,8 +527,8 @@ export class QuestsService {
     // Seleccionar challenges aleatorios
     const shuffled = availableChallenges.sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, QUEST_SETTINGS.CHALLENGES_PER_QUEST);
-    
-    return selected.map(c => c.id);
+
+    return selected.map((c) => c.id);
   }
 
   /**
@@ -440,7 +554,10 @@ export class QuestsService {
   /**
    * Crear progreso inicial para una quest
    */
-  private static async createQuestProgress(userId: string, questId: string): Promise<QuestProgress> {
+  private static async createQuestProgress(
+    userId: string,
+    questId: string
+  ): Promise<QuestProgress> {
     const { data, error } = await supabase
       .from('user_quest_progress')
       .insert({
@@ -450,16 +567,18 @@ export class QuestsService {
         completion_percentage: 0,
         completed_at: null,
       })
-      .select(`
+      .select(
+        `
         *,
         quest:weekly_quests(*)
-      `)
+      `
+      )
       .single();
 
     if (error) {
       throw error;
     }
 
-    return data as any;
+    return data as QuestProgress;
   }
 }

@@ -61,10 +61,11 @@ export const getLevelInfo = (currentXP: number): LevelInfo => {
   const nextLevelXP = getXPForLevel(level + 1);
   const xpInCurrentLevel = currentXP - currentLevelXP;
   const xpNeededForLevel = nextLevelXP - currentLevelXP;
-  
-  const progress = xpNeededForLevel > 0 
-    ? Math.round((xpInCurrentLevel / xpNeededForLevel) * 100)
-    : 100;
+
+  const progress =
+    xpNeededForLevel > 0
+      ? Math.round((xpInCurrentLevel / xpNeededForLevel) * 100)
+      : 100;
 
   return {
     level,
@@ -77,8 +78,12 @@ export const getLevelInfo = (currentXP: number): LevelInfo => {
 /**
  * Verifica si una racha debe romperse basado en tiempo transcurrido
  */
-export const shouldBreakStreak = (lastActivityAt: Date, currentTime: Date = new Date()): boolean => {
-  const hoursDiff = (currentTime.getTime() - lastActivityAt.getTime()) / (1000 * 60 * 60);
+export const shouldBreakStreak = (
+  lastActivityAt: Date,
+  currentTime: Date = new Date()
+): boolean => {
+  const hoursDiff =
+    (currentTime.getTime() - lastActivityAt.getTime()) / (1000 * 60 * 60);
   return hoursDiff > 48; // 48 horas
 };
 
@@ -86,15 +91,15 @@ export const shouldBreakStreak = (lastActivityAt: Date, currentTime: Date = new 
  * Calcula el porcentaje de completado de una quest
  */
 export const calculateQuestProgress = (
-  completedChallengeIds: string[], 
+  completedChallengeIds: string[],
   totalChallengeIds: string[]
 ): number => {
   if (totalChallengeIds.length === 0) return 100;
-  
-  const completedCount = completedChallengeIds.filter(id => 
+
+  const completedCount = completedChallengeIds.filter((id) =>
     totalChallengeIds.includes(id)
   ).length;
-  
+
   return Math.round((completedCount / totalChallengeIds.length) * 100);
 };
 
@@ -102,10 +107,12 @@ export const calculateQuestProgress = (
  * Verifica si una quest está completada
  */
 export const isQuestCompleted = (
-  completedChallengeIds: string[], 
+  completedChallengeIds: string[],
   totalChallengeIds: string[]
 ): boolean => {
-  return calculateQuestProgress(completedChallengeIds, totalChallengeIds) >= 100;
+  return (
+    calculateQuestProgress(completedChallengeIds, totalChallengeIds) >= 100
+  );
 };
 
 /**

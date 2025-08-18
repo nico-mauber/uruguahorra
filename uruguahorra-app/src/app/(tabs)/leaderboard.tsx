@@ -332,7 +332,9 @@ export default function LeaderboardScreen() {
               <View style={styles.rankContainer}>
                 {getRankIcon(entry.rank) ? (
                   <Ionicons
-                    name={getRankIcon(entry.rank) as any}
+                    name={
+                      getRankIcon(entry.rank) as keyof typeof Ionicons.glyphMap
+                    }
                     size={24}
                     color={getRankColor(entry.rank)}
                   />

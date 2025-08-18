@@ -374,7 +374,9 @@ export class AuthService {
   /**
    * Configurar listener de cambios de autenticación
    */
-  static onAuthStateChange(callback: (event: string, session: any) => void) {
+  static onAuthStateChange(
+    callback: (event: string, session: unknown) => void
+  ) {
     return supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session);
     });

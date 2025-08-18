@@ -130,7 +130,7 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
         totalGoals: localGoals.length,
         userId,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.STORE, 'Error cargando metas', error);
       set({
         isLoading: false,

@@ -83,7 +83,7 @@ export class TransactionsService {
 
           transactionsToInsert.push(transaction);
           result.successfulImports++;
-        } catch (error: any) {
+        } catch (error: unknown) {
           result.errors.push(error.message);
           logger.warn(LogModule.DB, 'Error procesando fila CSV', {
             rowIndex: i,
@@ -134,7 +134,7 @@ export class TransactionsService {
               count: createdContributions.length,
             }
           );
-        } catch (contributionError: any) {
+        } catch (contributionError: unknown) {
           logger.error(
             LogModule.DB,
             'Error creando contribuciones automáticas',
@@ -527,7 +527,7 @@ export class TransactionsService {
       }
 
       return { isValid: errors.length === 0, errors };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isValid: false,
         errors: [`Error validando archivo: ${error.message}`],

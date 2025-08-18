@@ -194,7 +194,7 @@ export class GoalsService {
         goalName: data.name,
       });
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.GOALS, 'Error fatal creando meta', {
         type: error.constructor.name,
         message: error.message,

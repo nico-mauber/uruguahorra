@@ -417,7 +417,7 @@ export class SubscriptionsService {
   static async processPaymentWebhook(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
     eventType: string,
-    data: any
+    data: unknown
   ) {
     try {
       logger.info(LogModule.DB, 'Procesando webhook de pago', {
@@ -461,7 +461,7 @@ export class SubscriptionsService {
    */
   private static async handleSubscriptionUpdate(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
-    data: any
+    data: unknown
   ) {
     try {
       // Lógica específica por proveedor para extraer datos
@@ -507,7 +507,7 @@ export class SubscriptionsService {
    */
   private static async handleSubscriptionCancellation(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
-    data: any
+    data: unknown
   ) {
     try {
       const subscriptionData = this.extractSubscriptionData(provider, data);
@@ -547,7 +547,7 @@ export class SubscriptionsService {
    */
   private static async handlePaymentSuccess(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
-    _data: any
+    _data: unknown
   ) {
     try {
       logger.info(LogModule.DB, 'Procesando pago exitoso', { provider });
@@ -567,7 +567,7 @@ export class SubscriptionsService {
    */
   private static async handlePaymentFailure(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
-    data: any
+    data: unknown
   ) {
     try {
       logger.warn(LogModule.DB, 'Procesando pago fallido', { provider });
@@ -602,7 +602,7 @@ export class SubscriptionsService {
    */
   private static extractSubscriptionData(
     provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
-    data: any
+    data: unknown
   ): {
     userId?: string;
     updates?: SubscriptionUpdate;
@@ -628,7 +628,7 @@ export class SubscriptionsService {
   }
 
   // Métodos específicos para cada proveedor (implementación básica)
-  private static extractStripeData(data: any) {
+  private static extractStripeData(data: unknown) {
     return {
       userId: data.metadata?.userId,
       updates: {
@@ -643,28 +643,28 @@ export class SubscriptionsService {
     };
   }
 
-  private static extractPayPalData(data: any) {
+  private static extractPayPalData(data: unknown) {
     return {
       userId: data.custom_id,
       // Implementar según estructura de PayPal
     };
   }
 
-  private static extractMercadoPagoData(data: any) {
+  private static extractMercadoPagoData(data: unknown) {
     return {
       userId: data.external_reference,
       // Implementar según estructura de MercadoPago
     };
   }
 
-  private static extractAppleData(data: any) {
+  private static extractAppleData(data: unknown) {
     return {
       userId: data.applicationUsername,
       // Implementar según estructura de Apple
     };
   }
 
-  private static extractGoogleData(data: any) {
+  private static extractGoogleData(data: unknown) {
     return {
       userId: data.developerPayload,
       // Implementar según estructura de Google

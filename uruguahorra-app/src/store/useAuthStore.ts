@@ -4,7 +4,11 @@ import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
-import { XPService, LevelsService, StreaksService } from '@/features/gamification';
+import {
+  XPService,
+  LevelsService,
+  StreaksService,
+} from '@/features/gamification';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -33,7 +37,6 @@ interface AuthStore {
   checkSession: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
-
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
@@ -195,7 +198,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isPremium: false,
         isLoading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.STORE, 'Error en signup store', error);
       set({ isLoading: false });
       throw error;
@@ -222,10 +225,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   updateUserXP: (xp) =>
     set((state) => {
       if (!state.user) return state;
-      
+
       const newTotalXP = state.user.totalXP + xp;
       const newLevel = LevelsService.getLevel(newTotalXP);
-      
+
       return {
         user: {
           ...state.user,
@@ -281,14 +284,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const totalXP = await XPService.getUserTotalXP(authUser.id);
         const level = LevelsService.getLevel(totalXP);
         const streak = await StreaksService.getUserStreak(authUser.id);
-        
+
         gamificationStats = {
           level,
           totalXP,
           streak: streak?.current_streak || 0,
         };
       } catch (error) {
-        logger.warn(LogModule.STORE, 'Error obteniendo estadísticas de gamificación, usando valores por defecto', error);
+        logger.warn(
+          LogModule.STORE,
+          'Error obteniendo estadísticas de gamificación, usando valores por defecto',
+          error
+        );
         gamificationStats = {
           level: 1,
           totalXP: 0,

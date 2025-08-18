@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, ViewStyle } from 'react-native';
 import { getLevelInfo, getXPForLevel } from '../utils/formulas';
 import { getLevelColor } from '../utils/constants';
 
@@ -8,7 +8,7 @@ interface XPProgressBarProps {
   animated?: boolean;
   showLabels?: boolean;
   height?: number;
-  style?: any;
+  style?: ViewStyle | ViewStyle[];
 }
 
 export const XPProgressBar: React.FC<XPProgressBarProps> = ({
@@ -32,7 +32,7 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
     } else {
       progressAnim.setValue(levelInfo.progress);
     }
-  }, [levelInfo.progress, animated]);
+  }, [levelInfo.progress, animated, progressAnim]);
 
   const currentLevelXP = getXPForLevel(levelInfo.level);
   const nextLevelXP = levelInfo.nextLevelXP;
@@ -49,13 +49,8 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
           </Text>
         </View>
       )}
-      
-      <View
-        style={[
-          styles.progressContainer,
-          { height },
-        ]}
-      >
+
+      <View style={[styles.progressContainer, { height }]}>
         <Animated.View
           style={[
             styles.progressBar,
@@ -69,7 +64,7 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
             },
           ]}
         />
-        
+
         {/* Brillo/efecto de carga */}
         {animated && (
           <Animated.View
@@ -88,9 +83,7 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
           <Text style={styles.progressText}>
             {levelInfo.progress}% al Nivel {levelInfo.level + 1}
           </Text>
-          <Text style={styles.totalXPText}>
-            {currentXP} XP total
-          </Text>
+          <Text style={styles.totalXPText}>{currentXP} XP total</Text>
         </View>
       )}
     </View>

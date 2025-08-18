@@ -9,50 +9,74 @@ export class StreaksService {
   /**
    * Actualizar racha del usuario después de una actividad
    */
-  static async updateStreak(userId: string, eventTimestamp: Date = new Date()): Promise<StreakData> {
+  static async updateStreak(
+    userId: string,
+    eventTimestamp: Date = new Date()
+  ): Promise<StreakData> {
     try {
-      logger.start(LogModule.DB, 'Actualizando racha de usuario', { userId, eventTimestamp });
+      logger.start(LogModule.DB, 'Actualizando racha de usuario', {
+        userId,
+        eventTimestamp,
+      });
 
       // Obtener racha actual del usuario
       const currentStreak = await this.getUserStreak(userId);
-      
+
       if (!currentStreak) {
         // Crear nueva racha si no existe
         return await this.createNewStreak(userId, eventTimestamp);
       }
 
       const lastActivity = new Date(currentStreak.last_activity_at);
-      const daysSinceLastActivity = this.getDaysDifference(lastActivity, eventTimestamp);
+      const daysSinceLastActivity = this.getDaysDifference(
+        lastActivity,
+        eventTimestamp
+      );
 
       let updatedStreak: StreakData;
 
       if (daysSinceLastActivity === 0) {
         // Misma fecha, solo actualizar timestamp
-        updatedStreak = await this.updateStreakTimestamp(currentStreak, eventTimestamp);
+        updatedStreak = await this.updateStreakTimestamp(
+          currentStreak,
+          eventTimestamp
+        );
       } else if (daysSinceLastActivity === 1) {
         // Día consecutivo, incrementar racha
-        updatedStreak = await this.incrementStreak(currentStreak, eventTimestamp);
-        
+        updatedStreak = await this.incrementStreak(
+          currentStreak,
+          eventTimestamp
+        );
+
         // Otorgar XP por racha diaria
         await XPService.awardStreakXP(userId, updatedStreak.current_streak);
       } else {
         // Más de 1 día, verificar si debe romperse
         const shouldBreak = shouldBreakStreak(lastActivity, eventTimestamp);
-        
+
         if (shouldBreak) {
           // Verificar si tiene protecciones disponibles
           const canUseProtection = this.canUseProtection(currentStreak);
-          
+
           if (canUseProtection) {
             // Usar protección y mantener racha
-            updatedStreak = await this.useStreakProtection(currentStreak, eventTimestamp);
+            updatedStreak = await this.useStreakProtection(
+              currentStreak,
+              eventTimestamp
+            );
           } else {
             // Romper racha y empezar nueva
-            updatedStreak = await this.resetStreak(currentStreak, eventTimestamp);
+            updatedStreak = await this.resetStreak(
+              currentStreak,
+              eventTimestamp
+            );
           }
         } else {
           // Dentro del margen de gracia, mantener racha
-          updatedStreak = await this.updateStreakTimestamp(currentStreak, eventTimestamp);
+          updatedStreak = await this.updateStreakTimestamp(
+            currentStreak,
+            eventTimestamp
+          );
         }
       }
 
@@ -84,11 +108,18 @@ export class StreaksService {
 
       if (error && error.code !== 'PGRST116') {
         logger.error(LogModule.DB, 'Error obteniendo racha', error);
-        
+
         // Si es error de tabla no encontrada, retornar null
-        if (error.message?.includes('relation "public.user_streaks" does not exist') ||
-            error.message?.includes('Could not find the table')) {
-          logger.warn(LogModule.DB, 'Tabla user_streaks no existe, retornando null');
+        if (
+          error.message?.includes(
+            'relation "public.user_streaks" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table')
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'Tabla user_streaks no existe, retornando null'
+          );
           return null;
         }
         throw error;
@@ -97,12 +128,19 @@ export class StreaksService {
       return data || null;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal obteniendo racha', error);
-      
+
       // Si es error de tabla no encontrada, retornar null
-      if (error instanceof Error && 
-          (error.message?.includes('relation "public.user_streaks" does not exist') ||
-           error.message?.includes('Could not find the table'))) {
-        logger.warn(LogModule.DB, 'Tabla user_streaks no existe, retornando null');
+      if (
+        error instanceof Error &&
+        (error.message?.includes(
+          'relation "public.user_streaks" does not exist'
+        ) ||
+          error.message?.includes('Could not find the table'))
+      ) {
+        logger.warn(
+          LogModule.DB,
+          'Tabla user_streaks no existe, retornando null'
+        );
         return null;
       }
       throw error;
@@ -114,10 +152,12 @@ export class StreaksService {
    */
   static async useStreakProtection(userId: string): Promise<boolean> {
     try {
-      logger.info(LogModule.DB, 'Intentando usar protección de racha', { userId });
+      logger.info(LogModule.DB, 'Intentando usar protección de racha', {
+        userId,
+      });
 
       const streak = await this.getUserStreak(userId);
-      
+
       if (!streak) {
         throw new Error('Usuario no tiene racha activa');
       }
@@ -158,7 +198,7 @@ export class StreaksService {
   static async checkStreakBreak(userId: string): Promise<boolean> {
     try {
       const streak = await this.getUserStreak(userId);
-      
+
       if (!streak) {
         return false; // No hay racha que romper
       }
@@ -181,26 +221,37 @@ export class StreaksService {
     protectionsUsed: number;
   }> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo estadísticas globales de rachas');
+      logger.database(
+        LogModule.DB,
+        'Obteniendo estadísticas globales de rachas'
+      );
 
       const { data, error } = await supabase
         .from('user_streaks')
         .select('current_streak, max_streak, streak_protections_used');
 
       if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo estadísticas de rachas', error);
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo estadísticas de rachas',
+          error
+        );
         throw error;
       }
 
       const streaks = data || [];
-      const activeStreaks = streaks.filter(s => s.current_streak > 0).length;
-      const averageStreak = streaks.length > 0 
-        ? streaks.reduce((sum, s) => sum + s.current_streak, 0) / streaks.length 
-        : 0;
-      const maxStreak = streaks.length > 0 
-        ? Math.max(...streaks.map(s => s.max_streak))
-        : 0;
-      const protectionsUsed = streaks.reduce((sum, s) => sum + s.streak_protections_used, 0);
+      const activeStreaks = streaks.filter((s) => s.current_streak > 0).length;
+      const averageStreak =
+        streaks.length > 0
+          ? streaks.reduce((sum, s) => sum + s.current_streak, 0) /
+            streaks.length
+          : 0;
+      const maxStreak =
+        streaks.length > 0 ? Math.max(...streaks.map((s) => s.max_streak)) : 0;
+      const protectionsUsed = streaks.reduce(
+        (sum, s) => sum + s.streak_protections_used,
+        0
+      );
 
       const stats = {
         averageStreak: Math.round(averageStreak * 10) / 10,
@@ -212,7 +263,11 @@ export class StreaksService {
       logger.success(LogModule.DB, 'Estadísticas globales calculadas', stats);
       return stats;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error calculando estadísticas globales', error);
+      logger.error(
+        LogModule.DB,
+        'Error calculando estadísticas globales',
+        error
+      );
       throw error;
     }
   }
@@ -222,7 +277,10 @@ export class StreaksService {
   /**
    * Crear nueva racha para usuario
    */
-  private static async createNewStreak(userId: string, timestamp: Date): Promise<StreakData> {
+  private static async createNewStreak(
+    userId: string,
+    timestamp: Date
+  ): Promise<StreakData> {
     const { data, error } = await supabase
       .from('user_streaks')
       .insert({
@@ -231,7 +289,9 @@ export class StreaksService {
         max_streak: 1,
         last_activity_at: timestamp.toISOString(),
         streak_protections_used: 0,
-        protection_reset_date: this.getNextResetDate().toISOString().split('T')[0],
+        protection_reset_date: this.getNextResetDate()
+          .toISOString()
+          .split('T')[0],
       })
       .select()
       .single();
@@ -247,7 +307,10 @@ export class StreaksService {
   /**
    * Incrementar racha actual
    */
-  private static async incrementStreak(streak: StreakData, timestamp: Date): Promise<StreakData> {
+  private static async incrementStreak(
+    streak: StreakData,
+    timestamp: Date
+  ): Promise<StreakData> {
     const newCurrentStreak = streak.current_streak + 1;
     const newMaxStreak = Math.max(streak.max_streak, newCurrentStreak);
 
@@ -274,7 +337,10 @@ export class StreaksService {
   /**
    * Actualizar solo timestamp de última actividad
    */
-  private static async updateStreakTimestamp(streak: StreakData, timestamp: Date): Promise<StreakData> {
+  private static async updateStreakTimestamp(
+    streak: StreakData,
+    timestamp: Date
+  ): Promise<StreakData> {
     const { data, error } = await supabase
       .from('user_streaks')
       .update({
@@ -286,7 +352,11 @@ export class StreaksService {
       .single();
 
     if (error) {
-      logger.error(LogModule.DB, 'Error actualizando timestamp de racha', error);
+      logger.error(
+        LogModule.DB,
+        'Error actualizando timestamp de racha',
+        error
+      );
       throw error;
     }
 
@@ -296,7 +366,10 @@ export class StreaksService {
   /**
    * Resetear racha a 1 (nueva actividad después de romperse)
    */
-  private static async resetStreak(streak: StreakData, timestamp: Date): Promise<StreakData> {
+  private static async resetStreak(
+    streak: StreakData,
+    timestamp: Date
+  ): Promise<StreakData> {
     const { data, error } = await supabase
       .from('user_streaks')
       .update({
@@ -319,7 +392,10 @@ export class StreaksService {
   /**
    * Usar protección de racha
    */
-  private static async useStreakProtection(streak: StreakData, timestamp: Date): Promise<StreakData> {
+  private static async useStreakProtection(
+    streak: StreakData,
+    timestamp: Date
+  ): Promise<StreakData> {
     const { data, error } = await supabase
       .from('user_streaks')
       .update({
@@ -345,12 +421,12 @@ export class StreaksService {
   private static canUseProtection(streak: StreakData): boolean {
     const now = new Date();
     const resetDate = new Date(streak.protection_reset_date);
-    
+
     // Si ya pasó la fecha de reset, reiniciar contador
     if (now > resetDate) {
       return true; // Se reinició el contador mensual
     }
-    
+
     return streak.streak_protections_used < STREAK_RULES.PROTECTIONS_PER_MONTH;
   }
 
@@ -368,7 +444,11 @@ export class StreaksService {
    */
   private static getNextResetDate(): Date {
     const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, STREAK_RULES.RESET_DAY);
+    const nextMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      STREAK_RULES.RESET_DAY
+    );
     return nextMonth;
   }
 }

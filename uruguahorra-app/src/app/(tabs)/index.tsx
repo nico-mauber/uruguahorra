@@ -14,23 +14,24 @@ import { Button, Card, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
+import { UserGamificationStats } from '@features/gamification/types/gamification.types';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
 import { GoalsService } from '@/services/goals.service';
 import { ChallengesService } from '@/services/challenges.service';
-import { LevelBadge, XPProgressBar, StreakDisplay, LevelsService } from '@/features/gamification';
+import {
+  LevelBadge,
+  XPProgressBar,
+  StreakDisplay,
+  LevelsService,
+} from '@/features/gamification';
 import { GamificationService } from '@/features/gamification';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const {
-    user,
-    updateUserXP,
-    checkSession,
-    isLoading: authLoading,
-  } = useAuthStore();
+  const { user, checkSession, isLoading: authLoading } = useAuthStore();
   const {
     goals,
     isLoading,
@@ -43,7 +44,8 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [initializing, setInitializing] = React.useState(true);
   const [hasShownWelcome, setHasShownWelcome] = React.useState(false);
-  const [gamificationStats, setGamificationStats] = React.useState<any>(null);
+  const [gamificationStats, setGamificationStats] =
+    React.useState<UserGamificationStats | null>(null);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
@@ -56,7 +58,11 @@ export default function DashboardScreen() {
       setGamificationStats(stats);
       logger.success(LogModule.UI, 'Estadísticas de gamificación cargadas');
     } catch (error) {
-      logger.error(LogModule.UI, 'Error cargando estadísticas de gamificación', error);
+      logger.error(
+        LogModule.UI,
+        'Error cargando estadísticas de gamificación',
+        error
+      );
       // No mostrar error al usuario, usar valores por defecto
       setGamificationStats({
         totalXP: 0,
@@ -96,7 +102,10 @@ export default function DashboardScreen() {
             fetchGoals(updatedUser.id),
             loadGamificationStats(updatedUser.id),
           ]);
-          logger.success(LogModule.UI, 'Datos del usuario cargados exitosamente');
+          logger.success(
+            LogModule.UI,
+            'Datos del usuario cargados exitosamente'
+          );
 
           // Mostrar bienvenida para nuevos usuarios o usuarios que regresan
           if (!hasShownWelcome) {
@@ -153,7 +162,7 @@ export default function DashboardScreen() {
       ]);
       logger.success(LogModule.UI, 'Dashboard refrescado');
       ToastService.quickSuccess('Información actualizada');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.UI, 'Error refrescando dashboard', error);
       ToastService.handleError(error);
     } finally {
@@ -185,26 +194,27 @@ export default function DashboardScreen() {
       });
 
       // 2. Procesar evento de gamificación
-      const gamificationResult = await GamificationService.processGamificationEvent(
-        user.id,
-        'contribution',
-        { amount }
-      );
+      const gamificationResult =
+        await GamificationService.processGamificationEvent(
+          user.id,
+          'contribution',
+          { amount }
+        );
 
       // 3. Actualizar datos del dashboard DESPUÉS de crear la contribución
       await Promise.all([
-        fetchGoals(user.id, true),  // Esto actualizará el monto ahorrado
-        loadGamificationStats(user.id),  // Esto actualizará el XP
+        fetchGoals(user.id, true), // Esto actualizará el monto ahorrado
+        loadGamificationStats(user.id), // Esto actualizará el XP
       ]);
 
       // 4. Actualizar el estado local de gamificationStats inmediatamente
       if (gamificationResult.xpEarned > 0) {
-        setGamificationStats(prevStats => {
+        setGamificationStats((prevStats) => {
           if (!prevStats) return prevStats;
           const newTotalXP = prevStats.totalXP + gamificationResult.xpEarned;
           const newLevel = LevelsService.getLevel(newTotalXP);
           const newLevelInfo = LevelsService.getLevelProgress(newTotalXP);
-          
+
           return {
             ...prevStats,
             totalXP: newTotalXP,
@@ -219,10 +229,12 @@ export default function DashboardScreen() {
 
       // 6. Mostrar toast de éxito con XP
       ToastService.savingSuccess(amount, firstGoal.name);
-      
+
       if (gamificationResult.xpEarned > 0) {
         setTimeout(() => {
-          ToastService.quickSuccess(`+${gamificationResult.xpEarned} XP ganado!`);
+          ToastService.quickSuccess(
+            `+${gamificationResult.xpEarned} XP ganado!`
+          );
         }, 1000);
       }
 
@@ -236,7 +248,7 @@ export default function DashboardScreen() {
         amount,
         goalName: firstGoal.name,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.UI, 'Error en ahorro rápido', error);
       ToastService.handleError(error);
     }
@@ -439,25 +451,25 @@ export default function DashboardScreen() {
             <Card>
               <View style={styles.gamificationHeader}>
                 <View style={styles.levelContainer}>
-                  <LevelBadge 
-                    level={gamificationStats.level} 
+                  <LevelBadge
+                    level={gamificationStats.level}
                     size="large"
                     showLabel
                   />
                 </View>
-                
+
                 <View style={styles.xpProgressContainer}>
-                  <XPProgressBar 
+                  <XPProgressBar
                     currentXP={gamificationStats.totalXP}
                     animated={true}
                     showLabels={true}
                   />
                 </View>
               </View>
-              
+
               {/* Racha */}
               <View style={styles.streakContainer}>
-                <StreakDisplay 
+                <StreakDisplay
                   streak={gamificationStats.streak}
                   size="medium"
                   showProtections={true}
@@ -470,11 +482,15 @@ export default function DashboardScreen() {
         <View style={styles.statsRow}>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>Nivel</Text>
-            <Text style={styles.statValue}>{gamificationStats?.level || 1}</Text>
+            <Text style={styles.statValue}>
+              {gamificationStats?.level || 1}
+            </Text>
           </Card>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>XP Total</Text>
-            <Text style={styles.statValue}>{gamificationStats?.totalXP || 0}</Text>
+            <Text style={styles.statValue}>
+              {gamificationStats?.totalXP || 0}
+            </Text>
           </Card>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>Ahorrado</Text>
@@ -528,7 +544,7 @@ export default function DashboardScreen() {
                   try {
                     logger.info(LogModule.NAV, 'Navegando a crear meta');
                     router.push('/create-goal');
-                  } catch (error: any) {
+                  } catch (error: unknown) {
                     logger.error(
                       LogModule.NAV,
                       'Error navegando a crear meta',
@@ -582,7 +598,7 @@ export default function DashboardScreen() {
           try {
             logger.info(LogModule.NAV, 'Navegando a crear meta desde FAB');
             router.push('/create-goal');
-          } catch (error: any) {
+          } catch (error: unknown) {
             logger.error(
               LogModule.NAV,
               'Error navegando a crear meta desde FAB',

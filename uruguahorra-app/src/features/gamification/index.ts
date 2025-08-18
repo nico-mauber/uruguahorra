@@ -39,18 +39,22 @@ export class GamificationService {
 
       // Manejar resultados con valores por defecto para errores
       const finalTotalXP = totalXP.status === 'fulfilled' ? totalXP.value : 0;
-      const finalStreak = streak.status === 'fulfilled' && streak.value ? streak.value : {
-        id: '',
-        user_id: userId,
-        current_streak: 0,
-        max_streak: 0,
-        last_activity_at: new Date().toISOString(),
-        streak_protections_used: 0,
-        protection_reset_date: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      const finalActiveQuests = activeQuests.status === 'fulfilled' ? activeQuests.value : [];
+      const finalStreak =
+        streak.status === 'fulfilled' && streak.value
+          ? streak.value
+          : {
+              id: '',
+              user_id: userId,
+              current_streak: 0,
+              max_streak: 0,
+              last_activity_at: new Date().toISOString(),
+              streak_protections_used: 0,
+              protection_reset_date: new Date().toISOString().split('T')[0],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+      const finalActiveQuests =
+        activeQuests.status === 'fulfilled' ? activeQuests.value : [];
 
       const level = LevelsService.getLevel(finalTotalXP);
       const levelInfo = LevelsService.getLevelProgress(finalTotalXP);
@@ -103,9 +107,18 @@ export class GamificationService {
       let xpEarned = 0;
       try {
         if (eventType === 'contribution' && eventData.amount) {
-          xpEarned = await XPService.awardContributionXP(userId, eventData.amount);
-        } else if (eventType === 'challenge_complete' && eventData.challengeId) {
-          xpEarned = await XPService.awardChallengeXP(userId, eventData.challengeId);
+          xpEarned = await XPService.awardContributionXP(
+            userId,
+            eventData.amount
+          );
+        } else if (
+          eventType === 'challenge_complete' &&
+          eventData.challengeId
+        ) {
+          xpEarned = await XPService.awardChallengeXP(
+            userId,
+            eventData.challengeId
+          );
         }
       } catch (error) {
         // Si el XP falla, continuamos con valor 0
@@ -116,11 +129,18 @@ export class GamificationService {
       // 2. Verificar subida de nivel (con manejo resiliente)
       let levelCheck = { leveledUp: false, newLevel: 1 };
       try {
-        const previousTotalXP = await XPService.getUserTotalXP(userId) - xpEarned;
-        levelCheck = LevelsService.checkLevelUp(previousTotalXP, previousTotalXP + xpEarned);
+        const previousTotalXP =
+          (await XPService.getUserTotalXP(userId)) - xpEarned;
+        levelCheck = LevelsService.checkLevelUp(
+          previousTotalXP,
+          previousTotalXP + xpEarned
+        );
       } catch (error) {
         // Si level check falla, asumir que no hay level up
-        console.warn('Error checking level up, continuing without level up:', error);
+        console.warn(
+          'Error checking level up, continuing without level up:',
+          error
+        );
       }
 
       // 3. Actualizar racha (con manejo resiliente)
@@ -130,16 +150,22 @@ export class GamificationService {
         streakUpdated = true;
       } catch (error) {
         // Si streak update falla, continuamos
-        console.warn('Error updating streak, continuing without streak update:', error);
+        console.warn(
+          'Error updating streak, continuing without streak update:',
+          error
+        );
       }
-      
+
       // 4. Evaluar progreso de quests (con manejo resiliente)
-      let questProgress: any[] = [];
+      let questProgress: QuestProgress[] = [];
       try {
         questProgress = await QuestsService.evaluateQuestCompletion(userId);
       } catch (error) {
         // Si quest evaluation falla, continuamos
-        console.warn('Error evaluating quests, continuing without quest progress:', error);
+        console.warn(
+          'Error evaluating quests, continuing without quest progress:',
+          error
+        );
       }
 
       return {
@@ -151,7 +177,10 @@ export class GamificationService {
       };
     } catch (error) {
       // Si todo falla, retornar valores seguros que no rompan la UI
-      console.warn('Gamification event processing failed completely, returning safe defaults:', error);
+      console.warn(
+        'Gamification event processing failed completely, returning safe defaults:',
+        error
+      );
       return {
         xpEarned: 0,
         levelUp: false,

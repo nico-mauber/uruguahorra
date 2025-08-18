@@ -1,10 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import type { XPEventType, XPLogEntry } from '../types/gamification.types';
-import { 
-  calculateContributionXP, 
-  calculateChallengeXP, 
-  calculateStreakXP 
+import {
+  calculateContributionXP,
+  calculateChallengeXP,
+  calculateStreakXP,
 } from '../utils/formulas';
 
 export class XPService {
@@ -12,12 +12,15 @@ export class XPService {
    * Función principal para otorgar XP
    */
   static async awardXP(
-    userId: string, 
-    eventType: XPEventType, 
-    eventData: Record<string, any> = {}
+    userId: string,
+    eventType: XPEventType,
+    eventData: Record<string, unknown> = {}
   ): Promise<number> {
     try {
-      logger.start(LogModule.DB, `Otorgando XP por ${eventType}`, { userId, eventData });
+      logger.start(LogModule.DB, `Otorgando XP por ${eventType}`, {
+        userId,
+        eventData,
+      });
 
       let xpEarned: number;
 
@@ -36,7 +39,10 @@ export class XPService {
       }
 
       if (xpEarned <= 0) {
-        logger.warn(LogModule.DB, 'No se otorgó XP (cantidad = 0)', { eventType, eventData });
+        logger.warn(LogModule.DB, 'No se otorgó XP (cantidad = 0)', {
+          eventType,
+          eventData,
+        });
         return 0;
       }
 
@@ -54,11 +60,19 @@ export class XPService {
 
       if (logError) {
         logger.error(LogModule.DB, 'Error registrando XP en log', logError);
-        
+
         // Si es error de tabla no encontrada, retornar XP pero no fallar
-        if (logError.message?.includes('relation "public.user_xp_log" does not exist') ||
-            logError.message?.includes('Could not find the table')) {
-          logger.warn(LogModule.DB, 'Tabla user_xp_log no existe, XP otorgado pero no registrado', { xpEarned });
+        if (
+          logError.message?.includes(
+            'relation "public.user_xp_log" does not exist'
+          ) ||
+          logError.message?.includes('Could not find the table')
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'Tabla user_xp_log no existe, XP otorgado pero no registrado',
+            { xpEarned }
+          );
           return xpEarned;
         }
         throw logError;
@@ -80,21 +94,30 @@ export class XPService {
   /**
    * Otorgar XP por contribución monetaria
    */
-  static async awardContributionXP(userId: string, amount: number): Promise<number> {
+  static async awardContributionXP(
+    userId: string,
+    amount: number
+  ): Promise<number> {
     return this.awardXP(userId, 'contribution', { amount });
   }
 
   /**
    * Otorgar XP por completar challenge
    */
-  static async awardChallengeXP(userId: string, challengeId: string): Promise<number> {
+  static async awardChallengeXP(
+    userId: string,
+    challengeId: string
+  ): Promise<number> {
     return this.awardXP(userId, 'challenge_complete', { challengeId });
   }
 
   /**
    * Otorgar XP por racha diaria
    */
-  static async awardStreakXP(userId: string, streakDay: number): Promise<number> {
+  static async awardStreakXP(
+    userId: string,
+    streakDay: number
+  ): Promise<number> {
     return this.awardXP(userId, 'daily_streak', { streakDay });
   }
 
@@ -103,7 +126,9 @@ export class XPService {
    */
   static async getUserTotalXP(userId: string): Promise<number> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo XP total del usuario', { userId });
+      logger.database(LogModule.DB, 'Obteniendo XP total del usuario', {
+        userId,
+      });
 
       const { data, error } = await supabase
         .from('user_xp_log')
@@ -112,28 +137,47 @@ export class XPService {
 
       if (error) {
         logger.error(LogModule.DB, 'Error obteniendo XP total', error);
-        
+
         // Si es error de tabla no encontrada, retornar 0 en lugar de fallar
-        if (error.message?.includes('relation "public.user_xp_log" does not exist') ||
-            error.message?.includes('Could not find the table')) {
-          logger.warn(LogModule.DB, 'Tabla user_xp_log no existe, retornando XP = 0');
+        if (
+          error.message?.includes(
+            'relation "public.user_xp_log" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table')
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'Tabla user_xp_log no existe, retornando XP = 0'
+          );
           return 0;
         }
         throw error;
       }
 
-      const totalXP = (data || []).reduce((sum, entry) => sum + entry.xp_earned, 0);
-      
-      logger.success(LogModule.DB, `XP total calculado: ${totalXP}`, { userId });
+      const totalXP = (data || []).reduce(
+        (sum, entry) => sum + entry.xp_earned,
+        0
+      );
+
+      logger.success(LogModule.DB, `XP total calculado: ${totalXP}`, {
+        userId,
+      });
       return totalXP;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal obteniendo XP total', error);
-      
+
       // Si es error de tabla no encontrada, retornar 0 en lugar de fallar
-      if (error instanceof Error && 
-          (error.message?.includes('relation "public.user_xp_log" does not exist') ||
-           error.message?.includes('Could not find the table'))) {
-        logger.warn(LogModule.DB, 'Tabla user_xp_log no existe, retornando XP = 0');
+      if (
+        error instanceof Error &&
+        (error.message?.includes(
+          'relation "public.user_xp_log" does not exist'
+        ) ||
+          error.message?.includes('Could not find the table'))
+      ) {
+        logger.warn(
+          LogModule.DB,
+          'Tabla user_xp_log no existe, retornando XP = 0'
+        );
         return 0;
       }
       throw error;
@@ -144,12 +188,16 @@ export class XPService {
    * Obtener historial de XP del usuario
    */
   static async getXPHistory(
-    userId: string, 
+    userId: string,
     limit: number = 50,
     offset: number = 0
   ): Promise<XPLogEntry[]> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo historial de XP', { userId, limit, offset });
+      logger.database(LogModule.DB, 'Obteniendo historial de XP', {
+        userId,
+        limit,
+        offset,
+      });
 
       const { data, error } = await supabase
         .from('user_xp_log')
@@ -160,20 +208,34 @@ export class XPService {
 
       if (error) {
         logger.error(LogModule.DB, 'Error obteniendo historial de XP', error);
-        
+
         // Si es error de tabla no encontrada, retornar array vacío
-        if (error.message?.includes('relation "public.user_xp_log" does not exist') ||
-            error.message?.includes('Could not find the table')) {
-          logger.warn(LogModule.DB, 'Tabla user_xp_log no existe, retornando historial vacío');
+        if (
+          error.message?.includes(
+            'relation "public.user_xp_log" does not exist'
+          ) ||
+          error.message?.includes('Could not find the table')
+        ) {
+          logger.warn(
+            LogModule.DB,
+            'Tabla user_xp_log no existe, retornando historial vacío'
+          );
           return [];
         }
         throw error;
       }
 
-      logger.success(LogModule.DB, `${data?.length || 0} entradas de XP obtenidas`);
+      logger.success(
+        LogModule.DB,
+        `${data?.length || 0} entradas de XP obtenidas`
+      );
       return data || [];
     } catch (error) {
-      logger.error(LogModule.DB, 'Error fatal obteniendo historial de XP', error);
+      logger.error(
+        LogModule.DB,
+        'Error fatal obteniendo historial de XP',
+        error
+      );
       throw error;
     }
   }
@@ -182,8 +244,8 @@ export class XPService {
    * Obtener estadísticas de XP por período
    */
   static async getXPStats(
-    userId: string, 
-    startDate?: string, 
+    userId: string,
+    startDate?: string,
     endDate?: string
   ): Promise<{
     totalXP: number;
@@ -191,7 +253,11 @@ export class XPService {
     dailyXP: Record<string, number>;
   }> {
     try {
-      logger.database(LogModule.DB, 'Obteniendo estadísticas de XP', { userId, startDate, endDate });
+      logger.database(LogModule.DB, 'Obteniendo estadísticas de XP', {
+        userId,
+        startDate,
+        endDate,
+      });
 
       let query = supabase
         .from('user_xp_log')
@@ -205,10 +271,16 @@ export class XPService {
         query = query.lte('created_at', endDate);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: true });
+      const { data, error } = await query.order('created_at', {
+        ascending: true,
+      });
 
       if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo estadísticas de XP', error);
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo estadísticas de XP',
+          error
+        );
         throw error;
       }
 
@@ -227,7 +299,7 @@ export class XPService {
 
       entries.forEach((entry) => {
         // Por tipo de evento
-        xpByEventType[entry.event_type] = 
+        xpByEventType[entry.event_type] =
           (xpByEventType[entry.event_type] || 0) + entry.xp_earned;
 
         // Por día
@@ -244,7 +316,11 @@ export class XPService {
       logger.success(LogModule.DB, 'Estadísticas de XP calculadas', stats);
       return stats;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error fatal obteniendo estadísticas de XP', error);
+      logger.error(
+        LogModule.DB,
+        'Error fatal obteniendo estadísticas de XP',
+        error
+      );
       throw error;
     }
   }
@@ -252,21 +328,25 @@ export class XPService {
   /**
    * Obtener top usuarios por XP
    */
-  static async getTopXPUsers(limit: number = 10): Promise<Array<{
-    user_id: string;
-    total_xp: number;
-    user?: any;
-  }>> {
+  static async getTopXPUsers(limit: number = 10): Promise<
+    Array<{
+      user_id: string;
+      total_xp: number;
+      user?: unknown;
+    }>
+  > {
     try {
       logger.database(LogModule.DB, 'Obteniendo ranking de XP', { limit });
 
       const { data, error } = await supabase
         .from('user_xp_log')
-        .select(`
+        .select(
+          `
           user_id,
           xp_earned,
           user:users(id, email, country, premium)
-        `)
+        `
+        )
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -275,9 +355,12 @@ export class XPService {
       }
 
       // Agrupar por usuario y sumar XP
-      const userXPMap: Record<string, { user_id: string; total_xp: number; user?: any }> = {};
+      const userXPMap: Record<
+        string,
+        { user_id: string; total_xp: number; user?: unknown }
+      > = {};
 
-      (data || []).forEach((entry: any) => {
+      (data || []).forEach((entry: unknown) => {
         const userId = entry.user_id;
         if (!userXPMap[userId]) {
           userXPMap[userId] = {
@@ -294,7 +377,10 @@ export class XPService {
         .sort((a, b) => b.total_xp - a.total_xp)
         .slice(0, limit);
 
-      logger.success(LogModule.DB, `${topUsers.length} usuarios en ranking obtenidos`);
+      logger.success(
+        LogModule.DB,
+        `${topUsers.length} usuarios en ranking obtenidos`
+      );
       return topUsers;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal obteniendo ranking de XP', error);

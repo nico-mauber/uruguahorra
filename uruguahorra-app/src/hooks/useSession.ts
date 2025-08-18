@@ -8,7 +8,7 @@ import { logger, LogModule } from '@/utils/logger';
 interface SessionState {
   isLoading: boolean;
   isAuthenticated: boolean;
-  user: any;
+  user: unknown;
   error: string | null;
   lastRefresh: Date | null;
 }
@@ -69,7 +69,7 @@ export function useSession(options: UseSessionOptions = {}) {
       }
 
       return false;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Session refresh error', error);
       setSessionState((prev) => ({
         ...prev,
@@ -152,7 +152,7 @@ export function useSession(options: UseSessionOptions = {}) {
 
       logger.success(LogModule.AUTH, 'Session is valid');
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Session validation failed', error);
       return false;
     }
@@ -166,7 +166,7 @@ export function useSession(options: UseSessionOptions = {}) {
     try {
       await checkSession();
       await refreshSession();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Force refresh failed', error);
       setSessionState((prev) => ({
         ...prev,
@@ -190,7 +190,7 @@ export function useSession(options: UseSessionOptions = {}) {
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Failed to get session info', error);
       return null;
     }

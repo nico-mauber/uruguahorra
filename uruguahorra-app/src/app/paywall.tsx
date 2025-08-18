@@ -279,7 +279,7 @@ export default function PaywallScreen() {
             <View key={index} style={styles.featureItem}>
               <View style={styles.featureIcon}>
                 <Ionicons
-                  name={feature.icon as any}
+                  name={feature.icon as keyof typeof Ionicons.glyphMap}
                   size={20}
                   color={theme.primary}
                 />

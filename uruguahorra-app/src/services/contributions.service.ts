@@ -40,9 +40,11 @@ export class ContributionsService {
       });
 
       // Procesar gamificación en paralelo (sin bloquear la respuesta)
-      this.processGamificationAsync(data.user_id, data.amount).catch((error) => {
-        logger.error(LogModule.DB, 'Error procesando gamificación', error);
-      });
+      this.processGamificationAsync(data.user_id, data.amount).catch(
+        (error) => {
+          logger.error(LogModule.DB, 'Error procesando gamificación', error);
+        }
+      );
 
       return data;
     } catch (error) {
@@ -436,7 +438,7 @@ export class ContributionsService {
    * Procesar gamificación de forma asíncrona para contribuciones
    */
   private static async processGamificationAsync(
-    userId: string, 
+    userId: string,
     amount: number
   ): Promise<void> {
     try {
@@ -447,7 +449,7 @@ export class ContributionsService {
 
       // Otorgar XP por contribución
       const xpEarned = await XPService.awardContributionXP(userId, amount);
-      
+
       // Actualizar racha del usuario
       await StreaksService.updateStreak(userId);
 
@@ -455,7 +457,11 @@ export class ContributionsService {
         xpEarned,
       });
     } catch (error) {
-      logger.error(LogModule.DB, 'Error en procesamiento de gamificación', error);
+      logger.error(
+        LogModule.DB,
+        'Error en procesamiento de gamificación',
+        error
+      );
       // No re-lanzar el error para evitar afectar la operación principal
     }
   }

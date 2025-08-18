@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getLevelColor, getLevelTier } from '../utils/constants';
 
@@ -7,7 +7,7 @@ interface LevelBadgeProps {
   level: number;
   size?: 'small' | 'medium' | 'large';
   showLabel?: boolean;
-  style?: any;
+  style?: ViewStyle | ViewStyle[];
 }
 
 const SIZES = {
@@ -62,10 +62,10 @@ export const LevelBadge: React.FC<LevelBadgeProps> = ({
           },
         ]}
       >
-        <Ionicons 
-          name={icon} 
-          size={sizeConfig.iconSize} 
-          color={color} 
+        <Ionicons
+          name={icon}
+          size={sizeConfig.iconSize}
+          color={color}
           style={styles.icon}
         />
         <Text
@@ -80,7 +80,7 @@ export const LevelBadge: React.FC<LevelBadgeProps> = ({
           {level}
         </Text>
       </View>
-      
+
       {showLabel && (
         <Text
           style={[

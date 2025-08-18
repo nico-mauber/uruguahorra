@@ -1,10 +1,10 @@
 import { logger, LogModule } from '@/utils/logger';
 import type { LevelInfo } from '../types/gamification.types';
-import { 
+import {
   calculateLevel,
   getXPForLevel,
   getXPToNextLevel,
-  getLevelInfo 
+  getLevelInfo,
 } from '../utils/formulas';
 import { getLevelColor, getLevelTier } from '../utils/constants';
 
@@ -110,7 +110,10 @@ export class LevelsService {
   /**
    * Verificar si el usuario subió de nivel después de ganar XP
    */
-  static checkLevelUp(previousXP: number, newXP: number): {
+  static checkLevelUp(
+    previousXP: number,
+    newXP: number
+  ): {
     leveledUp: boolean;
     previousLevel: number;
     newLevel: number;
@@ -142,7 +145,10 @@ export class LevelsService {
   /**
    * Calcular cuántos niveles se pueden ganar con una cantidad específica de XP
    */
-  static calculatePotentialLevels(currentXP: number, xpToAdd: number): {
+  static calculatePotentialLevels(
+    currentXP: number,
+    xpToAdd: number
+  ): {
     currentLevel: number;
     newLevel: number;
     levelsGained: number;
@@ -168,7 +174,7 @@ export class LevelsService {
    */
   private static getLevelName(level: number): string {
     const tier = this.getLevelTier(level);
-    
+
     switch (tier) {
       case 'bronze':
         return `Ahorrador Bronce ${level}`;
@@ -191,7 +197,7 @@ export class LevelsService {
     reward?: {
       type: 'feature' | 'premium_trial' | 'badge' | 'xp_bonus';
       description: string;
-      value?: any;
+      value?: string | number;
     };
   } {
     const milestones = {
@@ -218,7 +224,7 @@ export class LevelsService {
     };
 
     const reward = milestones[level as keyof typeof milestones];
-    
+
     return {
       hasMilestone: !!reward,
       reward,
@@ -234,17 +240,20 @@ export class LevelsService {
     topLevels: Array<{ level: number; userCount: number }>;
   }> {
     try {
-      logger.database(LogModule.DB, 'Calculando estadísticas globales de niveles');
+      logger.database(
+        LogModule.DB,
+        'Calculando estadísticas globales de niveles'
+      );
 
       // Esta función requeriría una query más compleja en producción
       // Por ahora retorna una estructura de ejemplo
       return {
         averageLevel: 8.5,
         levelDistribution: {
-          'bronze': 60, // 60% de usuarios
-          'silver': 30, // 30% de usuarios  
-          'gold': 8,    // 8% de usuarios
-          'diamond': 2, // 2% de usuarios
+          bronze: 60, // 60% de usuarios
+          silver: 30, // 30% de usuarios
+          gold: 8, // 8% de usuarios
+          diamond: 2, // 2% de usuarios
         },
         topLevels: [
           { level: 45, userCount: 2 },
@@ -255,7 +264,11 @@ export class LevelsService {
         ],
       };
     } catch (error) {
-      logger.error(LogModule.DB, 'Error calculando estadísticas globales', error);
+      logger.error(
+        LogModule.DB,
+        'Error calculando estadísticas globales',
+        error
+      );
       throw error;
     }
   }

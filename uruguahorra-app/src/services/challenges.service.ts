@@ -1,7 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
-import { XPService, StreaksService, QuestsService } from '@/features/gamification';
+import {
+  XPService,
+  StreaksService,
+  QuestsService,
+} from '@/features/gamification';
 
 type Challenge = Database['public']['Tables']['challenges']['Row'];
 type UserChallenge = Database['public']['Tables']['user_challenges']['Row'];
@@ -79,7 +83,7 @@ export class ChallengesService {
         LogModule.DB,
         `${data?.length || 0} desafíos del usuario obtenidos`
       );
-      return (data as any) || [];
+      return (data as unknown) || [];
     } catch (error) {
       logger.error(
         LogModule.DB,
@@ -268,10 +272,17 @@ export class ChallengesService {
       }
 
       logger.success(LogModule.DB, 'Desafío completado y recompensa reclamada');
-      
+
       // Procesar gamificación en paralelo
-      this.processChallengeGamificationAsync(data.user_id, data.challenge_id).catch((error) => {
-        logger.error(LogModule.DB, 'Error procesando gamificación de challenge', error);
+      this.processChallengeGamificationAsync(
+        data.user_id,
+        data.challenge_id
+      ).catch((error) => {
+        logger.error(
+          LogModule.DB,
+          'Error procesando gamificación de challenge',
+          error
+        );
       });
 
       return data;
@@ -317,7 +328,7 @@ export class ChallengesService {
         LogModule.DB,
         `${data?.length || 0} recompensas pendientes obtenidas`
       );
-      return (data as any) || [];
+      return (data as unknown) || [];
     } catch (error) {
       logger.error(
         LogModule.DB,
@@ -352,40 +363,52 @@ export class ChallengesService {
         throw error;
       }
 
-      const challenges = (data as any) || [];
+      const challenges = (data as unknown) || [];
 
       // Calcular estadísticas
       const totalChallenges = challenges.length;
       const completedChallenges = challenges.filter(
-        (c: any) => c.status === 'done' || c.status === 'claimed'
+        (c: unknown) => c.status === 'done' || c.status === 'claimed'
       ).length;
       const claimedChallenges = challenges.filter(
-        (c: any) => c.status === 'claimed'
+        (c: unknown) => c.status === 'claimed'
       ).length;
       const inProgressChallenges = challenges.filter(
-        (c: any) => c.status === 'in_progress'
+        (c: unknown) => c.status === 'in_progress'
       ).length;
 
       const totalPointsEarned = challenges
-        .filter((c: any) => c.status === 'claimed')
-        .reduce((sum: number, c: any) => sum + (c.challenge?.points || 0), 0);
+        .filter((c: unknown) => c.status === 'claimed')
+        .reduce(
+          (sum: number, c: unknown) => sum + (c.challenge?.points || 0),
+          0
+        );
 
       const totalPointsPending = challenges
-        .filter((c: any) => c.status === 'done')
-        .reduce((sum: number, c: any) => sum + (c.challenge?.points || 0), 0);
+        .filter((c: unknown) => c.status === 'done')
+        .reduce(
+          (sum: number, c: unknown) => sum + (c.challenge?.points || 0),
+          0
+        );
 
       // Agrupar por tipo de desafío
-      const byType = challenges.reduce((acc: any, c: any) => {
-        const type = c.challenge?.type || 'unknown';
-        if (!acc[type]) {
-          acc[type] = { total: 0, completed: 0 };
-        }
-        acc[type].total++;
-        if (c.status === 'done' || c.status === 'claimed') {
-          acc[type].completed++;
-        }
-        return acc;
-      }, {});
+      const byType = challenges.reduce(
+        (
+          acc: Record<string, { total: number; completed: number }>,
+          c: unknown
+        ) => {
+          const type = c.challenge?.type || 'unknown';
+          if (!acc[type]) {
+            acc[type] = { total: 0, completed: 0 };
+          }
+          acc[type].total++;
+          if (c.status === 'done' || c.status === 'claimed') {
+            acc[type].completed++;
+          }
+          return acc;
+        },
+        {}
+      );
 
       const stats = {
         totalChallenges,
@@ -488,7 +511,7 @@ export class ChallengesService {
         return;
       }
 
-      const challenges = (userChallenges as any) || [];
+      const challenges = (userChallenges as unknown) || [];
 
       for (const userChallenge of challenges) {
         const challenge = userChallenge.challenge;
@@ -552,7 +575,7 @@ export class ChallengesService {
         return;
       }
 
-      const challenges = (userChallenges as any) || [];
+      const challenges = (userChallenges as unknown) || [];
 
       for (const userChallenge of challenges) {
         const challenge = userChallenge.challenge;
@@ -582,7 +605,7 @@ export class ChallengesService {
    * Procesar gamificación de forma asíncrona para challenges completados
    */
   private static async processChallengeGamificationAsync(
-    userId: string, 
+    userId: string,
     challengeId: string
   ): Promise<void> {
     try {
@@ -593,18 +616,26 @@ export class ChallengesService {
 
       // Otorgar XP por completar challenge
       const xpEarned = await XPService.awardChallengeXP(userId, challengeId);
-      
+
       // Actualizar racha del usuario
       await StreaksService.updateStreak(userId);
-      
+
       // Evaluar progreso de quests
       await QuestsService.evaluateQuestCompletion(userId);
 
-      logger.success(LogModule.DB, 'Gamificación de challenge procesada exitosamente', {
-        xpEarned,
-      });
+      logger.success(
+        LogModule.DB,
+        'Gamificación de challenge procesada exitosamente',
+        {
+          xpEarned,
+        }
+      );
     } catch (error) {
-      logger.error(LogModule.DB, 'Error en procesamiento de gamificación de challenge', error);
+      logger.error(
+        LogModule.DB,
+        'Error en procesamiento de gamificación de challenge',
+        error
+      );
       // No re-lanzar el error para evitar afectar la operación principal
     }
   }

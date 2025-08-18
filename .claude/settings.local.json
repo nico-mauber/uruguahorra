@@ -23,7 +23,10 @@
       "Bash(ss:*)",
       "Bash(npm run lint:*)",
       "Bash(mv:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(npx eslint . --ext .ts,.tsx --fix)",
+      "Bash(find:*)",
+      "Bash(sed:*)"
     ],
     "defaultMode": "acceptEdits"
   }

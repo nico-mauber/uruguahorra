@@ -123,7 +123,7 @@ export default function OnboardingScreen() {
           router.replace('/(tabs)');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error detallado en autenticación:', error);
 
       // Manejar errores comunes
@@ -274,7 +274,7 @@ export default function OnboardingScreen() {
       // Navegar al dashboard
       console.log('Navegando al dashboard...');
       router.replace('/(tabs)');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('=== ERROR CREANDO META ===');
       console.error('Tipo de error:', error.constructor.name);
       console.error('Mensaje:', error.message);
@@ -632,7 +632,13 @@ export default function OnboardingScreen() {
                   onPress={() => {
                     if (!isLoading) {
                       console.log('Seleccionando tipo de meta:', option.value);
-                      setGoalType(option.value as any);
+                      setGoalType(
+                        option.value as
+                          | 'emergency'
+                          | 'travel'
+                          | 'debt'
+                          | 'purchase'
+                      );
                     }
                   }}
                 >

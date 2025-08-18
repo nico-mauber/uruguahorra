@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { StreakData } from '../types/gamification.types';
 
@@ -7,7 +7,7 @@ interface StreakDisplayProps {
   streak: StreakData;
   size?: 'small' | 'medium' | 'large';
   showProtections?: boolean;
-  style?: any;
+  style?: ViewStyle | ViewStyle[];
 }
 
 const SIZES = {
@@ -36,10 +36,10 @@ const SIZES = {
 
 const getStreakColor = (streak: number): string => {
   if (streak === 0) return '#CCCCCC';
-  if (streak < 7) return '#FF6B35';      // Naranja - primeros días
-  if (streak < 30) return '#F7931E';     // Naranja dorado - primera semana+
-  if (streak < 100) return '#FFD700';    // Dorado - primer mes+
-  return '#FF1493';                      // Rosa fuego - 100+ días
+  if (streak < 7) return '#FF6B35'; // Naranja - primeros días
+  if (streak < 30) return '#F7931E'; // Naranja dorado - primera semana+
+  if (streak < 100) return '#FFD700'; // Dorado - primer mes+
+  return '#FF1493'; // Rosa fuego - 100+ días
 };
 
 export const StreakDisplay: React.FC<StreakDisplayProps> = ({
@@ -56,39 +56,36 @@ export const StreakDisplay: React.FC<StreakDisplayProps> = ({
     <View style={[styles.container, { padding: sizeConfig.padding }, style]}>
       <View style={styles.streakInfo}>
         <View style={[styles.streakBadge, { borderColor: streakColor }]}>
-          <Ionicons 
-            name={isActive ? 'flame' : 'flame-outline'} 
-            size={sizeConfig.iconSize} 
+          <Ionicons
+            name={isActive ? 'flame' : 'flame-outline'}
+            size={sizeConfig.iconSize}
             color={streakColor}
           />
-          <Text 
+          <Text
             style={[
-              styles.streakNumber, 
-              { 
-                fontSize: sizeConfig.numberSize, 
-                color: streakColor 
-              }
+              styles.streakNumber,
+              {
+                fontSize: sizeConfig.numberSize,
+                color: streakColor,
+              },
             ]}
           >
             {streak.current_streak}
           </Text>
         </View>
-        
+
         <View style={styles.streakLabels}>
-          <Text 
-            style={[
-              styles.streakLabel, 
-              { fontSize: sizeConfig.labelSize }
-            ]}
+          <Text
+            style={[styles.streakLabel, { fontSize: sizeConfig.labelSize }]}
           >
             Racha actual
           </Text>
-          
+
           {streak.max_streak > 0 && (
-            <Text 
+            <Text
               style={[
-                styles.maxStreakLabel, 
-                { fontSize: sizeConfig.labelSize - 1 }
+                styles.maxStreakLabel,
+                { fontSize: sizeConfig.labelSize - 1 },
               ]}
             >
               Mejor: {streak.max_streak} días
@@ -100,9 +97,9 @@ export const StreakDisplay: React.FC<StreakDisplayProps> = ({
       {showProtections && (
         <View style={styles.protectionsInfo}>
           <View style={styles.protectionItem}>
-            <Ionicons 
-              name="shield-checkmark-outline" 
-              size={16} 
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={16}
               color={streak.streak_protections_used < 1 ? '#4CAF50' : '#999'}
             />
             <Text style={styles.protectionText}>
@@ -113,10 +110,10 @@ export const StreakDisplay: React.FC<StreakDisplayProps> = ({
       )}
 
       {/* Indicador de estado */}
-      <View 
+      <View
         style={[
           styles.statusIndicator,
-          { backgroundColor: isActive ? '#4CAF50' : '#FFC107' }
+          { backgroundColor: isActive ? '#4CAF50' : '#FFC107' },
         ]}
       />
     </View>

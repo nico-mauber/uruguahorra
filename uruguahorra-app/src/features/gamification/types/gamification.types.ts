@@ -1,4 +1,8 @@
-export type XPEventType = 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+export type XPEventType =
+  | 'contribution'
+  | 'challenge_complete'
+  | 'daily_streak'
+  | 'quest_complete';
 
 export interface XPLogEntry {
   id: string;
@@ -9,7 +13,7 @@ export interface XPLogEntry {
     amount?: number;
     challengeId?: string;
     streakDay?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   created_at: string;
 }

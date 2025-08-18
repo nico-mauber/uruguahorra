@@ -92,7 +92,7 @@ export default function OTPVerificationScreen() {
 
       logger.info(LogModule.NAV, 'Redirigiendo al dashboard tras OTP exitoso');
       router.replace('/(tabs)');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Error verificando OTP', error);
 
       Alert.alert(
@@ -129,7 +129,7 @@ export default function OTPVerificationScreen() {
       setResendCooldown(60); // 60 seconds cooldown
       setOtp('');
       inputRef.current?.focus();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Error reenviando OTP', error);
       Alert.alert('Error', 'No se pudo reenviar el código. Intenta más tarde.');
     }

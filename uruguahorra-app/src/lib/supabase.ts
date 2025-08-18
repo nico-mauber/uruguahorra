@@ -160,7 +160,13 @@ export type Database = {
           points: number;
           description: string;
           icon: string | null;
-          requirement_type: 'savings' | 'streak' | 'transactions' | 'learning' | 'social' | null;
+          requirement_type:
+            | 'savings'
+            | 'streak'
+            | 'transactions'
+            | 'learning'
+            | 'social'
+            | null;
           requirement_value: number | null;
           active: boolean;
           created_at: string;
@@ -270,7 +276,14 @@ export type Database = {
           duration_sec: number;
           tags: string[];
           url: string | null;
-          category: 'budgeting' | 'saving' | 'investing' | 'debt' | 'financial_planning' | 'economics' | null;
+          category:
+            | 'budgeting'
+            | 'saving'
+            | 'investing'
+            | 'debt'
+            | 'financial_planning'
+            | 'economics'
+            | null;
           difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
           points: number;
           is_active: boolean;

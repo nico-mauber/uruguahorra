@@ -20,7 +20,8 @@
       "Bash(grep:*)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(ss:*)"
+      "Bash(ss:*)",
+      "Bash(npm run lint:*)"
     ],
     "defaultMode": "acceptEdits"
   }

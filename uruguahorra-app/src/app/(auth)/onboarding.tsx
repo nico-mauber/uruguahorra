@@ -24,52 +24,54 @@ export default function OnboardingScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { signup, login, user } = useAuthStore();
-  
+
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);
-  
+
   // Step 1: Credenciales
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   // Step 2: Tipo de meta
-  const [goalType, setGoalType] = useState<'emergency' | 'travel' | 'debt' | 'purchase'>('emergency');
-  
+  const [goalType, setGoalType] = useState<
+    'emergency' | 'travel' | 'debt' | 'purchase'
+  >('emergency');
+
   // Step 3: Detalles de meta
   const [goalName, setGoalName] = useState('');
   const [goalAmount, setGoalAmount] = useState('');
   const [targetMonths, setTargetMonths] = useState('3');
-  
+
   const goalOptions = [
     { id: 'emergency', label: '🛡️ Colchón de emergencia', value: 'emergency' },
     { id: 'travel', label: '✈️ Viaje', value: 'travel' },
     { id: 'debt', label: '💳 Pagar deudas', value: 'debt' },
     { id: 'purchase', label: '🛍️ Compra importante', value: 'purchase' },
   ];
-  
+
   const handleAuth = async () => {
     console.log('handleAuth llamado - isNewUser:', isNewUser, 'email:', email);
-    
+
     if (!email || !password) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
-    
+
     if (password.length < 6) {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       if (isNewUser) {
         console.log('Intentando registrar nuevo usuario...');
         // Registrar nuevo usuario
         await signup(email, password, {
           country: 'UY',
-          currency: 'UYU'
+          currency: 'UYU',
         });
         console.log('Usuario registrado exitosamente');
       } else {
@@ -77,7 +79,7 @@ export default function OnboardingScreen() {
         // Iniciar sesión
         await login(email, password);
         console.log('Sesión iniciada exitosamente');
-        
+
         // Los usuarios existentes van directo al dashboard
         console.log('Usuario existente, navegando directamente a tabs...');
         router.replace('/(tabs)');
@@ -87,38 +89,47 @@ export default function OnboardingScreen() {
       setStep(2);
     } catch (error: any) {
       console.error('Error detallado en autenticación:', error);
-      
+
       // Manejar errores comunes
-      if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
+      if (
+        error.message?.includes('already registered') ||
+        error.message?.includes('User already registered')
+      ) {
         Alert.alert(
           'Usuario existente',
           'Este email ya está registrado. ¿Deseas iniciar sesión?',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { 
-              text: 'Iniciar sesión', 
+            {
+              text: 'Iniciar sesión',
               onPress: () => {
                 setIsNewUser(false);
                 // No llamar handleAuth aquí para evitar loop, solo cambiar el modo
-              }
-            }
+              },
+            },
           ]
         );
       } else if (error.message?.includes('Invalid login')) {
         Alert.alert('Error', 'Email o contraseña incorrectos');
-      } else if (error.code === '42501' || error.message?.includes('row-level security')) {
+      } else if (
+        error.code === '42501' ||
+        error.message?.includes('row-level security')
+      ) {
         Alert.alert(
-          'Error de configuración', 
+          'Error de configuración',
           'Hay un problema con los permisos. Por favor, contacta al administrador o intenta iniciar sesión en lugar de registrarte.'
         );
       } else {
-        Alert.alert('Error', error.message || 'No se pudo completar la autenticación');
+        Alert.alert(
+          'Error',
+          error.message || 'No se pudo completar la autenticación'
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleCreateGoal = async () => {
     console.log('=== handleCreateGoal INICIADO ===');
     console.log('Estado actual:');
@@ -126,95 +137,104 @@ export default function OnboardingScreen() {
     console.log('- goalAmount:', goalAmount);
     console.log('- targetMonths:', targetMonths);
     console.log('- goalType:', goalType);
-    
+
     // Validación de campos
     if (!goalName || goalName.trim() === '') {
       console.error('Validación fallida: goalName vacío');
       Alert.alert('Error', 'Por favor ingresa un nombre para tu meta');
       return;
     }
-    
+
     if (!goalAmount || goalAmount.trim() === '') {
       console.error('Validación fallida: goalAmount vacío');
       Alert.alert('Error', 'Por favor ingresa el monto objetivo');
       return;
     }
-    
+
     const parsedAmount = parseFloat(goalAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       console.error('Validación fallida: monto inválido:', goalAmount);
       Alert.alert('Error', 'Por favor ingresa un monto válido mayor a 0');
       return;
     }
-    
+
     console.log('Validación completada exitosamente');
     setIsLoading(true);
-    
+
     try {
       // Verificar sesión primero
       console.log('Verificando sesión...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError) {
         console.error('Error obteniendo sesión:', sessionError);
         throw sessionError;
       }
-      
+
       if (!session) {
         console.error('No hay sesión activa');
         Alert.alert('Sesión expirada', 'Por favor, inicia sesión nuevamente');
         router.replace('/(auth)/onboarding');
         return;
       }
-      
+
       console.log('Sesión válida, usuario ID:', session.user.id);
-      
+
       // Obtener el usuario actual
       console.log('Obteniendo datos del usuario...');
-      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user: currentUser },
+        error: userError,
+      } = await supabase.auth.getUser();
+
       if (userError) {
         console.error('Error obteniendo usuario:', userError);
         throw userError;
       }
-      
+
       if (!currentUser) {
         console.error('Usuario no encontrado a pesar de tener sesión');
         Alert.alert('Error', 'No se pudo obtener la información del usuario');
         return;
       }
-      
+
       console.log('Usuario obtenido:', currentUser.email);
-      
+
       // Calcular fecha objetivo
       const targetDate = new Date();
       const monthsToAdd = parseInt(targetMonths) || 3;
       targetDate.setMonth(targetDate.getMonth() + monthsToAdd);
-      
+
       const goalData = {
         user_id: currentUser.id,
         name: goalName.trim(),
         target_amount: parsedAmount,
         target_date: targetDate.toISOString().split('T')[0],
         saved_amount: 0,
-        is_active: true
+        is_active: true,
       };
-      
-      console.log('Datos de la meta a crear:', JSON.stringify(goalData, null, 2));
-      
+
+      console.log(
+        'Datos de la meta a crear:',
+        JSON.stringify(goalData, null, 2)
+      );
+
       // Crear la meta en Supabase
       console.log('Llamando a GoalsService.createGoal...');
       const createdGoal = await GoalsService.createGoal(goalData);
-      
+
       console.log('¡Meta creada exitosamente!:', createdGoal);
-      
+
       // Actualizar el store de metas antes de navegar (force=true para recargar)
       const { fetchGoals } = useGoalsStore.getState();
       await fetchGoals(currentUser.id, true);
       console.log('Store de metas actualizado');
-      
+
       Alert.alert('¡Éxito!', 'Tu meta ha sido creada correctamente');
-      
+
       // Navegar al dashboard
       console.log('Navegando al dashboard...');
       router.replace('/(tabs)');
@@ -225,25 +245,26 @@ export default function OnboardingScreen() {
       console.error('Código:', error.code);
       console.error('Detalles:', error.details);
       console.error('Stack:', error.stack);
-      
+
       // Mensajes de error específicos
       let errorMessage = 'No se pudo crear la meta';
-      
+
       if (error.code === '23505') {
         errorMessage = 'Ya existe una meta con ese nombre';
       } else if (error.code === '42501') {
-        errorMessage = 'No tienes permisos para crear metas. Verifica tu sesión.';
+        errorMessage =
+          'No tienes permisos para crear metas. Verifica tu sesión.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       console.log('=== handleCreateGoal FINALIZADO ===');
       setIsLoading(false);
     }
   };
-  
+
   const handleNext = async () => {
     console.log('=== handleNext llamado ===');
     console.log('Step actual:', step);
@@ -251,7 +272,7 @@ export default function OnboardingScreen() {
     console.log('Goal name:', goalName);
     console.log('Goal amount:', goalAmount);
     console.log('Target months:', targetMonths);
-    
+
     try {
       if (step === 1) {
         console.log('Ejecutando handleAuth...');
@@ -263,7 +284,7 @@ export default function OnboardingScreen() {
           emergency: 'Mi Fondo de Emergencia',
           travel: 'Mi Viaje Soñado',
           debt: 'Libertad Financiera',
-          purchase: 'Mi Gran Compra'
+          purchase: 'Mi Gran Compra',
         };
         setGoalName(defaultNames[goalType]);
         setStep(3);
@@ -271,19 +292,24 @@ export default function OnboardingScreen() {
         console.log('Step 3 detectado, ejecutando handleCreateGoal...');
         await handleCreateGoal();
       } else {
-        console.log('Ninguna condición cumplida. Step:', step, 'GoalType:', goalType);
+        console.log(
+          'Ninguna condición cumplida. Step:',
+          step,
+          'GoalType:',
+          goalType
+        );
       }
     } catch (error) {
       console.error('Error en handleNext:', error);
       console.error('Stack trace:', error.stack);
     }
   };
-  
+
   const handleSkip = () => {
     // Si el usuario quiere saltar la creación de meta
     router.replace('/(tabs)');
   };
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -401,7 +427,7 @@ export default function OnboardingScreen() {
       backgroundColor: theme.surface,
     },
   });
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -417,55 +443,71 @@ export default function OnboardingScreen() {
               />
             ))}
           </View>
-          
+
           <View style={styles.header}>
             <Text style={styles.title}>
               {step === 1
                 ? '¡Bienvenido a Uruguahorra!'
                 : step === 2
-                ? '¿Cuál es tu meta?'
-                : 'Personaliza tu meta'}
+                  ? '¿Cuál es tu meta?'
+                  : 'Personaliza tu meta'}
             </Text>
             <Text style={styles.subtitle}>
               {step === 1
-                ? isNewUser 
+                ? isNewUser
                   ? 'Crea tu cuenta para comenzar a ahorrar'
                   : 'Inicia sesión para continuar'
                 : step === 2
-                ? 'Elige lo que más te motive'
-                : 'Define los detalles de tu objetivo'}
+                  ? 'Elige lo que más te motive'
+                  : 'Define los detalles de tu objetivo'}
             </Text>
           </View>
-          
+
           {step === 1 && (
             <>
               <View style={styles.toggleContainer}>
                 <TouchableOpacity
-                  style={[styles.toggleButton, isNewUser && styles.toggleButtonActive]}
+                  style={[
+                    styles.toggleButton,
+                    isNewUser && styles.toggleButtonActive,
+                  ]}
                   onPress={() => {
                     console.log('Cambiando a modo: Crear cuenta');
                     setIsNewUser(true);
                   }}
                   disabled={isLoading}
                 >
-                  <Text style={[styles.toggleText, isNewUser && styles.toggleTextActive]}>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      isNewUser && styles.toggleTextActive,
+                    ]}
+                  >
                     Crear cuenta
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.toggleButton, !isNewUser && styles.toggleButtonActive]}
+                  style={[
+                    styles.toggleButton,
+                    !isNewUser && styles.toggleButtonActive,
+                  ]}
                   onPress={() => {
                     console.log('Cambiando a modo: Ya tengo cuenta');
                     setIsNewUser(false);
                   }}
                   disabled={isLoading}
                 >
-                  <Text style={[styles.toggleText, !isNewUser && styles.toggleTextActive]}>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      !isNewUser && styles.toggleTextActive,
+                    ]}
+                  >
                     Ya tengo cuenta
                   </Text>
                 </TouchableOpacity>
               </View>
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Tu email"
@@ -476,7 +518,7 @@ export default function OnboardingScreen() {
                 autoCapitalize="none"
                 editable={!isLoading}
               />
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Contraseña (mínimo 6 caracteres)"
@@ -488,7 +530,7 @@ export default function OnboardingScreen() {
               />
             </>
           )}
-          
+
           {step === 2 && (
             <>
               {goalOptions.map((option) => (
@@ -513,7 +555,7 @@ export default function OnboardingScreen() {
               ))}
             </>
           )}
-          
+
           {step === 3 && (
             <>
               <TextInput
@@ -524,7 +566,7 @@ export default function OnboardingScreen() {
                 onChangeText={setGoalName}
                 editable={!isLoading}
               />
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Monto objetivo ($)"
@@ -534,7 +576,7 @@ export default function OnboardingScreen() {
                 keyboardType="numeric"
                 editable={!isLoading}
               />
-              
+
               <View style={styles.monthsContainer}>
                 <Text style={styles.monthsLabel}>Plazo:</Text>
                 <TextInput
@@ -546,17 +588,21 @@ export default function OnboardingScreen() {
                   keyboardType="numeric"
                   editable={!isLoading}
                 />
-                <Text style={[styles.monthsLabel, { marginLeft: 10 }]}>meses</Text>
+                <Text style={[styles.monthsLabel, { marginLeft: 10 }]}>
+                  meses
+                </Text>
               </View>
             </>
           )}
-          
+
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.primary} />
               <Text style={[styles.subtitle, { marginTop: 16 }]}>
-                {step === 1 
-                  ? isNewUser ? 'Creando tu cuenta...' : 'Iniciando sesión...'
+                {step === 1
+                  ? isNewUser
+                    ? 'Creando tu cuenta...'
+                    : 'Iniciando sesión...'
                   : 'Guardando tu meta...'}
               </Text>
             </View>
@@ -564,17 +610,19 @@ export default function OnboardingScreen() {
             <>
               <Button
                 title={
-                  step === 1 
-                    ? isNewUser ? 'Crear cuenta' : 'Iniciar sesión'
-                    : step === 3 
-                    ? 'Crear meta y comenzar' 
-                    : 'Continuar'
+                  step === 1
+                    ? isNewUser
+                      ? 'Crear cuenta'
+                      : 'Iniciar sesión'
+                    : step === 3
+                      ? 'Crear meta y comenzar'
+                      : 'Continuar'
                 }
                 onPress={handleNext}
                 size="large"
                 style={{ marginTop: 32 }}
               />
-              
+
               {step === 3 && (
                 <Button
                   title="Omitir por ahora"

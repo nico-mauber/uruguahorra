@@ -15,52 +15,42 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading, checkSession } = useAuthStore();
 
   useEffect(() => {
-    logger.start(LogModule.NAV, 'RootLayout montado, verificando autenticación inicial');
-    
-    // Verificar si hay una sesión activa
-    const initializeApp = async () => {
-      await checkSession();
-      logger.end(LogModule.NAV, 'Verificación de sesión inicial completada');
-    };
-    
-    initializeApp();
-  }, []);
+    logger.info(
+      LogModule.NAV,
+      'RootLayout iniciado, verificando autenticación'
+    );
+    checkSession();
+  }, [checkSession]);
 
   useEffect(() => {
-    logger.debug(LogModule.NAV, 'Estado de autenticación cambió', {
-      isAuthenticated,
-      isLoading,
-      currentSegment: segments[0]
-    });
-    
-    if (!isLoading) {
-      // Verificar si estamos en el grupo correcto
-      const inAuthGroup = segments[0] === '(auth)';
-      const inTabsGroup = segments[0] === '(tabs)';
-      
-      // Rutas modales permitidas para usuarios autenticados
-      const modalRoutes = ['create-goal', 'import-csv', 'paywall'];
-      const isModalRoute = modalRoutes.includes(segments[0]);
-      
-      if (isAuthenticated && !inTabsGroup && !isModalRoute) {
-        logger.info(LogModule.NAV, 'Usuario autenticado, navegando a tabs');
-        router.replace('/(tabs)');
-      } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
-        logger.info(LogModule.NAV, 'Usuario no autenticado, navegando a onboarding');
-        router.replace('/(auth)/onboarding');
-      }
+    if (isLoading) return;
+
+    const currentRoute = segments[0];
+    const inAuthGroup = currentRoute === '(auth)';
+    const inTabsGroup = currentRoute === '(tabs)';
+    const modalRoutes = ['create-goal', 'import-csv', 'paywall'];
+    const isModalRoute = modalRoutes.includes(currentRoute);
+
+    if (isAuthenticated && !inTabsGroup && !isModalRoute) {
+      logger.info(LogModule.NAV, 'Redirigiendo a tabs');
+      router.replace('/(tabs)');
+    } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
+      logger.info(LogModule.NAV, 'Redirigiendo a onboarding');
+      router.replace('/(auth)/onboarding');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, router]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
     return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: theme.background 
-      }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: theme.background,
+        }}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );

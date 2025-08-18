@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from '@components';
 import { useTheme } from '@theme';
@@ -19,7 +25,7 @@ interface Challenge {
 export default function ChallengesScreen() {
   const { theme } = useTheme();
   const { updateUserXP } = useAuthStore();
-  
+
   const [challenges, setChallenges] = React.useState<Challenge[]>([
     {
       id: '1',
@@ -58,19 +64,17 @@ export default function ChallengesScreen() {
       icon: 'trending-up',
     },
   ]);
-  
+
   const handleCompleteChallenge = (challengeId: string) => {
     const challenge = challenges.find((c) => c.id === challengeId);
     if (challenge && !challenge.completed) {
       setChallenges((prev) =>
-        prev.map((c) =>
-          c.id === challengeId ? { ...c, completed: true } : c
-        )
+        prev.map((c) => (c.id === challengeId ? { ...c, completed: true } : c))
       );
       updateUserXP(challenge.points);
     }
   };
-  
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'daily':
@@ -83,7 +87,7 @@ export default function ChallengesScreen() {
         return theme.primary;
     }
   };
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -184,7 +188,7 @@ export default function ChallengesScreen() {
       color: theme.textSecondary,
     },
   });
-  
+
   const dailyChallenges = challenges.filter((c) => c.type === 'daily');
   const weeklyChallenges = challenges.filter((c) => c.type === 'weekly');
   const specialChallenges = challenges.filter((c) => c.type === 'special');
@@ -192,7 +196,7 @@ export default function ChallengesScreen() {
   const totalPoints = challenges
     .filter((c) => c.completed)
     .reduce((sum, c) => sum + c.points, 0);
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -200,7 +204,7 @@ export default function ChallengesScreen() {
           <Text style={styles.title}>Retos</Text>
           <Text style={styles.subtitle}>Completa retos y gana XP</Text>
         </View>
-        
+
         <Card style={styles.progressCard}>
           <View style={styles.progressContent}>
             <View style={styles.progressItem}>
@@ -212,12 +216,14 @@ export default function ChallengesScreen() {
               <Text style={styles.progressLabel}>XP ganados</Text>
             </View>
             <View style={styles.progressItem}>
-              <Text style={styles.progressValue}>{challenges.length - completedCount}</Text>
+              <Text style={styles.progressValue}>
+                {challenges.length - completedCount}
+              </Text>
               <Text style={styles.progressLabel}>Pendientes</Text>
             </View>
           </View>
         </Card>
-        
+
         {dailyChallenges.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Retos diarios</Text>
@@ -247,7 +253,9 @@ export default function ChallengesScreen() {
                     <Text style={styles.challengeDescription}>
                       {challenge.description}
                     </Text>
-                    <Text style={styles.challengePoints}>+{challenge.points} XP</Text>
+                    <Text style={styles.challengePoints}>
+                      +{challenge.points} XP
+                    </Text>
                   </View>
                   {challenge.completed ? (
                     <View style={styles.completedBadge}>
@@ -265,7 +273,7 @@ export default function ChallengesScreen() {
             ))}
           </View>
         )}
-        
+
         {weeklyChallenges.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Retos semanales</Text>
@@ -295,7 +303,9 @@ export default function ChallengesScreen() {
                     <Text style={styles.challengeDescription}>
                       {challenge.description}
                     </Text>
-                    <Text style={styles.challengePoints}>+{challenge.points} XP</Text>
+                    <Text style={styles.challengePoints}>
+                      +{challenge.points} XP
+                    </Text>
                   </View>
                   {challenge.completed ? (
                     <View style={styles.completedBadge}>
@@ -313,7 +323,7 @@ export default function ChallengesScreen() {
             ))}
           </View>
         )}
-        
+
         {specialChallenges.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Retos especiales</Text>
@@ -343,7 +353,9 @@ export default function ChallengesScreen() {
                     <Text style={styles.challengeDescription}>
                       {challenge.description}
                     </Text>
-                    <Text style={styles.challengePoints}>+{challenge.points} XP</Text>
+                    <Text style={styles.challengePoints}>
+                      +{challenge.points} XP
+                    </Text>
                   </View>
                   {challenge.completed ? (
                     <View style={styles.completedBadge}>

@@ -26,7 +26,9 @@ export const Card: React.FC<CardProps> = ({
       borderWidth: variant === 'outlined' ? 1 : 0,
       shadowColor: variant === 'elevated' && !isDark ? '#000' : 'transparent',
       shadowOffset:
-        variant === 'elevated' ? { width: 0, height: 2 } : { width: 0, height: 0 },
+        variant === 'elevated'
+          ? { width: 0, height: 2 }
+          : { width: 0, height: 0 },
       shadowOpacity: variant === 'elevated' && !isDark ? 0.1 : 0,
       shadowRadius: variant === 'elevated' ? 8 : 0,
       elevation: variant === 'elevated' && !isDark ? 4 : 0,

@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from '@components';
 import { useTheme } from '@theme';
@@ -19,19 +25,42 @@ interface LeaderboardEntry {
 export default function LeaderboardScreen() {
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  
-  const [activeTab, setActiveTab] = React.useState<'friends' | 'global'>('friends');
-  
+
+  const [activeTab, setActiveTab] = React.useState<'friends' | 'global'>(
+    'friends'
+  );
+
   const mockLeaderboard: LeaderboardEntry[] = [
-    { id: '1', name: 'María G.', level: 12, totalXP: 2450, streak: 45, rank: 1 },
-    { id: '2', name: 'Carlos R.', level: 10, totalXP: 1890, streak: 30, rank: 2 },
+    {
+      id: '1',
+      name: 'María G.',
+      level: 12,
+      totalXP: 2450,
+      streak: 45,
+      rank: 1,
+    },
+    {
+      id: '2',
+      name: 'Carlos R.',
+      level: 10,
+      totalXP: 1890,
+      streak: 30,
+      rank: 2,
+    },
     { id: '3', name: 'Ana L.', level: 9, totalXP: 1650, streak: 22, rank: 3 },
-    { id: '4', name: 'Tú', level: user?.level || 1, totalXP: user?.totalXP || 0, streak: user?.streak || 0, rank: 4 },
+    {
+      id: '4',
+      name: 'Tú',
+      level: user?.level || 1,
+      totalXP: user?.totalXP || 0,
+      streak: user?.streak || 0,
+      rank: 4,
+    },
     { id: '5', name: 'Pedro M.', level: 7, totalXP: 1200, streak: 15, rank: 5 },
     { id: '6', name: 'Laura S.', level: 6, totalXP: 980, streak: 10, rank: 6 },
     { id: '7', name: 'Diego F.', level: 5, totalXP: 750, streak: 7, rank: 7 },
   ];
-  
+
   const getRankColor = (rank: number) => {
     switch (rank) {
       case 1:
@@ -44,7 +73,7 @@ export default function LeaderboardScreen() {
         return theme.textSecondary;
     }
   };
-  
+
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
@@ -57,7 +86,7 @@ export default function LeaderboardScreen() {
         return null;
     }
   };
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -203,10 +232,10 @@ export default function LeaderboardScreen() {
       borderWidth: 2,
     },
   });
-  
+
   const topThree = mockLeaderboard.slice(0, 3);
   const restOfLeaderboard = mockLeaderboard.slice(3);
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -214,7 +243,7 @@ export default function LeaderboardScreen() {
           <Text style={styles.title}>Ranking</Text>
           <Text style={styles.subtitle}>Compite con tus amigos</Text>
         </View>
-        
+
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
@@ -243,7 +272,7 @@ export default function LeaderboardScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.podiumContainer}>
           {/* Second place */}
           <View style={styles.podiumItem}>
@@ -259,7 +288,7 @@ export default function LeaderboardScreen() {
             <Text style={styles.podiumXP}>{topThree[1].totalXP} XP</Text>
             <View style={[styles.podiumBar, { height: 80 }]} />
           </View>
-          
+
           {/* First place */}
           <View style={styles.podiumItem}>
             <View
@@ -274,7 +303,7 @@ export default function LeaderboardScreen() {
             <Text style={styles.podiumXP}>{topThree[0].totalXP} XP</Text>
             <View style={[styles.podiumBar, { height: 100 }]} />
           </View>
-          
+
           {/* Third place */}
           <View style={styles.podiumItem}>
             <View
@@ -290,7 +319,7 @@ export default function LeaderboardScreen() {
             <View style={[styles.podiumBar, { height: 60 }]} />
           </View>
         </View>
-        
+
         {restOfLeaderboard.map((entry) => (
           <Card
             key={entry.id}
@@ -309,21 +338,20 @@ export default function LeaderboardScreen() {
                   />
                 ) : (
                   <Text
-                    style={[styles.rankNumber, { color: getRankColor(entry.rank) }]}
+                    style={[
+                      styles.rankNumber,
+                      { color: getRankColor(entry.rank) },
+                    ]}
                   >
                     {entry.rank}
                   </Text>
                 )}
               </View>
-              
+
               <View style={styles.avatar}>
-                <Ionicons
-                  name="person"
-                  size={24}
-                  color={theme.textSecondary}
-                />
+                <Ionicons name="person" size={24} color={theme.textSecondary} />
               </View>
-              
+
               <View style={styles.entryInfo}>
                 <Text style={styles.entryName}>{entry.name}</Text>
                 <View style={styles.entryStats}>
@@ -337,7 +365,7 @@ export default function LeaderboardScreen() {
                   </View>
                 </View>
               </View>
-              
+
               <View style={styles.entryXP}>
                 <Text style={styles.xpValue}>{entry.totalXP}</Text>
                 <Text style={styles.xpLabel}>XP</Text>

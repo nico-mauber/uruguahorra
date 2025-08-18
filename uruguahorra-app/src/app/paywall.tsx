@@ -11,9 +11,11 @@ export default function PaywallScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { user } = useAuthStore();
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>(
+    'annual'
+  );
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const handleSubscribe = async () => {
     setIsLoading(true);
     // Simulación de proceso de pago
@@ -26,16 +28,40 @@ export default function PaywallScreen() {
       );
     }, 2000);
   };
-  
+
   const features = [
-    { icon: 'infinite', title: 'Metas ilimitadas', description: 'Crea todas las metas que necesites' },
-    { icon: 'analytics', title: 'Reportes avanzados', description: 'Análisis detallado de tus gastos' },
-    { icon: 'people', title: 'Pods de ahorro', description: 'Ahorra en grupo con amigos' },
-    { icon: 'school', title: 'Contenido educativo completo', description: 'Acceso a todos los cursos' },
-    { icon: 'cloud-upload', title: 'Importaciones ilimitadas', description: 'Sube todos tus CSV' },
-    { icon: 'flash', title: 'Retos exclusivos', description: 'Desafíos especiales con más XP' },
+    {
+      icon: 'infinite',
+      title: 'Metas ilimitadas',
+      description: 'Crea todas las metas que necesites',
+    },
+    {
+      icon: 'analytics',
+      title: 'Reportes avanzados',
+      description: 'Análisis detallado de tus gastos',
+    },
+    {
+      icon: 'people',
+      title: 'Pods de ahorro',
+      description: 'Ahorra en grupo con amigos',
+    },
+    {
+      icon: 'school',
+      title: 'Contenido educativo completo',
+      description: 'Acceso a todos los cursos',
+    },
+    {
+      icon: 'cloud-upload',
+      title: 'Importaciones ilimitadas',
+      description: 'Sube todos tus CSV',
+    },
+    {
+      icon: 'flash',
+      title: 'Retos exclusivos',
+      description: 'Desafíos especiales con más XP',
+    },
   ];
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -184,7 +210,7 @@ export default function PaywallScreen() {
       fontWeight: '600',
     },
   });
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -197,13 +223,13 @@ export default function PaywallScreen() {
             Lleva tu ahorro al siguiente nivel con funciones exclusivas
           </Text>
         </View>
-        
+
         {user?.premium && (
           <View style={styles.currentPlanBadge}>
             <Text style={styles.currentPlanText}>Ya eres Premium</Text>
           </View>
         )}
-        
+
         <View style={styles.plansContainer}>
           <Card
             style={[
@@ -218,16 +244,14 @@ export default function PaywallScreen() {
                 <Text style={styles.planPrice}>
                   $39.99<Text style={styles.planPeriod}>/año</Text>
                 </Text>
-                <Text style={styles.planDescription}>
-                  Equivale a $3.33/mes
-                </Text>
+                <Text style={styles.planDescription}>Equivale a $3.33/mes</Text>
               </View>
               <View style={styles.savingBadge}>
                 <Text style={styles.savingText}>Ahorra 33%</Text>
               </View>
             </View>
           </Card>
-          
+
           <Card
             style={[
               styles.planCard,
@@ -248,7 +272,7 @@ export default function PaywallScreen() {
             </View>
           </Card>
         </View>
-        
+
         <View style={styles.featuresSection}>
           <Text style={styles.sectionTitle}>Todo lo que incluye Premium</Text>
           {features.map((feature, index) => (
@@ -262,12 +286,14 @@ export default function PaywallScreen() {
               </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
+                <Text style={styles.featureDescription}>
+                  {feature.description}
+                </Text>
               </View>
             </View>
           ))}
         </View>
-        
+
         <Button
           title={
             selectedPlan === 'annual'
@@ -279,7 +305,7 @@ export default function PaywallScreen() {
           onPress={handleSubscribe}
           disabled={user?.premium}
         />
-        
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Puedes cancelar en cualquier momento desde tu perfil.{'\n'}

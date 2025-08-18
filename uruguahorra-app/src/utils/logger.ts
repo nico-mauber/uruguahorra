@@ -22,10 +22,11 @@ export enum LogModule {
   SYNC = 'SYNC',
 }
 
-// Configuración de desarrollo - en producción podría ser INFO o WARN
-const CURRENT_LOG_LEVEL = LogLevel.DEBUG;
-const ENABLE_TIMESTAMPS = true;
-const ENABLE_COLORS = true;
+// Configuración dinámica basada en entorno
+const isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
+const CURRENT_LOG_LEVEL = isDevelopment ? LogLevel.DEBUG : LogLevel.WARN;
+const ENABLE_TIMESTAMPS = isDevelopment;
+const ENABLE_COLORS = isDevelopment;
 
 // Colores para la consola (funcionan en navegadores modernos)
 const colors = {
@@ -123,21 +124,34 @@ class Logger {
     const levelColor = this.getLevelColor(level);
     const levelName = LogLevel[level];
     const emojiStr = emoji ? `${emoji} ` : '';
-    
+
     let formattedMsg = `${timestamp} ${moduleColor}[${module}]${colors.reset} ${levelColor}${emojiStr}${levelName}:${colors.reset} ${message}`;
-    
+
     if (data !== undefined) {
-      formattedMsg += '\n' + colors.dim + JSON.stringify(data, null, 2) + colors.reset;
+      formattedMsg +=
+        '\n' + colors.dim + JSON.stringify(data, null, 2) + colors.reset;
     }
-    
+
     return formattedMsg;
   }
 
-  private log(level: LogLevel, module: LogModule, message: string, emoji?: string, data?: any) {
+  private log(
+    level: LogLevel,
+    module: LogModule,
+    message: string,
+    emoji?: string,
+    data?: any
+  ) {
     if (level < CURRENT_LOG_LEVEL) return;
 
-    const formattedMessage = this.formatMessage(level, module, message, emoji, data);
-    
+    const formattedMessage = this.formatMessage(
+      level,
+      module,
+      message,
+      emoji,
+      data
+    );
+
     switch (level) {
       case LogLevel.ERROR:
         console.error(formattedMessage);

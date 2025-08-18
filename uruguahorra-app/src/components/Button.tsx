@@ -34,8 +34,8 @@ export const Button: React.FC<ButtonProps> = ({
         variant === 'primary'
           ? theme.primary
           : variant === 'secondary'
-          ? theme.secondary
-          : 'transparent',
+            ? theme.secondary
+            : 'transparent',
       borderColor: variant === 'outline' ? theme.primary : 'transparent',
       borderWidth: variant === 'outline' ? 1 : 0,
       opacity: disabled || loading ? 0.6 : 1,
@@ -51,8 +51,8 @@ export const Button: React.FC<ButtonProps> = ({
         variant === 'outline'
           ? theme.primary
           : variant === 'primary'
-          ? '#FFFFFF'
-          : '#FFFFFF',
+            ? '#FFFFFF'
+            : '#FFFFFF',
     },
   ];
 

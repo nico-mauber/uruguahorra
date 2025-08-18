@@ -6,7 +6,8 @@ type Goal = Database['public']['Tables']['goals']['Row'];
 type GoalInsert = Database['public']['Tables']['goals']['Insert'];
 type GoalUpdate = Database['public']['Tables']['goals']['Update'];
 type Contribution = Database['public']['Tables']['micro_contributions']['Row'];
-type ContributionInsert = Database['public']['Tables']['micro_contributions']['Insert'];
+type ContributionInsert =
+  Database['public']['Tables']['micro_contributions']['Insert'];
 
 export class GoalsService {
   /**
@@ -14,8 +15,12 @@ export class GoalsService {
    */
   static async getUserGoals(userId: string): Promise<Goal[]> {
     try {
-      logger.database(LogModule.GOALS, 'Obteniendo todas las metas del usuario', { userId });
-      
+      logger.database(
+        LogModule.GOALS,
+        'Obteniendo todas las metas del usuario',
+        { userId }
+      );
+
       const { data, error } = await supabase
         .from('goals')
         .select('*')
@@ -26,7 +31,7 @@ export class GoalsService {
         logger.error(LogModule.GOALS, 'Error obteniendo metas', error);
         throw error;
       }
-      
+
       logger.success(LogModule.GOALS, `${data?.length || 0} metas obtenidas`);
       return data || [];
     } catch (error) {
@@ -80,7 +85,7 @@ export class GoalsService {
   static async createGoal(goal: GoalInsert): Promise<Goal> {
     try {
       logger.start(LogModule.GOALS, 'Creando nueva meta', goal);
-      
+
       const { data, error } = await supabase
         .from('goals')
         .insert(goal)
@@ -91,20 +96,20 @@ export class GoalsService {
         logger.error(LogModule.DB, 'Error de Supabase al crear meta', {
           code: error.code,
           message: error.message,
-          details: error.details
+          details: error.details,
         });
         throw error;
       }
-      
+
       logger.success(LogModule.GOALS, 'Meta creada exitosamente', {
         goalId: data.id,
-        goalName: data.name
+        goalName: data.name,
       });
       return data;
     } catch (error: any) {
       logger.error(LogModule.GOALS, 'Error fatal creando meta', {
         type: error.constructor.name,
-        message: error.message
+        message: error.message,
       });
       throw error;
     }
@@ -150,14 +155,16 @@ export class GoalsService {
   /**
    * Agregar contribución a una meta
    */
-  static async addContribution(contribution: ContributionInsert): Promise<Contribution> {
+  static async addContribution(
+    contribution: ContributionInsert
+  ): Promise<Contribution> {
     try {
       logger.start(LogModule.GOALS, 'Agregando contribución', {
         amount: contribution.amount,
         goalId: contribution.goal_id,
-        source: contribution.source
+        source: contribution.source,
       });
-      
+
       // 1. Insertar la contribución
       const { data: newContribution, error: contributionError } = await supabase
         .from('micro_contributions')
@@ -166,7 +173,11 @@ export class GoalsService {
         .single();
 
       if (contributionError) {
-        logger.error(LogModule.DB, 'Error insertando contribución', contributionError);
+        logger.error(
+          LogModule.DB,
+          'Error insertando contribución',
+          contributionError
+        );
         throw contributionError;
       }
 
@@ -180,10 +191,10 @@ export class GoalsService {
       if (goalError) throw goalError;
 
       const newSavedAmount = (goal.saved_amount || 0) + contribution.amount;
-      
+
       logger.sync(LogModule.GOALS, 'Actualizando monto ahorrado', {
         oldAmount: goal.saved_amount,
-        newAmount: newSavedAmount
+        newAmount: newSavedAmount,
       });
 
       const { error: updateError } = await supabase
@@ -192,13 +203,17 @@ export class GoalsService {
         .eq('id', contribution.goal_id);
 
       if (updateError) {
-        logger.error(LogModule.DB, 'Error actualizando monto de meta', updateError);
+        logger.error(
+          LogModule.DB,
+          'Error actualizando monto de meta',
+          updateError
+        );
         throw updateError;
       }
-      
+
       logger.success(LogModule.GOALS, 'Contribución agregada exitosamente', {
         contributionId: newContribution.id,
-        newTotal: newSavedAmount
+        newTotal: newSavedAmount,
       });
 
       return newContribution;
@@ -230,7 +245,10 @@ export class GoalsService {
   /**
    * Obtener todas las contribuciones del usuario
    */
-  static async getUserContributions(userId: string, limit = 50): Promise<Contribution[]> {
+  static async getUserContributions(
+    userId: string,
+    limit = 50
+  ): Promise<Contribution[]> {
     try {
       const { data, error } = await supabase
         .from('micro_contributions')
@@ -280,7 +298,8 @@ export class GoalsService {
 
       if (goalsError) throw goalsError;
 
-      const totalSaved = goals?.reduce((sum, goal) => sum + (goal.saved_amount || 0), 0) || 0;
+      const totalSaved =
+        goals?.reduce((sum, goal) => sum + (goal.saved_amount || 0), 0) || 0;
 
       // Obtener contribuciones del último mes
       const lastMonth = new Date();
@@ -294,7 +313,11 @@ export class GoalsService {
 
       if (contribError) throw contribError;
 
-      const monthlySaved = recentContributions?.reduce((sum, contrib) => sum + contrib.amount, 0) || 0;
+      const monthlySaved =
+        recentContributions?.reduce(
+          (sum, contrib) => sum + contrib.amount,
+          0
+        ) || 0;
 
       // Obtener número de metas activas
       const { count: activeGoalsCount, error: countError } = await supabase
@@ -309,8 +332,8 @@ export class GoalsService {
         totalSaved,
         monthlySaved,
         activeGoalsCount: activeGoalsCount || 0,
-        averageContribution: recentContributions?.length 
-          ? monthlySaved / recentContributions.length 
+        averageContribution: recentContributions?.length
+          ? monthlySaved / recentContributions.length
           : 0,
       };
     } catch (error) {

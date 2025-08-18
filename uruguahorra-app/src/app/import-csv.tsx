@@ -11,7 +11,7 @@ export default function ImportCSVScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
-  
+
   const handleSelectFile = async () => {
     // Simulación de selección de archivo
     // En producción, usar expo-document-picker
@@ -21,13 +21,13 @@ export default function ImportCSVScreen() {
       setIsLoading(false);
     }, 1000);
   };
-  
+
   const handleImport = async () => {
     if (!fileName) {
       Alert.alert('Error', 'Por favor selecciona un archivo primero');
       return;
     }
-    
+
     setIsLoading(true);
     // Simulación de procesamiento
     setTimeout(() => {
@@ -39,7 +39,7 @@ export default function ImportCSVScreen() {
       );
     }, 2000);
   };
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -156,17 +156,18 @@ export default function ImportCSVScreen() {
       marginTop: 32,
     },
   });
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Importar movimientos</Text>
           <Text style={styles.subtitle}>
-            Carga tu archivo CSV con tus gastos para analizarlos y categorizar tus ahorros automáticamente.
+            Carga tu archivo CSV con tus gastos para analizarlos y categorizar
+            tus ahorros automáticamente.
           </Text>
         </View>
-        
+
         <Card
           style={[styles.uploadCard, fileName && styles.selectedFile]}
           onTouchEnd={handleSelectFile}
@@ -178,13 +179,15 @@ export default function ImportCSVScreen() {
             style={styles.uploadIcon}
           />
           <Text style={styles.uploadText}>
-            {fileName ? 'Archivo seleccionado' : 'Toca para seleccionar archivo'}
+            {fileName
+              ? 'Archivo seleccionado'
+              : 'Toca para seleccionar archivo'}
           </Text>
           <Text style={styles.uploadHint}>
             {fileName ? fileName : 'Formato CSV, máximo 10MB'}
           </Text>
         </Card>
-        
+
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>Formato esperado</Text>
           <View style={styles.infoItem}>
@@ -217,18 +220,25 @@ export default function ImportCSVScreen() {
               style={styles.infoIcon}
             />
             <Text style={styles.infoText}>
-              Los datos se procesan localmente, no se envían a servidores externos
+              Los datos se procesan localmente, no se envían a servidores
+              externos
             </Text>
           </View>
         </View>
-        
+
         <Card style={styles.exampleCard}>
           <Text style={styles.exampleTitle}>Ejemplo de formato</Text>
           <View style={styles.exampleTable}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableCell, styles.tableHeaderCell]}>Fecha</Text>
-              <Text style={[styles.tableCell, styles.tableHeaderCell]}>Descripción</Text>
-              <Text style={[styles.tableCell, styles.tableHeaderCell]}>Monto</Text>
+              <Text style={[styles.tableCell, styles.tableHeaderCell]}>
+                Fecha
+              </Text>
+              <Text style={[styles.tableCell, styles.tableHeaderCell]}>
+                Descripción
+              </Text>
+              <Text style={[styles.tableCell, styles.tableHeaderCell]}>
+                Monto
+              </Text>
             </View>
             <View style={styles.tableRow}>
               <Text style={styles.tableCell}>2024-11-15</Text>
@@ -247,7 +257,7 @@ export default function ImportCSVScreen() {
             </View>
           </View>
         </Card>
-        
+
         <View style={styles.buttonContainer}>
           <Button
             title="Importar archivo"

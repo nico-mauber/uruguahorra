@@ -1,28 +1,35 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Card, Button, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
-import { useThemeStore } from '@store/useThemeStore';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { themeMode } = useThemeStore();
-  
+
   const handleLogout = () => {
     logout();
     router.replace('/(auth)/onboarding');
   };
-  
+
   const nextLevelXP = Math.pow((user?.level || 1) + 1, 2) * 4;
   const currentLevelXP = Math.pow(user?.level || 1, 2) * 4;
-  const progressToNextLevel = ((user?.totalXP || 0) - currentLevelXP) / (nextLevelXP - currentLevelXP) * 100;
-  
+  const progressToNextLevel =
+    (((user?.totalXP || 0) - currentLevelXP) / (nextLevelXP - currentLevelXP)) *
+    100;
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -142,7 +149,7 @@ export default function ProfileScreen() {
       fontWeight: '600',
     },
   });
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -150,10 +157,12 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Ionicons name="person" size={48} color={theme.primary} />
           </View>
-          <Text style={styles.name}>{user?.email?.split('@')[0] || 'Usuario'}</Text>
+          <Text style={styles.name}>
+            {user?.email?.split('@')[0] || 'Usuario'}
+          </Text>
           <Text style={styles.email}>{user?.email || 'email@ejemplo.com'}</Text>
         </View>
-        
+
         <Card style={styles.levelCard}>
           <View style={styles.levelHeader}>
             <Text style={styles.levelText}>Nivel {user?.level || 1}</Text>
@@ -167,7 +176,7 @@ export default function ProfileScreen() {
             color={theme.primary}
           />
         </Card>
-        
+
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Card>
@@ -202,7 +211,7 @@ export default function ProfileScreen() {
             </Card>
           </View>
         </View>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Configuración</Text>
           <Card>
@@ -217,7 +226,7 @@ export default function ProfileScreen() {
             </View>
           </Card>
         </View>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cuenta</Text>
           <Card padding="none">
@@ -243,7 +252,7 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.menuItem}>
               <Ionicons
                 name="notifications"
@@ -258,7 +267,7 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.menuItem}>
               <Ionicons
                 name="shield-checkmark"
@@ -273,7 +282,7 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.menuItem}>
               <Ionicons
                 name="help-circle"
@@ -290,7 +299,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </Card>
         </View>
-        
+
         <Button
           title="Cerrar sesión"
           variant="outline"

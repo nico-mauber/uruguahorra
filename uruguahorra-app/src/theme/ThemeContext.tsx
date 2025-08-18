@@ -1,14 +1,16 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { colors } from './colors';
-import { useThemeStore } from '@store/useThemeStore';
 
 type Theme = typeof colors.light;
+type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
+  themeMode: ThemeMode;
   toggleTheme: () => void;
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -17,7 +19,22 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const systemColorScheme = useColorScheme();
-  const { themeMode, toggleTheme } = useThemeStore();
+  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+
+  const toggleTheme = () => {
+    setThemeMode((current) => {
+      switch (current) {
+        case 'light':
+          return 'dark';
+        case 'dark':
+          return 'system';
+        case 'system':
+          return 'light';
+        default:
+          return 'light';
+      }
+    });
+  };
 
   const isDark =
     themeMode === 'dark' ||
@@ -26,7 +43,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   const theme = isDark ? colors.dark : colors.light;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ theme, isDark, themeMode, toggleTheme, setThemeMode }}
+    >
       {children}
     </ThemeContext.Provider>
   );

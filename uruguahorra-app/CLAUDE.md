@@ -38,17 +38,21 @@ eas build --platform ios      # Build iOS IPA
 - **Supabase Client**: `src/lib/supabase.ts` - Configured with project credentials
 - **Auth Service**: `src/services/auth.service.ts` - User authentication
 - **Goals Service**: `src/services/goals.service.ts` - CRUD operations for savings goals
-- **Zustand Stores**: `useAuthStore`, `useGoalsStore`, `useThemeStore` - Global state management
+- **Zustand Stores**: `useAuthStore`, `useGoalsStore` - Global state management (theme managed via Context API)
 
 ### Database Schema
 The app uses Supabase with 13 tables including:
 - `users` - User profiles with gamification stats (XP, level, streaks)
-- `goals` - Savings goals with progress tracking
-- `challenges` - Weekly gamified challenges
-- `micro_contributions` - Individual savings entries
+- `goals` - Savings goals with category-specific fields and progress tracking
+- `challenges` - Gamified challenges for motivation
+- `micro_contributions` - Individual savings entries with multiple sources
 - `squads` - Social groups for competition
+- `learnings` - Educational content with gamification
+- `subscriptions` - Premium user management
+- `transactions_raw` - Imported financial data
+- Additional tables for user progress, audit logs, and paywall events
 
-All tables have Row Level Security (RLS) enabled. Initial migration in `supabase/migrations/001_initial_schema.sql`.
+All tables have optimized RLS policies. **UNIFIED MIGRATION**: Use `supabase/master_database_schema.sql` - single file that creates the complete database from scratch.
 
 ## Development Workflow
 

@@ -8,10 +8,17 @@ export class AuthService {
   /**
    * Registrar nuevo usuario
    */
-  static async signUp(email: string, password: string, metadata?: { country?: string; currency?: string }) {
+  static async signUp(
+    email: string,
+    password: string,
+    metadata?: { country?: string; currency?: string }
+  ) {
     try {
-      logger.start(LogModule.AUTH, `Iniciando registro de nuevo usuario`, { email, metadata });
-      
+      logger.start(LogModule.AUTH, `Iniciando registro de nuevo usuario`, {
+        email,
+        metadata,
+      });
+
       // 1. Crear cuenta en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -22,18 +29,22 @@ export class AuthService {
       });
 
       if (authError) {
-        logger.error(LogModule.AUTH, 'Error al crear usuario en Supabase Auth', authError);
+        logger.error(
+          LogModule.AUTH,
+          'Error al crear usuario en Supabase Auth',
+          authError
+        );
         throw authError;
       }
-      
+
       if (!authData.user) {
         throw new Error('No se pudo crear el usuario');
       }
-      
+
       logger.success(LogModule.AUTH, 'Usuario creado en Auth exitosamente', {
         userId: authData.user.id,
         email: authData.user.email,
-        sessionCreated: !!authData.session
+        sessionCreated: !!authData.session,
       });
 
       // 2. Si tenemos sesión, establecerla inmediatamente
@@ -47,65 +58,11 @@ export class AuthService {
       }
 
       // 3. Esperar un momento para que el trigger se ejecute (si existe)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // 4. Verificar si el perfil existe en la tabla users
-      logger.database(LogModule.DB, 'Verificando si el perfil fue creado por el trigger');
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .maybeSingle();
-      
-      if (checkError) {
-        logger.warn(LogModule.DB, 'Error verificando perfil existente', checkError);
-      }
-      
-      // 5. Si no existe el perfil, crearlo manualmente (RLS está desactivado)
-      if (!existingProfile) {
-        logger.info(LogModule.DB, 'Perfil no encontrado, creando manualmente');
-        
-        const profileData = {
-          id: authData.user.id,
-          email: authData.user.email!,
-          country: metadata?.country || 'UY',
-          currency: metadata?.currency || 'UYU',
-          premium: false,
-        };
-        
-        const { data: newProfile, error: profileError } = await supabase
-          .from('users')
-          .insert(profileData)
-          .select()
-          .single();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        if (profileError) {
-          if (profileError.code === '23505') {
-            logger.info(LogModule.DB, 'Perfil ya existía (creado por trigger)');
-          } else {
-            logger.warn(LogModule.DB, 'Error no crítico al crear perfil', profileError);
-          }
-        } else {
-          logger.success(LogModule.DB, 'Perfil creado exitosamente', newProfile);
-        }
-      } else {
-        logger.info(LogModule.DB, 'Perfil encontrado (creado por trigger)', existingProfile);
-        
-        // Actualizar metadata si es necesario
-        if (metadata) {
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({
-              country: metadata.country || existingProfile.country,
-              currency: metadata.currency || existingProfile.currency,
-            })
-            .eq('id', authData.user.id);
-            
-          if (updateError) {
-            console.warn('Error actualizando metadata del perfil:', updateError);
-          }
-        }
-      }
+      // 4. El perfil se crea automáticamente por trigger
+      // Esperar a que el trigger termine de procesar
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       logger.end(LogModule.AUTH, 'Registro completado exitosamente');
       return { user: authData.user, session: authData.session };
@@ -121,7 +78,7 @@ export class AuthService {
   static async signIn(email: string, password: string) {
     try {
       logger.start(LogModule.AUTH, 'Iniciando sesión', { email });
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -134,9 +91,9 @@ export class AuthService {
 
       logger.success(LogModule.AUTH, 'Sesión iniciada exitosamente', {
         userId: data.user?.id,
-        email: data.user?.email
+        email: data.user?.email,
       });
-      
+
       return { user: data.user, session: data.session };
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en signIn', error);
@@ -150,13 +107,13 @@ export class AuthService {
   static async signOut() {
     try {
       logger.info(LogModule.AUTH, 'Cerrando sesión de usuario');
-      
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         logger.error(LogModule.AUTH, 'Error al cerrar sesión', error);
         throw error;
       }
-      
+
       logger.success(LogModule.AUTH, 'Sesión cerrada exitosamente');
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en signOut', error);
@@ -170,18 +127,18 @@ export class AuthService {
   static async getSession() {
     try {
       logger.debug(LogModule.AUTH, 'Obteniendo sesión actual');
-      
+
       const { data, error } = await supabase.auth.getSession();
       if (error) {
         logger.warn(LogModule.AUTH, 'Error obteniendo sesión', error);
         throw error;
       }
-      
+
       logger.debug(LogModule.AUTH, 'Sesión obtenida', {
         hasSession: !!data.session,
-        userId: data.session?.user?.id
+        userId: data.session?.user?.id,
       });
-      
+
       return data.session;
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error obteniendo sesión', error);
@@ -195,18 +152,21 @@ export class AuthService {
   static async getCurrentUser() {
     try {
       logger.debug(LogModule.AUTH, 'Obteniendo usuario actual');
-      
-      const { data: { user }, error } = await supabase.auth.getUser();
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
       if (error) {
         logger.warn(LogModule.AUTH, 'Error obteniendo usuario', error);
         throw error;
       }
-      
+
       logger.debug(LogModule.AUTH, 'Usuario obtenido', {
         userId: user?.id,
-        email: user?.email
+        email: user?.email,
       });
-      
+
       return user;
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error obteniendo usuario actual', error);
@@ -220,7 +180,7 @@ export class AuthService {
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
       logger.database(LogModule.DB, 'Obteniendo perfil de usuario', { userId });
-      
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -231,7 +191,7 @@ export class AuthService {
         logger.error(LogModule.DB, 'Error obteniendo perfil de usuario', error);
         throw error;
       }
-      
+
       logger.success(LogModule.DB, 'Perfil obtenido exitosamente', data);
       return data;
     } catch (error) {
@@ -245,6 +205,8 @@ export class AuthService {
    */
   static async updateUserProfile(userId: string, updates: Partial<User>) {
     try {
+      logger.info(LogModule.DB, 'Actualizando perfil de usuario', { userId });
+
       const { data, error } = await supabase
         .from('users')
         .update(updates)
@@ -252,10 +214,15 @@ export class AuthService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.DB, 'Error actualizando perfil', error);
+        throw error;
+      }
+
+      logger.success(LogModule.DB, 'Perfil actualizado exitosamente');
       return data;
     } catch (error) {
-      console.error('Error actualizando perfil:', error);
+      logger.error(LogModule.DB, 'Error fatal actualizando perfil', error);
       throw error;
     }
   }
@@ -265,13 +232,22 @@ export class AuthService {
    */
   static async resetPassword(email: string) {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      logger.info(
+        LogModule.AUTH,
+        'Solicitando restablecimiento de contraseña',
+        { email }
+      );
 
-      if (error) throw error;
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error en resetPassword', error);
+        throw error;
+      }
+
+      logger.success(LogModule.AUTH, 'Email de restablecimiento enviado');
     } catch (error) {
-      console.error('Error en resetPassword:', error);
+      logger.error(LogModule.AUTH, 'Error fatal en resetPassword', error);
       throw error;
     }
   }
@@ -281,13 +257,24 @@ export class AuthService {
    */
   static async updatePassword(newPassword: string) {
     try {
+      logger.info(LogModule.AUTH, 'Actualizando contraseña de usuario');
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error actualizando contraseña', error);
+        throw error;
+      }
+
+      logger.success(LogModule.AUTH, 'Contraseña actualizada exitosamente');
     } catch (error) {
-      console.error('Error actualizando contraseña:', error);
+      logger.error(
+        LogModule.AUTH,
+        'Error fatal actualizando contraseña',
+        error
+      );
       throw error;
     }
   }
@@ -306,6 +293,8 @@ export class AuthService {
    */
   static async checkPremiumStatus(userId: string): Promise<boolean> {
     try {
+      logger.debug(LogModule.DB, 'Verificando estado premium', { userId });
+
       const { data, error } = await supabase
         .from('subscriptions')
         .select('status')
@@ -313,13 +302,20 @@ export class AuthService {
         .eq('status', 'active')
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error verificando premium:', error);
+      if (error && error.code !== 'PGRST116') {
+        logger.warn(LogModule.DB, 'Error verificando premium', error);
+        return false;
       }
 
-      return !!data;
+      const isPremium = !!data;
+      logger.debug(LogModule.DB, 'Estado premium verificado', {
+        userId,
+        isPremium,
+      });
+
+      return isPremium;
     } catch (error) {
-      console.error('Error en checkPremiumStatus:', error);
+      logger.error(LogModule.DB, 'Error fatal verificando premium', error);
       return false;
     }
   }

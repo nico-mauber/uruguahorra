@@ -26,68 +26,80 @@ export default function CreateGoalScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { fetchGoals } = useGoalsStore();
-  
+
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Step 1: Tipo de meta
-  const [goalType, setGoalType] = useState<'emergency' | 'travel' | 'debt' | 'purchase'>('emergency');
-  
+  const [goalType, setGoalType] = useState<
+    'emergency' | 'travel' | 'debt' | 'purchase'
+  >('emergency');
+
   // Step 2: Detalles de meta
   const [goalName, setGoalName] = useState('');
   const [goalAmount, setGoalAmount] = useState('');
   const [targetMonths, setTargetMonths] = useState('3');
-  
+
   // Campos específicos por tipo de meta
   const [travelDestination, setTravelDestination] = useState('');
   const [debtInterestRate, setDebtInterestRate] = useState('');
   const [purchaseDescription, setPurchaseDescription] = useState('');
-  
+
   const goalOptions = [
     { id: 'emergency', label: '🛡️ Colchón de emergencia', value: 'emergency' },
     { id: 'travel', label: '✈️ Viaje', value: 'travel' },
     { id: 'debt', label: '💳 Pagar deudas', value: 'debt' },
     { id: 'purchase', label: '🛍️ Compra importante', value: 'purchase' },
   ];
-  
+
   const handleCreateGoal = async () => {
-    logger.start(LogModule.GOALS, 'Iniciando creación de meta desde create-goal');
-    
+    logger.start(
+      LogModule.GOALS,
+      'Iniciando creación de meta desde create-goal'
+    );
+
     // Validación de campos
     if (!goalName || goalName.trim() === '') {
       Alert.alert('Error', 'Por favor ingresa un nombre para tu meta');
       return;
     }
-    
+
     if (!goalAmount || goalAmount.trim() === '') {
       Alert.alert('Error', 'Por favor ingresa el monto objetivo');
       return;
     }
-    
+
     const parsedAmount = parseFloat(goalAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Error', 'Por favor ingresa un monto válido mayor a 0');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Verificar que tengamos un usuario autenticado
       if (!user?.id) {
-        logger.error(LogModule.AUTH, 'No hay usuario autenticado para crear meta');
+        logger.error(
+          LogModule.AUTH,
+          'No hay usuario autenticado para crear meta'
+        );
         Alert.alert('Error', 'Debes iniciar sesión para crear una meta');
         router.replace('/(auth)/onboarding');
         return;
       }
-      
-      logger.info(LogModule.GOALS, 'Usuario autenticado, procediendo con creación', { userId: user.id });
-      
+
+      logger.info(
+        LogModule.GOALS,
+        'Usuario autenticado, procediendo con creación',
+        { userId: user.id }
+      );
+
       // Calcular fecha objetivo
       const targetDate = new Date();
       const monthsToAdd = parseInt(targetMonths) || 3;
       targetDate.setMonth(targetDate.getMonth() + monthsToAdd);
-      
+
       const goalData = {
         user_id: user.id,
         name: goalName.trim(),
@@ -97,53 +109,55 @@ export default function CreateGoalScreen() {
         is_active: true,
         category: goalType,
         // Agregar datos adicionales según el tipo
-        ...(goalType === 'travel' && travelDestination && { destination: travelDestination }),
-        ...(goalType === 'debt' && debtInterestRate && { interest_rate: parseFloat(debtInterestRate) }),
-        ...(goalType === 'purchase' && purchaseDescription && { description: purchaseDescription })
+        ...(goalType === 'travel' &&
+          travelDestination && { destination: travelDestination }),
+        ...(goalType === 'debt' &&
+          debtInterestRate && { interest_rate: parseFloat(debtInterestRate) }),
+        ...(goalType === 'purchase' &&
+          purchaseDescription && { description: purchaseDescription }),
       };
-      
+
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
-      
+
       // Crear la meta en Supabase
       const createdGoal = await GoalsService.createGoal(goalData);
-      
-      logger.success(LogModule.GOALS, 'Meta creada exitosamente', { goalId: createdGoal.id });
-      
+
+      logger.success(LogModule.GOALS, 'Meta creada exitosamente', {
+        goalId: createdGoal.id,
+      });
+
       // Actualizar el store de metas
       await fetchGoals(user.id, true);
-      
-      Alert.alert(
-        '¡Éxito!', 
-        'Tu meta ha sido creada correctamente',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              logger.info(LogModule.NAV, 'Cerrando modal de creación de meta');
-              router.back();
-            }
-          }
-        ]
-      );
+
+      Alert.alert('¡Éxito!', 'Tu meta ha sido creada correctamente', [
+        {
+          text: 'OK',
+          onPress: () => {
+            logger.info(LogModule.NAV, 'Cerrando modal de creación de meta');
+            router.back();
+          },
+        },
+      ]);
     } catch (error: any) {
       logger.error(LogModule.GOALS, 'Error creando meta', error);
-      
+
       let errorMessage = 'No se pudo crear la meta';
-      
+
       if (error.code === '23505') {
         errorMessage = 'Ya existe una meta con ese nombre';
       } else if (error.code === '42501') {
-        errorMessage = 'No tienes permisos para crear metas. Verifica tu sesión.';
+        errorMessage =
+          'No tienes permisos para crear metas. Verifica tu sesión.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleNext = () => {
     if (step === 1 && goalType) {
       // Pre-llenar nombre y configuraciones según el tipo de meta
@@ -151,25 +165,25 @@ export default function CreateGoalScreen() {
         emergency: {
           name: 'Mi Fondo de Emergencia',
           months: '6',
-          amount: ''
+          amount: '',
         },
         travel: {
           name: 'Mi Viaje Soñado',
           months: '12',
-          amount: ''
+          amount: '',
         },
         debt: {
           name: 'Libertad Financiera',
           months: '24',
-          amount: ''
+          amount: '',
         },
         purchase: {
           name: 'Mi Gran Compra',
           months: '8',
-          amount: ''
-        }
+          amount: '',
+        },
       };
-      
+
       const config = defaultConfigs[goalType];
       setGoalName(config.name);
       setTargetMonths(config.months);
@@ -179,12 +193,12 @@ export default function CreateGoalScreen() {
       handleCreateGoal();
     }
   };
-  
+
   const handleCancel = () => {
     logger.info(LogModule.NAV, 'Usuario canceló creación de meta');
     router.back();
   };
-  
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -333,13 +347,15 @@ export default function CreateGoalScreen() {
       color: theme.textSecondary,
     },
   });
-  
+
   // Verificar autenticación
   if (!user) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.subtitle}>Debes iniciar sesión para crear una meta</Text>
+          <Text style={styles.subtitle}>
+            Debes iniciar sesión para crear una meta
+          </Text>
           <Button
             title="Ir al inicio"
             onPress={() => router.replace('/(auth)/onboarding')}
@@ -350,7 +366,7 @@ export default function CreateGoalScreen() {
       </SafeAreaView>
     );
   }
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -366,18 +382,18 @@ export default function CreateGoalScreen() {
               />
             ))}
           </View>
-          
+
           <View style={styles.header}>
             <Text style={styles.title}>
               {step === 1 ? '¿Cuál es tu meta?' : 'Personaliza tu meta'}
             </Text>
             <Text style={styles.subtitle}>
-              {step === 1 
+              {step === 1
                 ? 'Elige lo que más te motive'
                 : 'Define los detalles de tu objetivo'}
             </Text>
           </View>
-          
+
           {step === 1 && (
             <>
               {goalOptions.map((option) => (
@@ -389,12 +405,10 @@ export default function CreateGoalScreen() {
                   ]}
                   onPress={() => {
                     if (!isLoading) {
-                      console.log('=== OPCIÓN SELECCIONADA ===');
-                      console.log('Opción:', option.value);
-                      console.log('Estado actual:', goalType);
-                      logger.debug(LogModule.UI, 'Tipo de meta seleccionado', { type: option.value });
+                      logger.debug(LogModule.UI, 'Tipo de meta seleccionado', {
+                        type: option.value,
+                      });
                       setGoalType(option.value as any);
-                      console.log('Estado después:', option.value);
                     }
                   }}
                   disabled={isLoading}
@@ -406,32 +420,40 @@ export default function CreateGoalScreen() {
               ))}
             </>
           )}
-          
+
           {step === 2 && (
             <>
               {/* Consejo específico por tipo de meta */}
               <Card style={styles.tipCard} variant="outlined">
                 <Text style={styles.tipTitle}>
-                  {goalType === 'emergency' && '💡 Consejo para Fondo de Emergencia'}
+                  {goalType === 'emergency' &&
+                    '💡 Consejo para Fondo de Emergencia'}
                   {goalType === 'travel' && '💡 Consejo para tu Viaje'}
                   {goalType === 'debt' && '💡 Consejo para Pagar Deudas'}
                   {goalType === 'purchase' && '💡 Consejo para tu Compra'}
                 </Text>
                 <Text style={styles.tipText}>
-                  {goalType === 'emergency' && 'Idealmente 3-6 meses de gastos mensuales. Esto te protege ante imprevistos.'}
-                  {goalType === 'travel' && 'Investiga costos de vuelos, alojamiento y actividades. ¡Planificar te ayuda a ahorrar más!'}
-                  {goalType === 'debt' && 'Pagar deudas rápido te ahorra intereses. Considera empezar por la de mayor tasa.'}
-                  {goalType === 'purchase' && 'Comprar al contado suele tener descuentos. ¡Tu paciencia será recompensada!'}
+                  {goalType === 'emergency' &&
+                    'Idealmente 3-6 meses de gastos mensuales. Esto te protege ante imprevistos.'}
+                  {goalType === 'travel' &&
+                    'Investiga costos de vuelos, alojamiento y actividades. ¡Planificar te ayuda a ahorrar más!'}
+                  {goalType === 'debt' &&
+                    'Pagar deudas rápido te ahorra intereses. Considera empezar por la de mayor tasa.'}
+                  {goalType === 'purchase' &&
+                    'Comprar al contado suele tener descuentos. ¡Tu paciencia será recompensada!'}
                 </Text>
               </Card>
 
               <TextInput
                 style={styles.input}
                 placeholder={
-                  goalType === 'emergency' ? 'Ej: Fondo de Emergencia Familiar' :
-                  goalType === 'travel' ? 'Ej: Viaje a Europa 2025' :
-                  goalType === 'debt' ? 'Ej: Eliminar deuda tarjeta de crédito' :
-                  'Ej: Auto nuevo'
+                  goalType === 'emergency'
+                    ? 'Ej: Fondo de Emergencia Familiar'
+                    : goalType === 'travel'
+                      ? 'Ej: Viaje a Europa 2025'
+                      : goalType === 'debt'
+                        ? 'Ej: Eliminar deuda tarjeta de crédito'
+                        : 'Ej: Auto nuevo'
                 }
                 placeholderTextColor={theme.textSecondary}
                 value={goalName}
@@ -474,14 +496,17 @@ export default function CreateGoalScreen() {
                   multiline
                 />
               )}
-              
+
               <TextInput
                 style={styles.input}
                 placeholder={
-                  goalType === 'emergency' ? 'Monto objetivo (Ej: $50,000)' :
-                  goalType === 'travel' ? 'Presupuesto total del viaje' :
-                  goalType === 'debt' ? 'Total de la deuda a pagar' :
-                  'Precio estimado de la compra'
+                  goalType === 'emergency'
+                    ? 'Monto objetivo (Ej: $50,000)'
+                    : goalType === 'travel'
+                      ? 'Presupuesto total del viaje'
+                      : goalType === 'debt'
+                        ? 'Total de la deuda a pagar'
+                        : 'Precio estimado de la compra'
                 }
                 placeholderTextColor={theme.textSecondary}
                 value={goalAmount}
@@ -489,7 +514,7 @@ export default function CreateGoalScreen() {
                 keyboardType="numeric"
                 editable={!isLoading}
               />
-              
+
               <View style={styles.monthsContainer}>
                 <Text style={styles.monthsLabel}>Plazo:</Text>
                 <TextInput
@@ -501,24 +526,37 @@ export default function CreateGoalScreen() {
                   keyboardType="numeric"
                   editable={!isLoading}
                 />
-                <Text style={[styles.monthsLabel, { marginLeft: 10 }]}>meses</Text>
+                <Text style={[styles.monthsLabel, { marginLeft: 10 }]}>
+                  meses
+                </Text>
               </View>
 
               {/* Calculadora automática */}
               {goalAmount && targetMonths && (
                 <Card style={styles.calculatorCard}>
-                  <Text style={styles.calculatorTitle}>📊 Tu plan de ahorro</Text>
+                  <Text style={styles.calculatorTitle}>
+                    📊 Tu plan de ahorro
+                  </Text>
                   <Text style={styles.calculatorText}>
-                    Necesitas ahorrar: ${(parseFloat(goalAmount) / parseInt(targetMonths)).toFixed(0)} por mes
+                    Necesitas ahorrar: $
+                    {(parseFloat(goalAmount) / parseInt(targetMonths)).toFixed(
+                      0
+                    )}{' '}
+                    por mes
                   </Text>
                   <Text style={styles.calculatorSubtext}>
-                    ≈ ${(parseFloat(goalAmount) / (parseInt(targetMonths) * 30)).toFixed(0)} por día
+                    ≈ $
+                    {(
+                      parseFloat(goalAmount) /
+                      (parseInt(targetMonths) * 30)
+                    ).toFixed(0)}{' '}
+                    por día
                   </Text>
                 </Card>
               )}
             </>
           )}
-          
+
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.primary} />
@@ -533,7 +571,7 @@ export default function CreateGoalScreen() {
                 onPress={handleNext}
                 size="large"
               />
-              
+
               <Button
                 title="Cancelar"
                 onPress={handleCancel}

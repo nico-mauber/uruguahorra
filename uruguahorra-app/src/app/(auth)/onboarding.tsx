@@ -18,16 +18,20 @@ import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
+import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 
 export default function OnboardingScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { signup, login, user } = useAuthStore();
+  const { signup, login } = useAuthStore();
 
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>(
+    'password'
+  );
 
   // Step 1: Credenciales
   const [email, setEmail] = useState('');
@@ -51,14 +55,27 @@ export default function OnboardingScreen() {
   ];
 
   const handleAuth = async () => {
-    console.log('handleAuth llamado - isNewUser:', isNewUser, 'email:', email);
+    console.log(
+      'handleAuth llamado - isNewUser:',
+      isNewUser,
+      'email:',
+      email,
+      'method:',
+      loginMethod
+    );
 
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+    if (!email) {
+      Alert.alert('Error', 'Por favor ingresa tu email');
       return;
     }
 
-    if (password.length < 6) {
+    // Validación solo para contraseña cuando se usa ese método
+    if (loginMethod === 'password' && !password) {
+      Alert.alert('Error', 'Por favor ingresa tu contraseña');
+      return;
+    }
+
+    if (loginMethod === 'password' && password.length < 6) {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
       return;
     }
@@ -66,27 +83,46 @@ export default function OnboardingScreen() {
     setIsLoading(true);
 
     try {
-      if (isNewUser) {
-        console.log('Intentando registrar nuevo usuario...');
-        // Registrar nuevo usuario
-        await signup(email, password, {
-          country: 'UY',
-          currency: 'UYU',
-        });
-        console.log('Usuario registrado exitosamente');
-      } else {
-        console.log('Intentando iniciar sesión...');
-        // Iniciar sesión
-        await login(email, password);
-        console.log('Sesión iniciada exitosamente');
+      if (loginMethod === 'otp') {
+        // Iniciar sesión con OTP/Magic Link
+        console.log('Enviando OTP a:', email);
+        await AuthService.signInWithOTP(email, isNewUser);
 
-        // Los usuarios existentes van directo al dashboard
-        console.log('Usuario existente, navegando directamente a tabs...');
-        router.replace('/(tabs)');
-        return; // No continuar al paso 2
+        Alert.alert(
+          'Código enviado',
+          `Te hemos enviado un código de verificación a ${email}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.push({
+                  pathname: '/(auth)/otp-verification',
+                  params: { email },
+                });
+              },
+            },
+          ]
+        );
+      } else {
+        // Autenticación tradicional con contraseña
+        if (isNewUser) {
+          console.log('Intentando registrar nuevo usuario...');
+          await signup(email, password, {
+            country: 'UY',
+            currency: 'UYU',
+          });
+          console.log('Usuario registrado exitosamente');
+          setStep(2); // Solo los nuevos usuarios continúan al paso 2 (crear meta)
+        } else {
+          console.log('Intentando iniciar sesión...');
+          await login(email, password);
+          console.log('Sesión iniciada exitosamente');
+
+          // Los usuarios existentes van directo al dashboard
+          console.log('Usuario existente, navegando directamente a tabs...');
+          router.replace('/(tabs)');
+        }
       }
-      // Solo los nuevos usuarios continúan al paso 2 (crear meta)
-      setStep(2);
     } catch (error: any) {
       console.error('Error detallado en autenticación:', error);
 
@@ -474,6 +510,7 @@ export default function OnboardingScreen() {
                   onPress={() => {
                     console.log('Cambiando a modo: Crear cuenta');
                     setIsNewUser(true);
+                    setLoginMethod('password'); // Reset to password for new users
                   }}
                   disabled={isLoading}
                 >
@@ -508,6 +545,46 @@ export default function OnboardingScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Login method selector for existing users */}
+              {!isNewUser && (
+                <View style={[styles.toggleContainer, { marginBottom: 16 }]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      loginMethod === 'password' && styles.toggleButtonActive,
+                    ]}
+                    onPress={() => setLoginMethod('password')}
+                    disabled={isLoading}
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        loginMethod === 'password' && styles.toggleTextActive,
+                      ]}
+                    >
+                      Contraseña
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      loginMethod === 'otp' && styles.toggleButtonActive,
+                    ]}
+                    onPress={() => setLoginMethod('otp')}
+                    disabled={isLoading}
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        loginMethod === 'otp' && styles.toggleTextActive,
+                      ]}
+                    >
+                      Código por email
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <TextInput
                 style={styles.input}
                 placeholder="Tu email"
@@ -519,15 +596,26 @@ export default function OnboardingScreen() {
                 editable={!isLoading}
               />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Contraseña (mínimo 6 caracteres)"
-                placeholderTextColor={theme.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!isLoading}
-              />
+              {(isNewUser || loginMethod === 'password') && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Contraseña (mínimo 6 caracteres)"
+                  placeholderTextColor={theme.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  editable={!isLoading}
+                />
+              )}
+
+              {!isNewUser && loginMethod === 'otp' && (
+                <Text
+                  style={[styles.subtitle, { marginBottom: 16, fontSize: 14 }]}
+                >
+                  Te enviaremos un código de verificación de 6 dígitos a tu
+                  email
+                </Text>
+              )}
             </>
           )}
 
@@ -613,7 +701,9 @@ export default function OnboardingScreen() {
                   step === 1
                     ? isNewUser
                       ? 'Crear cuenta'
-                      : 'Iniciar sesión'
+                      : loginMethod === 'otp'
+                        ? 'Enviar código'
+                        : 'Iniciar sesión'
                     : step === 3
                       ? 'Crear meta y comenzar'
                       : 'Continuar'

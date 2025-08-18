@@ -87,30 +87,37 @@ export class GoalsService {
       logger.start(LogModule.GOALS, 'Creando nueva meta', goal);
 
       // 1. Verificar sesión activa antes de crear meta
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError) {
         logger.error(LogModule.AUTH, 'Error obteniendo sesión', sessionError);
         throw new Error('Error de autenticación: ' + sessionError.message);
       }
-      
+
       if (!session) {
         logger.error(LogModule.AUTH, 'No hay sesión activa');
         throw new Error('Debes iniciar sesión para crear una meta');
       }
-      
+
       logger.info(LogModule.AUTH, 'Sesión verificada para creación de meta', {
         userId: session.user.id,
         goalUserId: goal.user_id,
         sessionExpires: session.expires_at,
       });
-      
+
       // 2. Verificar que el usuario coincide
       if (session.user.id !== goal.user_id) {
-        logger.error(LogModule.AUTH, 'Usuario de sesión no coincide con user_id de la meta', {
-          sessionUserId: session.user.id,
-          goalUserId: goal.user_id,
-        });
+        logger.error(
+          LogModule.AUTH,
+          'Usuario de sesión no coincide con user_id de la meta',
+          {
+            sessionUserId: session.user.id,
+            goalUserId: goal.user_id,
+          }
+        );
         throw new Error('Error de autorización: usuario no válido');
       }
 
@@ -124,38 +131,56 @@ export class GoalsService {
       if (error) {
         // Manejo específico de errores RLS
         if (error.code === '42501') {
-          logger.error(LogModule.DB, 'Error RLS: Políticas de seguridad bloquearon la inserción', {
-            code: error.code,
-            message: error.message,
-            sessionUserId: session.user.id,
-            goalData: goal,
-          });
-          
+          logger.error(
+            LogModule.DB,
+            'Error RLS: Políticas de seguridad bloquearon la inserción',
+            {
+              code: error.code,
+              message: error.message,
+              sessionUserId: session.user.id,
+              goalData: goal,
+            }
+          );
+
           // Intentar refresh de sesión y reintento
           logger.info(LogModule.AUTH, 'Intentando refresh de sesión...');
           const { error: refreshError } = await supabase.auth.refreshSession();
-          
+
           if (!refreshError) {
-            logger.info(LogModule.AUTH, 'Sesión refrescada, reintentando creación...');
-            
+            logger.info(
+              LogModule.AUTH,
+              'Sesión refrescada, reintentando creación...'
+            );
+
             const { data: retryData, error: retryError } = await supabase
               .from('goals')
               .insert(goal)
               .select()
               .single();
-              
+
             if (retryError) {
-              logger.error(LogModule.DB, 'Reintento fallido tras refresh de sesión', retryError);
-              throw new Error('No tienes permisos para crear metas. Verifica tu sesión.');
+              logger.error(
+                LogModule.DB,
+                'Reintento fallido tras refresh de sesión',
+                retryError
+              );
+              throw new Error(
+                'No tienes permisos para crear metas. Verifica tu sesión.'
+              );
             }
-            
-            logger.success(LogModule.GOALS, 'Meta creada exitosamente tras refresh');
+
+            logger.success(
+              LogModule.GOALS,
+              'Meta creada exitosamente tras refresh'
+            );
             return retryData;
           }
-          
-          throw new Error('No tienes permisos para crear metas. Verifica tu sesión.');
+
+          throw new Error(
+            'No tienes permisos para crear metas. Verifica tu sesión.'
+          );
         }
-        
+
         logger.error(LogModule.DB, 'Error de Supabase al crear meta', {
           code: error.code,
           message: error.message,

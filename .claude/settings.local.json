@@ -21,7 +21,9 @@
       "Bash(lsof:*)",
       "Bash(kill:*)",
       "Bash(ss:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(mv:*)",
+      "Bash(npx prettier:*)"
     ],
     "defaultMode": "acceptEdits"
   }

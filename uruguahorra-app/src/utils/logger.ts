@@ -22,6 +22,15 @@ export enum LogModule {
   SYNC = 'SYNC',
 }
 
+// Tipo para datos adicionales del log
+export type LogData =
+  | Record<string, unknown>
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
+
 // Configuración dinámica basada en entorno
 const isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
 const CURRENT_LOG_LEVEL = isDevelopment ? LogLevel.DEBUG : LogLevel.WARN;
@@ -117,7 +126,7 @@ class Logger {
     module: LogModule,
     message: string,
     emoji?: string,
-    data?: any
+    data?: LogData
   ): string {
     const timestamp = this.getTimestamp();
     const moduleColor = this.getModuleColor(module);
@@ -140,7 +149,7 @@ class Logger {
     module: LogModule,
     message: string,
     emoji?: string,
-    data?: any
+    data?: LogData
   ) {
     if (level < CURRENT_LOG_LEVEL) return;
 

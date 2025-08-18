@@ -58,10 +58,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true });
     try {
       // 1. Autenticar con Supabase
-      const { user: authUser, session } = await AuthService.signIn(
-        email,
-        password
-      );
+      const { user: authUser } = await AuthService.signIn(email, password);
 
       if (!authUser) throw new Error('No se pudo autenticar');
 

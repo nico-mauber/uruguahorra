@@ -7,6 +7,9 @@ import { useAuthStore } from '@store/useAuthStore';
 import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '@theme';
 import { logger, LogModule } from '@/utils/logger';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from '@/utils/toast';
+import { ErrorBoundary } from '@components';
 
 function RootLayoutNav() {
   const router = useRouter();
@@ -94,11 +97,14 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <StatusBar style="auto" />
-        <RootLayoutNav />
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <StatusBar style="auto" />
+          <RootLayoutNav />
+          <Toast config={toastConfig} />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Button, Card, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
+import { ToastService } from '@/utils/toast';
+import { ContributionsService } from '@/services/contributions.service';
+import { ChallengesService } from '@/services/challenges.service';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -31,13 +34,13 @@ export default function DashboardScreen() {
     isLoading,
     error,
     fetchGoals,
-    addContribution,
     getGoalProgress,
     getTotalSaved,
   } = useGoalsStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [initializing, setInitializing] = React.useState(true);
+  const [hasShownWelcome, setHasShownWelcome] = React.useState(false);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
@@ -64,6 +67,15 @@ export default function DashboardScreen() {
           goalsLoadedRef.current = true;
           await fetchGoals(updatedUser.id);
           logger.success(LogModule.UI, 'Metas cargadas exitosamente');
+
+          // Mostrar bienvenida para nuevos usuarios o usuarios que regresan
+          if (!hasShownWelcome) {
+            setTimeout(() => {
+              const firstName = updatedUser.email?.split('@')[0] || '';
+              ToastService.welcome(firstName);
+              setHasShownWelcome(true);
+            }, 1500);
+          }
         }
       } catch (error) {
         logger.error(LogModule.UI, 'Error inicializando dashboard', error);
@@ -74,7 +86,7 @@ export default function DashboardScreen() {
     };
 
     initializeUser();
-  }, [checkSession, fetchGoals]);
+  }, [checkSession, fetchGoals, hasShownWelcome]);
 
   // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
   // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
@@ -107,18 +119,57 @@ export default function DashboardScreen() {
     try {
       await fetchGoals(user.id, true);
       logger.success(LogModule.UI, 'Metas refrescadas');
-    } catch (error) {
+      ToastService.quickSuccess('Información actualizada');
+    } catch (error: any) {
       logger.error(LogModule.UI, 'Error refrescando metas', error);
+      ToastService.handleError(error);
     } finally {
       setRefreshing(false);
     }
   }, [user?.id, fetchGoals]);
 
   const handleQuickSave = async (amount: number) => {
-    if (goals.length > 0) {
-      await addContribution(goals[0].id, amount, 'manual');
+    if (!user || goals.length === 0) {
+      ToastService.warning(
+        'Sin metas',
+        'Crea una meta primero para poder ahorrar'
+      );
+      return;
+    }
+
+    try {
+      const firstGoal = goals[0];
+
+      ToastService.loading(`Ahorrando $${amount}...`);
+
+      // Crear contribución
+      await ContributionsService.createContribution({
+        user_id: user.id,
+        goal_id: firstGoal.id,
+        amount,
+        source: 'manual',
+        description: 'Ahorro rápido desde dashboard',
+      });
+
+      // Actualizar store de metas
+      await fetchGoals(user.id, true);
+
+      // Actualizar XP del usuario
       updateUserXP(amount * 2);
-      logger.success(LogModule.UI, 'Ahorro rápido completado', { amount });
+
+      // Verificar desafíos de ahorro
+      await ChallengesService.checkSavingsChallenges(user.id, amount);
+
+      // Mostrar toast de éxito
+      ToastService.savingSuccess(amount, firstGoal.name);
+
+      logger.success(LogModule.UI, 'Ahorro rápido completado', {
+        amount,
+        goalName: firstGoal.name,
+      });
+    } catch (error: any) {
+      logger.error(LogModule.UI, 'Error en ahorro rápido', error);
+      ToastService.handleError(error);
     }
   };
 
@@ -379,8 +430,17 @@ export default function DashboardScreen() {
               <Button
                 title="Crear nueva meta"
                 onPress={() => {
-                  logger.info(LogModule.NAV, 'Navegando a crear meta');
-                  router.push('/create-goal');
+                  try {
+                    logger.info(LogModule.NAV, 'Navegando a crear meta');
+                    router.push('/create-goal');
+                  } catch (error: any) {
+                    logger.error(
+                      LogModule.NAV,
+                      'Error navegando a crear meta',
+                      error
+                    );
+                    ToastService.handleError(error);
+                  }
                 }}
                 style={styles.createGoalButton}
               />
@@ -424,8 +484,17 @@ export default function DashboardScreen() {
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => {
-          logger.info(LogModule.NAV, 'Navegando a crear meta');
-          router.push('/create-goal');
+          try {
+            logger.info(LogModule.NAV, 'Navegando a crear meta desde FAB');
+            router.push('/create-goal');
+          } catch (error: any) {
+            logger.error(
+              LogModule.NAV,
+              'Error navegando a crear meta desde FAB',
+              error
+            );
+            ToastService.handleError(error);
+          }
         }}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />

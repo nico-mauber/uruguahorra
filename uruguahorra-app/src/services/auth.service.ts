@@ -280,6 +280,98 @@ export class AuthService {
   }
 
   /**
+   * Iniciar sesión con Magic Link/OTP
+   */
+  static async signInWithOTP(email: string, shouldCreateUser: boolean = false) {
+    try {
+      logger.start(LogModule.AUTH, 'Iniciando autenticación con OTP', {
+        email,
+      });
+
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser,
+          emailRedirectTo: undefined, // Para móvil no necesitamos redirect
+        },
+      });
+
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error enviando OTP', error);
+        throw error;
+      }
+
+      logger.success(LogModule.AUTH, 'OTP enviado exitosamente', {
+        email,
+        shouldCreateUser,
+      });
+
+      return data;
+    } catch (error) {
+      logger.error(LogModule.AUTH, 'Error fatal en signInWithOTP', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar OTP recibido por email
+   */
+  static async verifyOTP(email: string, token: string) {
+    try {
+      logger.start(LogModule.AUTH, 'Verificando OTP', { email, token: '***' });
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
+
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error verificando OTP', error);
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('No se pudo autenticar el usuario');
+      }
+
+      logger.success(LogModule.AUTH, 'OTP verificado exitosamente', {
+        userId: data.user.id,
+        email: data.user.email,
+      });
+
+      return { user: data.user, session: data.session };
+    } catch (error) {
+      logger.error(LogModule.AUTH, 'Error fatal en verifyOTP', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reenviar OTP
+   */
+  static async resendOTP(email: string) {
+    try {
+      logger.info(LogModule.AUTH, 'Reenviando OTP', { email });
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error reenviando OTP', error);
+        throw error;
+      }
+
+      logger.success(LogModule.AUTH, 'OTP reenviado exitosamente');
+    } catch (error) {
+      logger.error(LogModule.AUTH, 'Error fatal reenviando OTP', error);
+      throw error;
+    }
+  }
+
+  /**
    * Configurar listener de cambios de autenticación
    */
   static onAuthStateChange(callback: (event: string, session: any) => void) {

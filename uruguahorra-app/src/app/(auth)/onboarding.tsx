@@ -82,7 +82,7 @@ export default function OnboardingScreen() {
       console.error('Error detallado en autenticación:', error);
       
       // Manejar errores comunes
-      if (error.message?.includes('already registered')) {
+      if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
         Alert.alert(
           'Usuario existente',
           'Este email ya está registrado. ¿Deseas iniciar sesión?',
@@ -92,13 +92,18 @@ export default function OnboardingScreen() {
               text: 'Iniciar sesión', 
               onPress: () => {
                 setIsNewUser(false);
-                handleAuth();
+                // No llamar handleAuth aquí para evitar loop, solo cambiar el modo
               }
             }
           ]
         );
       } else if (error.message?.includes('Invalid login')) {
         Alert.alert('Error', 'Email o contraseña incorrectos');
+      } else if (error.code === '42501' || error.message?.includes('row-level security')) {
+        Alert.alert(
+          'Error de configuración', 
+          'Hay un problema con los permisos. Por favor, contacta al administrador o intenta iniciar sesión en lugar de registrarte.'
+        );
       } else {
         Alert.alert('Error', error.message || 'No se pudo completar la autenticación');
       }
@@ -108,71 +113,156 @@ export default function OnboardingScreen() {
   };
   
   const handleCreateGoal = async () => {
-    console.log('handleCreateGoal llamado - goalName:', goalName, 'goalAmount:', goalAmount);
+    console.log('=== handleCreateGoal INICIADO ===');
+    console.log('Estado actual:');
+    console.log('- goalName:', goalName);
+    console.log('- goalAmount:', goalAmount);
+    console.log('- targetMonths:', targetMonths);
+    console.log('- goalType:', goalType);
     
-    if (!goalName || !goalAmount) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+    // Validación de campos
+    if (!goalName || goalName.trim() === '') {
+      console.error('Validación fallida: goalName vacío');
+      Alert.alert('Error', 'Por favor ingresa un nombre para tu meta');
       return;
     }
     
+    if (!goalAmount || goalAmount.trim() === '') {
+      console.error('Validación fallida: goalAmount vacío');
+      Alert.alert('Error', 'Por favor ingresa el monto objetivo');
+      return;
+    }
+    
+    const parsedAmount = parseFloat(goalAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.error('Validación fallida: monto inválido:', goalAmount);
+      Alert.alert('Error', 'Por favor ingresa un monto válido mayor a 0');
+      return;
+    }
+    
+    console.log('Validación completada exitosamente');
     setIsLoading(true);
     
     try {
-      // Obtener el usuario actual
-      console.log('Obteniendo usuario actual...');
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      // Verificar sesión primero
+      console.log('Verificando sesión...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (!currentUser) {
-        console.error('No se encontró usuario autenticado');
-        Alert.alert('Error', 'No se encontró el usuario. Por favor, intenta iniciar sesión nuevamente.');
+      if (sessionError) {
+        console.error('Error obteniendo sesión:', sessionError);
+        throw sessionError;
+      }
+      
+      if (!session) {
+        console.error('No hay sesión activa');
+        Alert.alert('Sesión expirada', 'Por favor, inicia sesión nuevamente');
+        router.replace('/(auth)/onboarding');
         return;
       }
       
-      console.log('Usuario encontrado:', currentUser.id);
+      console.log('Sesión válida, usuario ID:', session.user.id);
+      
+      // Obtener el usuario actual
+      console.log('Obteniendo datos del usuario...');
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Error obteniendo usuario:', userError);
+        throw userError;
+      }
+      
+      if (!currentUser) {
+        console.error('Usuario no encontrado a pesar de tener sesión');
+        Alert.alert('Error', 'No se pudo obtener la información del usuario');
+        return;
+      }
+      
+      console.log('Usuario obtenido:', currentUser.email);
       
       // Calcular fecha objetivo
       const targetDate = new Date();
-      targetDate.setMonth(targetDate.getMonth() + parseInt(targetMonths));
+      const monthsToAdd = parseInt(targetMonths) || 3;
+      targetDate.setMonth(targetDate.getMonth() + monthsToAdd);
       
       const goalData = {
         user_id: currentUser.id,
-        name: goalName,
-        target_amount: parseFloat(goalAmount),
+        name: goalName.trim(),
+        target_amount: parsedAmount,
         target_date: targetDate.toISOString().split('T')[0],
+        saved_amount: 0,
+        is_active: true
       };
       
-      console.log('Creando meta con datos:', goalData);
+      console.log('Datos de la meta a crear:', JSON.stringify(goalData, null, 2));
       
       // Crear la meta en Supabase
+      console.log('Llamando a GoalsService.createGoal...');
       const createdGoal = await GoalsService.createGoal(goalData);
       
-      console.log('Meta creada exitosamente:', createdGoal);
+      console.log('¡Meta creada exitosamente!:', createdGoal);
+      Alert.alert('¡Éxito!', 'Tu meta ha sido creada correctamente');
       
       // Navegar al dashboard
+      console.log('Navegando al dashboard...');
       router.replace('/(tabs)');
     } catch (error: any) {
-      console.error('Error detallado creando meta:', error);
-      Alert.alert('Error', `No se pudo crear la meta: ${error.message || 'Error desconocido'}`);
+      console.error('=== ERROR CREANDO META ===');
+      console.error('Tipo de error:', error.constructor.name);
+      console.error('Mensaje:', error.message);
+      console.error('Código:', error.code);
+      console.error('Detalles:', error.details);
+      console.error('Stack:', error.stack);
+      
+      // Mensajes de error específicos
+      let errorMessage = 'No se pudo crear la meta';
+      
+      if (error.code === '23505') {
+        errorMessage = 'Ya existe una meta con ese nombre';
+      } else if (error.code === '42501') {
+        errorMessage = 'No tienes permisos para crear metas. Verifica tu sesión.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
+      console.log('=== handleCreateGoal FINALIZADO ===');
       setIsLoading(false);
     }
   };
   
   const handleNext = async () => {
-    if (step === 1) {
-      await handleAuth();
-    } else if (step === 2 && goalType) {
-      // Pre-llenar nombre según el tipo de meta
-      const defaultNames = {
-        emergency: 'Mi Fondo de Emergencia',
-        travel: 'Mi Viaje Soñado',
-        debt: 'Libertad Financiera',
-        purchase: 'Mi Gran Compra'
-      };
-      setGoalName(defaultNames[goalType]);
-      setStep(3);
-    } else if (step === 3) {
-      await handleCreateGoal();
+    console.log('=== handleNext llamado ===');
+    console.log('Step actual:', step);
+    console.log('Goal type:', goalType);
+    console.log('Goal name:', goalName);
+    console.log('Goal amount:', goalAmount);
+    console.log('Target months:', targetMonths);
+    
+    try {
+      if (step === 1) {
+        console.log('Ejecutando handleAuth...');
+        await handleAuth();
+      } else if (step === 2 && goalType) {
+        console.log('Pasando al paso 3, configurando nombre por defecto...');
+        // Pre-llenar nombre según el tipo de meta
+        const defaultNames = {
+          emergency: 'Mi Fondo de Emergencia',
+          travel: 'Mi Viaje Soñado',
+          debt: 'Libertad Financiera',
+          purchase: 'Mi Gran Compra'
+        };
+        setGoalName(defaultNames[goalType]);
+        setStep(3);
+      } else if (step === 3) {
+        console.log('Step 3 detectado, ejecutando handleCreateGoal...');
+        await handleCreateGoal();
+      } else {
+        console.log('Ninguna condición cumplida. Step:', step, 'GoalType:', goalType);
+      }
+    } catch (error) {
+      console.error('Error en handleNext:', error);
+      console.error('Stack trace:', error.stack);
     }
   };
   

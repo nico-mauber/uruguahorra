@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Button, Card, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { user, updateUserXP } = useAuthStore();
+  const { user, updateUserXP, checkSession, isLoading: authLoading } = useAuthStore();
   const { 
     goals, 
     isLoading, 
@@ -23,26 +23,92 @@ export default function DashboardScreen() {
   } = useGoalsStore();
   
   const [refreshing, setRefreshing] = React.useState(false);
+  const [initializing, setInitializing] = React.useState(true);
   
-  // Cargar metas cuando el componente se monta o cuando el usuario cambia
+  // Usar useRef para rastrear si ya se cargaron las metas
+  const goalsLoadedRef = useRef(false);
+  const initializingRef = useRef(false);
+  
+  // Inicializar sesión cuando el componente se monta - SOLO UNA VEZ
   useEffect(() => {
-    console.log('Dashboard montado, usuario:', user?.email);
-    
-    if (user?.id) {
-      console.log('Cargando metas para usuario:', user.id);
-      fetchGoals(user.id);
+    // Si ya estamos inicializando, no hacer nada
+    if (initializingRef.current) {
+      console.log('Ya se está inicializando, evitando llamada duplicada');
+      return;
     }
-  }, [user?.id]);
+    
+    initializingRef.current = true;
+    console.log('Dashboard montado, verificando sesión...');
+    
+    const initializeUser = async () => {
+      try {
+        // Verificar si ya hay un usuario en el store
+        const currentUser = useAuthStore.getState().user;
+        console.log('Usuario actual en store:', currentUser);
+        
+        if (!currentUser) {
+          console.log('No hay usuario en store, verificando sesión con Supabase...');
+          await checkSession();
+        }
+        
+        // Después de checkSession, obtener el usuario actualizado
+        const updatedUser = useAuthStore.getState().user;
+        console.log('Usuario después de checkSession:', updatedUser);
+        
+        // Solo cargar metas si no se han cargado antes
+        if (updatedUser?.id && !goalsLoadedRef.current) {
+          console.log('Cargando metas por primera vez para usuario:', updatedUser.id);
+          goalsLoadedRef.current = true; // Marcar como cargadas ANTES de la llamada
+          await fetchGoals(updatedUser.id);
+        } else if (goalsLoadedRef.current) {
+          console.log('Las metas ya fueron cargadas, evitando llamada duplicada');
+        } else {
+          console.log('No hay usuario autenticado después de verificar sesión');
+        }
+      } catch (error) {
+        console.error('Error inicializando usuario:', error);
+        goalsLoadedRef.current = false; // Reset en caso de error
+      } finally {
+        setInitializing(false);
+      }
+    };
+    
+    initializeUser();
+    
+    // Sin dependencias - solo se ejecuta una vez
+  }, []);
+  
+  // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
+  // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
+  /*
+  useEffect(() => {
+    console.log('Usuario cambió:', user);
+    
+    if (user?.id && !initializing) {
+      console.log('Usuario disponible, cargando metas para ID:', user.id);
+      fetchGoals(user.id).then(() => {
+        console.log('fetchGoals completado');
+      }).catch(err => {
+        console.error('Error en fetchGoals:', err);
+      });
+    }
+  }, [user?.id, initializing]);
+  */
+  
+  // REMOVIDO: useFocusEffect causaba loops infinitos
+  // Las metas se cargan una sola vez en el useEffect inicial
+  // y el usuario puede refrescar manualmente con pull-to-refresh
   
   // Función para refrescar metas
   const onRefresh = React.useCallback(async () => {
     if (!user?.id) return;
     
     setRefreshing(true);
-    console.log('Refrescando metas...');
+    console.log('Refrescando metas manualmente...');
     
     try {
-      await fetchGoals(user.id);
+      // Usar force=true para forzar la recarga cuando el usuario lo solicita
+      await fetchGoals(user.id, true);
     } catch (error) {
       console.error('Error refrescando metas:', error);
     } finally {
@@ -54,10 +120,8 @@ export default function DashboardScreen() {
     if (goals.length > 0) {
       await addContribution(goals[0].id, amount, 'manual');
       updateUserXP(amount * 2);
-      // Recargar metas para obtener el monto actualizado
-      if (user?.id) {
-        fetchGoals(user.id);
-      }
+      // No es necesario recargar las metas porque addContribution ya actualiza el store local
+      // Esto evita llamadas innecesarias a la API
     }
   };
   
@@ -210,16 +274,25 @@ export default function DashboardScreen() {
     },
   });
   
-  // Mostrar loading mientras se cargan las metas por primera vez
-  if (isLoading && goals.length === 0) {
+  // Mostrar loading mientras se inicializa el usuario o se cargan las metas
+  if (initializing || authLoading || (isLoading && goals.length === 0)) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Cargando tus metas...</Text>
+          <Text style={styles.loadingText}>
+            {initializing ? 'Verificando sesión...' : 'Cargando tus metas...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
+  }
+  
+  // Si no hay usuario después de inicializar, redirigir al login
+  if (!initializing && !user) {
+    console.log('No hay usuario autenticado, redirigiendo al onboarding...');
+    router.replace('/(auth)/onboarding');
+    return null;
   }
   
   return (
@@ -303,13 +376,17 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Mis metas activas</Text>
           {goals.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Ionicons name="target" size={48} color={theme.textSecondary} />
+              <Ionicons name="flag" size={48} color={theme.textSecondary} />
               <Text style={styles.emptyText}>
                 No tienes metas activas. ¡Crea una para empezar a ahorrar!
               </Text>
               <Button
                 title="Crear nueva meta"
-                onPress={() => router.push('/(auth)/onboarding')}
+                onPress={() => {
+                  // Navegar al onboarding pero marcar que es para crear meta solamente
+                  // Podrías pasar un parámetro para indicar que es solo para crear meta
+                  router.push('/(auth)/onboarding');
+                }}
                 style={styles.createGoalButton}
               />
             </Card>

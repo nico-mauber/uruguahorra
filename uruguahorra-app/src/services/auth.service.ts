@@ -30,22 +30,33 @@ export class AuthService {
       }
       
       console.log('Usuario creado en Auth con ID:', authData.user.id);
+      console.log('Sesión obtenida:', authData.session ? 'Sí' : 'No');
 
-      // 2. Esperar un momento para que el trigger se ejecute (si existe)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 2. Si tenemos sesión, establecerla inmediatamente
+      if (authData.session) {
+        console.log('Estableciendo sesión del nuevo usuario...');
+        await supabase.auth.setSession({
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+        });
+      }
+
+      // 3. Esperar un momento para que el trigger se ejecute (si existe)
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // 3. Verificar si el perfil existe en la tabla users
+      // 4. Verificar si el perfil existe en la tabla users
+      console.log('Verificando si el perfil fue creado por el trigger...');
       const { data: existingProfile, error: checkError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
-        .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no existe
+        .maybeSingle();
       
       if (checkError) {
         console.error('Error verificando perfil existente:', checkError);
       }
       
-      // 4. Si no existe el perfil, crearlo manualmente
+      // 5. Si no existe el perfil, crearlo manualmente (RLS está desactivado)
       if (!existingProfile) {
         console.log('Perfil no encontrado, creando manualmente...');
         
@@ -65,25 +76,18 @@ export class AuthService {
 
         if (profileError) {
           console.error('Error creando perfil de usuario:', profileError);
-          // Si el error es porque ya existe, intentamos obtenerlo
-          if (profileError.code === '23505') { // Duplicate key
-            const { data: existingUser } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', authData.user.id)
-              .single();
-            
-            if (existingUser) {
-              console.log('Perfil ya existía, usando el existente');
-            }
+          // Si el error es porque ya existe, está bien
+          if (profileError.code === '23505') {
+            console.log('Perfil ya existía (creado por trigger)');
           } else {
-            throw profileError;
+            // No lanzamos el error para no interrumpir el registro
+            console.error('Error no crítico al crear perfil:', profileError);
           }
         } else {
           console.log('Perfil creado exitosamente:', newProfile);
         }
       } else {
-        console.log('Perfil ya existía:', existingProfile);
+        console.log('Perfil encontrado (creado por trigger):', existingProfile);
         
         // Actualizar metadata si es necesario
         if (metadata) {

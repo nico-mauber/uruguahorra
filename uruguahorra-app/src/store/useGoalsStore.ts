@@ -30,9 +30,10 @@ interface GoalsStore {
   activeGoalId: string | null;
   isLoading: boolean;
   error: string | null;
+  lastFetchUserId: string | null; // Para rastrear el último usuario cargado
   
   // Acciones para metas
-  fetchGoals: (userId: string) => Promise<void>;
+  fetchGoals: (userId: string, force?: boolean) => Promise<void>;
   setGoals: (goals: Goal[]) => void;
   addGoal: (goal: Omit<Goal, 'id' | 'savedAmount' | 'createdAt'>) => void;
   updateGoal: (id: string, updates: Partial<Goal>) => void;
@@ -66,15 +67,36 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
   activeGoalId: null,
   isLoading: false,
   error: null,
+  lastFetchUserId: null,
   
-  fetchGoals: async (userId: string) => {
-    console.log('fetchGoals llamado para usuario:', userId);
+  fetchGoals: async (userId: string, force: boolean = false) => {
+    console.log('fetchGoals llamado para usuario:', userId, 'force:', force);
+    
+    // Verificar si ya estamos cargando
+    const currentState = get();
+    if (currentState.isLoading) {
+      console.log('Ya se están cargando las metas, evitando llamada duplicada');
+      return;
+    }
+    
+    // Si no es forzado, verificar si ya cargamos las metas para este usuario
+    if (!force && currentState.lastFetchUserId === userId) {
+      console.log('Las metas ya fueron consultadas para este usuario, evitando recarga (use force=true para recargar)');
+      return;
+    }
+    
     set({ isLoading: true, error: null });
     
     try {
-      // Obtener metas activas del usuario
-      const goals = await GoalsService.getActiveGoals(userId);
-      console.log('Metas obtenidas de Supabase:', goals);
+      // Obtener TODAS las metas del usuario (activas e inactivas)
+      const goals = await GoalsService.getUserGoals(userId);
+      console.log('Metas obtenidas de Supabase (todas):', goals);
+      console.log('Detalle de metas:', goals.map(g => ({
+        id: g.id,
+        name: g.name,
+        is_active: g.is_active,
+        user_id: g.user_id
+      })));
       
       // Convertir al formato del store
       const localGoals = goals.map(convertDBGoalToLocal);
@@ -82,7 +104,8 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
       set({ 
         goals: localGoals, 
         isLoading: false,
-        error: null 
+        error: null,
+        lastFetchUserId: userId // Guardar el ID del último usuario cargado
       });
       
       console.log('Store actualizado con metas:', localGoals.length);
@@ -221,6 +244,7 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
       activeGoalId: null,
       isLoading: false,
       error: null,
+      lastFetchUserId: null, // Limpiar también el último usuario cargado
     });
   },
 }));

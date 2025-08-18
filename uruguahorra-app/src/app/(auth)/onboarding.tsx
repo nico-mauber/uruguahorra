@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
+import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
 import { supabase } from '@/lib/supabase';
 
@@ -76,7 +77,13 @@ export default function OnboardingScreen() {
         // Iniciar sesión
         await login(email, password);
         console.log('Sesión iniciada exitosamente');
+        
+        // Los usuarios existentes van directo al dashboard
+        console.log('Usuario existente, navegando directamente a tabs...');
+        router.replace('/(tabs)');
+        return; // No continuar al paso 2
       }
+      // Solo los nuevos usuarios continúan al paso 2 (crear meta)
       setStep(2);
     } catch (error: any) {
       console.error('Error detallado en autenticación:', error);
@@ -200,6 +207,12 @@ export default function OnboardingScreen() {
       const createdGoal = await GoalsService.createGoal(goalData);
       
       console.log('¡Meta creada exitosamente!:', createdGoal);
+      
+      // Actualizar el store de metas antes de navegar (force=true para recargar)
+      const { fetchGoals } = useGoalsStore.getState();
+      await fetchGoals(currentUser.id, true);
+      console.log('Store de metas actualizado');
+      
       Alert.alert('¡Éxito!', 'Tu meta ha sido creada correctamente');
       
       // Navegar al dashboard

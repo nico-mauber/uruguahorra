@@ -260,7 +260,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         streak: 0,
       };
       
-      console.log('Usuario autenticado configurado en store:', userWithStats);
+      console.log('checkSession - Usuario autenticado configurado en store:', userWithStats);
+      console.log('checkSession - ID del usuario:', userWithStats.id);
+      console.log('checkSession - Email del usuario:', userWithStats.email);
       
       set({
         user: userWithStats,

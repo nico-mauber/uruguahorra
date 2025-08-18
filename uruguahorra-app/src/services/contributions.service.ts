@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
+import { XPService, StreaksService } from '@/features/gamification';
 
 type Contribution = Database['public']['Tables']['micro_contributions']['Row'];
 type ContributionInsert =
@@ -36,6 +37,11 @@ export class ContributionsService {
       logger.success(LogModule.DB, 'Contribución creada exitosamente', {
         contributionId: data.id,
         amount: data.amount,
+      });
+
+      // Procesar gamificación en paralelo (sin bloquear la respuesta)
+      this.processGamificationAsync(data.user_id, data.amount).catch((error) => {
+        logger.error(LogModule.DB, 'Error procesando gamificación', error);
       });
 
       return data;
@@ -423,6 +429,34 @@ export class ContributionsService {
         error
       );
       throw error;
+    }
+  }
+
+  /**
+   * Procesar gamificación de forma asíncrona para contribuciones
+   */
+  private static async processGamificationAsync(
+    userId: string, 
+    amount: number
+  ): Promise<void> {
+    try {
+      logger.info(LogModule.DB, 'Procesando gamificación para contribución', {
+        userId,
+        amount,
+      });
+
+      // Otorgar XP por contribución
+      const xpEarned = await XPService.awardContributionXP(userId, amount);
+      
+      // Actualizar racha del usuario
+      await StreaksService.updateStreak(userId);
+
+      logger.success(LogModule.DB, 'Gamificación procesada exitosamente', {
+        xpEarned,
+      });
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error en procesamiento de gamificación', error);
+      // No re-lanzar el error para evitar afectar la operación principal
     }
   }
 }

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
+import { XPService, LevelsService, StreaksService } from '@/features/gamification';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -33,10 +34,6 @@ interface AuthStore {
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
-// Función auxiliar para calcular nivel basado en XP
-const calculateLevel = (xp: number): number => {
-  return Math.floor(Math.sqrt(xp) / 2) + 1;
-};
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
@@ -223,15 +220,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   updateUserXP: (xp) =>
-    set((state) => ({
-      user: state.user
-        ? {
-            ...state.user,
-            totalXP: state.user.totalXP + xp,
-            level: calculateLevel(state.user.totalXP + xp),
-          }
-        : null,
-    })),
+    set((state) => {
+      if (!state.user) return state;
+      
+      const newTotalXP = state.user.totalXP + xp;
+      const newLevel = LevelsService.getLevel(newTotalXP);
+      
+      return {
+        user: {
+          ...state.user,
+          totalXP: newTotalXP,
+          level: newLevel,
+        },
+      };
+    }),
 
   updateStreak: (streak) =>
     set((state) => ({
@@ -273,23 +275,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       // 4. Verificar premium
       const isPremium = await AuthService.checkPremiumStatus(authUser.id);
 
-      // 5. Calcular estadísticas
-      const { count: challengesCompleted } = await supabase
-        .from('user_challenges')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id)
-        .eq('status', 'done');
-
-      const totalXP = (challengesCompleted || 0) * 50;
-      const level = calculateLevel(totalXP);
+      // 5. Obtener estadísticas de gamificación
+      let gamificationStats;
+      try {
+        const totalXP = await XPService.getUserTotalXP(authUser.id);
+        const level = LevelsService.getLevel(totalXP);
+        const streak = await StreaksService.getUserStreak(authUser.id);
+        
+        gamificationStats = {
+          level,
+          totalXP,
+          streak: streak?.current_streak || 0,
+        };
+      } catch (error) {
+        logger.warn(LogModule.STORE, 'Error obteniendo estadísticas de gamificación, usando valores por defecto', error);
+        gamificationStats = {
+          level: 1,
+          totalXP: 0,
+          streak: 0,
+        };
+      }
 
       // 6. Actualizar store
       const userWithStats = {
         ...profile,
         id: authUser.id, // Asegurar que el ID esté presente
-        level,
-        totalXP,
-        streak: 0,
+        ...gamificationStats,
       };
 
       logger.success(LogModule.STORE, 'Sesión verificada exitosamente', {

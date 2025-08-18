@@ -19,6 +19,8 @@ import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
 import { ContributionsService } from '@/services/contributions.service';
 import { ChallengesService } from '@/services/challenges.service';
+import { LevelBadge, XPProgressBar, StreakDisplay } from '@/features/gamification';
+import { GamificationService } from '@/features/gamification';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -41,10 +43,35 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [initializing, setInitializing] = React.useState(true);
   const [hasShownWelcome, setHasShownWelcome] = React.useState(false);
+  const [gamificationStats, setGamificationStats] = React.useState<any>(null);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
   const initializingRef = useRef(false);
+
+  // Función para cargar estadísticas de gamificación
+  const loadGamificationStats = async (userId: string) => {
+    try {
+      const stats = await GamificationService.getUserStats(userId);
+      setGamificationStats(stats);
+      logger.success(LogModule.UI, 'Estadísticas de gamificación cargadas');
+    } catch (error) {
+      logger.error(LogModule.UI, 'Error cargando estadísticas de gamificación', error);
+      // No mostrar error al usuario, usar valores por defecto
+      setGamificationStats({
+        totalXP: 0,
+        level: 1,
+        levelInfo: { level: 1, progress: 0, nextLevelXP: 4, currentLevelXP: 0 },
+        streak: {
+          current_streak: 0,
+          max_streak: 0,
+          last_activity_at: new Date().toISOString(),
+          streak_protections_used: 0,
+        },
+        activeQuests: [],
+      });
+    }
+  };
 
   // Inicializar dashboard una sola vez
   useEffect(() => {
@@ -65,8 +92,11 @@ export default function DashboardScreen() {
 
         if (updatedUser?.id && !goalsLoadedRef.current) {
           goalsLoadedRef.current = true;
-          await fetchGoals(updatedUser.id);
-          logger.success(LogModule.UI, 'Metas cargadas exitosamente');
+          await Promise.all([
+            fetchGoals(updatedUser.id),
+            loadGamificationStats(updatedUser.id),
+          ]);
+          logger.success(LogModule.UI, 'Datos del usuario cargados exitosamente');
 
           // Mostrar bienvenida para nuevos usuarios o usuarios que regresan
           if (!hasShownWelcome) {
@@ -114,14 +144,17 @@ export default function DashboardScreen() {
     if (!user?.id) return;
 
     setRefreshing(true);
-    logger.info(LogModule.UI, 'Refrescando metas');
+    logger.info(LogModule.UI, 'Refrescando datos del dashboard');
 
     try {
-      await fetchGoals(user.id, true);
-      logger.success(LogModule.UI, 'Metas refrescadas');
+      await Promise.all([
+        fetchGoals(user.id, true),
+        loadGamificationStats(user.id),
+      ]);
+      logger.success(LogModule.UI, 'Dashboard refrescado');
       ToastService.quickSuccess('Información actualizada');
     } catch (error: any) {
-      logger.error(LogModule.UI, 'Error refrescando metas', error);
+      logger.error(LogModule.UI, 'Error refrescando dashboard', error);
       ToastService.handleError(error);
     } finally {
       setRefreshing(false);
@@ -151,17 +184,36 @@ export default function DashboardScreen() {
         description: 'Ahorro rápido desde dashboard',
       });
 
-      // Actualizar store de metas
-      await fetchGoals(user.id, true);
+      // Actualizar datos del dashboard
+      await Promise.all([
+        fetchGoals(user.id, true),
+        loadGamificationStats(user.id),
+      ]);
 
-      // Actualizar XP del usuario
-      updateUserXP(amount * 2);
+      // Procesar evento de gamificación
+      const gamificationResult = await GamificationService.processGamificationEvent(
+        user.id,
+        'contribution',
+        { amount }
+      );
 
       // Verificar desafíos de ahorro
       await ChallengesService.checkSavingsChallenges(user.id, amount);
 
-      // Mostrar toast de éxito
+      // Mostrar toast de éxito con XP
       ToastService.savingSuccess(amount, firstGoal.name);
+      
+      if (gamificationResult.xpEarned > 0) {
+        setTimeout(() => {
+          ToastService.quickSuccess(`+${gamificationResult.xpEarned} XP ganado!`);
+        }, 1000);
+      }
+
+      if (gamificationResult.levelUp) {
+        setTimeout(() => {
+          ToastService.levelUp(gamificationResult.newLevel!);
+        }, 2000);
+      }
 
       logger.success(LogModule.UI, 'Ahorro rápido completado', {
         amount,
@@ -193,6 +245,25 @@ export default function DashboardScreen() {
     subtitle: {
       fontSize: 16,
       color: theme.textSecondary,
+    },
+    gamificationSection: {
+      marginBottom: 24,
+    },
+    gamificationHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    levelContainer: {
+      alignItems: 'center',
+    },
+    xpProgressContainer: {
+      flex: 1,
+      marginLeft: 16,
+    },
+    streakContainer: {
+      marginTop: 16,
     },
     statsRow: {
       flexDirection: 'row',
@@ -252,23 +323,6 @@ export default function DashboardScreen() {
     quickSaveButtons: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-    },
-    streakCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 16,
-      marginBottom: 16,
-    },
-    streakInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    streakText: {
-      marginLeft: 12,
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.text,
     },
     addButton: {
       position: 'absolute',
@@ -362,30 +416,54 @@ export default function DashboardScreen() {
           <Text style={styles.subtitle}>Tu progreso de hoy</Text>
         </View>
 
+        {gamificationStats && (
+          <View style={styles.gamificationSection}>
+            {/* Nivel y progreso de XP */}
+            <Card>
+              <View style={styles.gamificationHeader}>
+                <View style={styles.levelContainer}>
+                  <LevelBadge 
+                    level={gamificationStats.level} 
+                    size="large"
+                    showLabel
+                  />
+                </View>
+                
+                <View style={styles.xpProgressContainer}>
+                  <XPProgressBar 
+                    currentXP={gamificationStats.totalXP}
+                    animated={true}
+                    showLabels={true}
+                  />
+                </View>
+              </View>
+              
+              {/* Racha */}
+              <View style={styles.streakContainer}>
+                <StreakDisplay 
+                  streak={gamificationStats.streak}
+                  size="medium"
+                  showProtections={true}
+                />
+              </View>
+            </Card>
+          </View>
+        )}
+
         <View style={styles.statsRow}>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>Nivel</Text>
-            <Text style={styles.statValue}>{user?.level || 1}</Text>
+            <Text style={styles.statValue}>{gamificationStats?.level || 1}</Text>
           </Card>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>XP Total</Text>
-            <Text style={styles.statValue}>{user?.totalXP || 0}</Text>
+            <Text style={styles.statValue}>{gamificationStats?.totalXP || 0}</Text>
           </Card>
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>Ahorrado</Text>
             <Text style={styles.statValue}>${getTotalSaved().toFixed(0)}</Text>
           </Card>
         </View>
-
-        <Card style={styles.streakCard} variant="outlined">
-          <View style={styles.streakInfo}>
-            <Ionicons name="flame" size={32} color={theme.warning} />
-            <Text style={styles.streakText}>
-              {user?.streak || 0} días de racha
-            </Text>
-          </View>
-          <Ionicons name="shield-checkmark" size={24} color={theme.success} />
-        </Card>
 
         {goals.length > 0 && (
           <View style={styles.quickSaveSection}>

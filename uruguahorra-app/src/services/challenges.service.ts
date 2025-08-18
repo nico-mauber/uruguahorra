@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
+import { XPService, StreaksService, QuestsService } from '@/features/gamification';
 
 type Challenge = Database['public']['Tables']['challenges']['Row'];
 type UserChallenge = Database['public']['Tables']['user_challenges']['Row'];
@@ -267,6 +268,12 @@ export class ChallengesService {
       }
 
       logger.success(LogModule.DB, 'Desafío completado y recompensa reclamada');
+      
+      // Procesar gamificación en paralelo
+      this.processChallengeGamificationAsync(data.user_id, data.challenge_id).catch((error) => {
+        logger.error(LogModule.DB, 'Error procesando gamificación de challenge', error);
+      });
+
       return data;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal completando desafío', error);
@@ -568,6 +575,37 @@ export class ChallengesService {
       }
     } catch (error) {
       logger.error(LogModule.DB, 'Error verificando desafíos de racha', error);
+    }
+  }
+
+  /**
+   * Procesar gamificación de forma asíncrona para challenges completados
+   */
+  private static async processChallengeGamificationAsync(
+    userId: string, 
+    challengeId: string
+  ): Promise<void> {
+    try {
+      logger.info(LogModule.DB, 'Procesando gamificación para challenge', {
+        userId,
+        challengeId,
+      });
+
+      // Otorgar XP por completar challenge
+      const xpEarned = await XPService.awardChallengeXP(userId, challengeId);
+      
+      // Actualizar racha del usuario
+      await StreaksService.updateStreak(userId);
+      
+      // Evaluar progreso de quests
+      await QuestsService.evaluateQuestCompletion(userId);
+
+      logger.success(LogModule.DB, 'Gamificación de challenge procesada exitosamente', {
+        xpEarned,
+      });
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error en procesamiento de gamificación de challenge', error);
+      // No re-lanzar el error para evitar afectar la operación principal
     }
   }
 }

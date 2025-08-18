@@ -357,6 +357,116 @@ export type Database = {
           updated_at?: string;
         };
       };
+      user_xp_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          xp_earned: number;
+          event_data: Record<string, any>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          xp_earned: number;
+          event_data?: Record<string, any>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_type?: 'contribution' | 'challenge_complete' | 'daily_streak' | 'quest_complete';
+          xp_earned?: number;
+          event_data?: Record<string, any>;
+          created_at?: string;
+        };
+      };
+      user_streaks: {
+        Row: {
+          id: string;
+          user_id: string;
+          current_streak: number;
+          max_streak: number;
+          last_activity_at: string;
+          streak_protections_used: number;
+          protection_reset_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          current_streak?: number;
+          max_streak?: number;
+          last_activity_at?: string;
+          streak_protections_used?: number;
+          protection_reset_date?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          current_streak?: number;
+          max_streak?: number;
+          last_activity_at?: string;
+          streak_protections_used?: number;
+          protection_reset_date?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      weekly_quests: {
+        Row: {
+          id: string;
+          week_start_date: string;
+          challenge_ids: string[];
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          week_start_date: string;
+          challenge_ids?: string[];
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          week_start_date?: string;
+          challenge_ids?: string[];
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      user_quest_progress: {
+        Row: {
+          id: string;
+          user_id: string;
+          quest_id: string;
+          completed_challenge_ids: string[];
+          completion_percentage: number;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          quest_id: string;
+          completed_challenge_ids?: string[];
+          completion_percentage?: number;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          quest_id?: string;
+          completed_challenge_ids?: string[];
+          completion_percentage?: number;
+          completed_at?: string | null;
+        };
+      };
     };
     Views: {
       user_dashboard: {
@@ -379,6 +489,36 @@ export type Database = {
           total_squad_savings: number;
           avg_monthly_savings: number;
           ranking: number;
+        };
+      };
+      user_xp_stats: {
+        Row: {
+          user_id: string;
+          total_xp: number;
+          total_events: number;
+          contribution_xp: number;
+          challenge_xp: number;
+          streak_xp: number;
+          quest_xp: number;
+          last_xp_earned: string | null;
+        };
+      };
+      xp_leaderboard: {
+        Row: {
+          rank: number;
+          user_id: string;
+          total_xp: number;
+          level: number;
+        };
+      };
+      streak_stats: {
+        Row: {
+          user_id: string;
+          current_streak: number;
+          max_streak: number;
+          last_activity_at: string;
+          streak_protections_used: number;
+          streak_status: 'active' | 'broken';
         };
       };
     };

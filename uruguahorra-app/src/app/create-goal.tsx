@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -36,6 +37,11 @@ export default function CreateGoalScreen() {
   const [goalName, setGoalName] = useState('');
   const [goalAmount, setGoalAmount] = useState('');
   const [targetMonths, setTargetMonths] = useState('3');
+  
+  // Campos específicos por tipo de meta
+  const [travelDestination, setTravelDestination] = useState('');
+  const [debtInterestRate, setDebtInterestRate] = useState('');
+  const [purchaseDescription, setPurchaseDescription] = useState('');
   
   const goalOptions = [
     { id: 'emergency', label: '🛡️ Colchón de emergencia', value: 'emergency' },
@@ -88,7 +94,12 @@ export default function CreateGoalScreen() {
         target_amount: parsedAmount,
         target_date: targetDate.toISOString().split('T')[0],
         saved_amount: 0,
-        is_active: true
+        is_active: true,
+        category: goalType,
+        // Agregar datos adicionales según el tipo
+        ...(goalType === 'travel' && travelDestination && { destination: travelDestination }),
+        ...(goalType === 'debt' && debtInterestRate && { interest_rate: parseFloat(debtInterestRate) }),
+        ...(goalType === 'purchase' && purchaseDescription && { description: purchaseDescription })
       };
       
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
@@ -135,14 +146,34 @@ export default function CreateGoalScreen() {
   
   const handleNext = () => {
     if (step === 1 && goalType) {
-      // Pre-llenar nombre según el tipo de meta
-      const defaultNames = {
-        emergency: 'Mi Fondo de Emergencia',
-        travel: 'Mi Viaje Soñado',
-        debt: 'Libertad Financiera',
-        purchase: 'Mi Gran Compra'
+      // Pre-llenar nombre y configuraciones según el tipo de meta
+      const defaultConfigs = {
+        emergency: {
+          name: 'Mi Fondo de Emergencia',
+          months: '6',
+          amount: ''
+        },
+        travel: {
+          name: 'Mi Viaje Soñado',
+          months: '12',
+          amount: ''
+        },
+        debt: {
+          name: 'Libertad Financiera',
+          months: '24',
+          amount: ''
+        },
+        purchase: {
+          name: 'Mi Gran Compra',
+          months: '8',
+          amount: ''
+        }
       };
-      setGoalName(defaultNames[goalType]);
+      
+      const config = defaultConfigs[goalType];
+      setGoalName(config.name);
+      setTargetMonths(config.months);
+      setGoalAmount(config.amount);
       setStep(2);
     } else if (step === 2) {
       handleCreateGoal();
@@ -189,6 +220,18 @@ export default function CreateGoalScreen() {
     },
     goalOption: {
       marginBottom: 12,
+    },
+    goalOptionCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      marginBottom: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
     },
     goalOptionContent: {
       flexDirection: 'row',
@@ -251,6 +294,44 @@ export default function CreateGoalScreen() {
       marginTop: 16,
       opacity: 0.7,
     },
+    tipCard: {
+      marginBottom: 20,
+      backgroundColor: theme.primary + '10',
+      borderColor: theme.primary + '30',
+    },
+    tipTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    tipText: {
+      fontSize: 14,
+      color: theme.text,
+      lineHeight: 20,
+    },
+    calculatorCard: {
+      marginTop: 16,
+      backgroundColor: theme.success + '10',
+      borderColor: theme.success + '30',
+      borderWidth: 1,
+    },
+    calculatorTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.success,
+      marginBottom: 8,
+    },
+    calculatorText: {
+      fontSize: 16,
+      color: theme.text,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    calculatorSubtext: {
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
   });
   
   // Verificar autenticación
@@ -300,42 +381,108 @@ export default function CreateGoalScreen() {
           {step === 1 && (
             <>
               {goalOptions.map((option) => (
-                <Card
+                <TouchableOpacity
                   key={option.id}
-                  variant="outlined"
                   style={[
-                    styles.goalOption,
+                    styles.goalOptionCard,
                     goalType === option.value && styles.selectedGoal,
                   ]}
                   onPress={() => {
                     if (!isLoading) {
+                      console.log('=== OPCIÓN SELECCIONADA ===');
+                      console.log('Opción:', option.value);
+                      console.log('Estado actual:', goalType);
                       logger.debug(LogModule.UI, 'Tipo de meta seleccionado', { type: option.value });
                       setGoalType(option.value as any);
+                      console.log('Estado después:', option.value);
                     }
                   }}
+                  disabled={isLoading}
                 >
                   <View style={styles.goalOptionContent}>
                     <Text style={styles.goalOptionText}>{option.label}</Text>
                   </View>
-                </Card>
+                </TouchableOpacity>
               ))}
             </>
           )}
           
           {step === 2 && (
             <>
+              {/* Consejo específico por tipo de meta */}
+              <Card style={styles.tipCard} variant="outlined">
+                <Text style={styles.tipTitle}>
+                  {goalType === 'emergency' && '💡 Consejo para Fondo de Emergencia'}
+                  {goalType === 'travel' && '💡 Consejo para tu Viaje'}
+                  {goalType === 'debt' && '💡 Consejo para Pagar Deudas'}
+                  {goalType === 'purchase' && '💡 Consejo para tu Compra'}
+                </Text>
+                <Text style={styles.tipText}>
+                  {goalType === 'emergency' && 'Idealmente 3-6 meses de gastos mensuales. Esto te protege ante imprevistos.'}
+                  {goalType === 'travel' && 'Investiga costos de vuelos, alojamiento y actividades. ¡Planificar te ayuda a ahorrar más!'}
+                  {goalType === 'debt' && 'Pagar deudas rápido te ahorra intereses. Considera empezar por la de mayor tasa.'}
+                  {goalType === 'purchase' && 'Comprar al contado suele tener descuentos. ¡Tu paciencia será recompensada!'}
+                </Text>
+              </Card>
+
               <TextInput
                 style={styles.input}
-                placeholder="Nombre de tu meta"
+                placeholder={
+                  goalType === 'emergency' ? 'Ej: Fondo de Emergencia Familiar' :
+                  goalType === 'travel' ? 'Ej: Viaje a Europa 2025' :
+                  goalType === 'debt' ? 'Ej: Eliminar deuda tarjeta de crédito' :
+                  'Ej: Auto nuevo'
+                }
                 placeholderTextColor={theme.textSecondary}
                 value={goalName}
                 onChangeText={setGoalName}
                 editable={!isLoading}
               />
+
+              {/* Campos específicos según el tipo de meta */}
+              {goalType === 'travel' && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Destino (opcional)"
+                  placeholderTextColor={theme.textSecondary}
+                  value={travelDestination}
+                  onChangeText={setTravelDestination}
+                  editable={!isLoading}
+                />
+              )}
+
+              {goalType === 'debt' && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Tasa de interés actual (%) - opcional"
+                  placeholderTextColor={theme.textSecondary}
+                  value={debtInterestRate}
+                  onChangeText={setDebtInterestRate}
+                  keyboardType="numeric"
+                  editable={!isLoading}
+                />
+              )}
+
+              {goalType === 'purchase' && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Descripción del producto (opcional)"
+                  placeholderTextColor={theme.textSecondary}
+                  value={purchaseDescription}
+                  onChangeText={setPurchaseDescription}
+                  editable={!isLoading}
+                  multiline
+                />
+              )}
               
               <TextInput
                 style={styles.input}
-                placeholder="Monto objetivo ($)"
+                placeholder={
+                  goalType === 'emergency' ? 'Monto objetivo (Ej: $50,000)' :
+                  goalType === 'travel' ? 'Presupuesto total del viaje' :
+                  goalType === 'debt' ? 'Total de la deuda a pagar' :
+                  'Precio estimado de la compra'
+                }
                 placeholderTextColor={theme.textSecondary}
                 value={goalAmount}
                 onChangeText={setGoalAmount}
@@ -347,7 +494,7 @@ export default function CreateGoalScreen() {
                 <Text style={styles.monthsLabel}>Plazo:</Text>
                 <TextInput
                   style={styles.monthsInput}
-                  placeholder="3"
+                  placeholder={targetMonths}
                   placeholderTextColor={theme.textSecondary}
                   value={targetMonths}
                   onChangeText={setTargetMonths}
@@ -356,6 +503,19 @@ export default function CreateGoalScreen() {
                 />
                 <Text style={[styles.monthsLabel, { marginLeft: 10 }]}>meses</Text>
               </View>
+
+              {/* Calculadora automática */}
+              {goalAmount && targetMonths && (
+                <Card style={styles.calculatorCard}>
+                  <Text style={styles.calculatorTitle}>📊 Tu plan de ahorro</Text>
+                  <Text style={styles.calculatorText}>
+                    Necesitas ahorrar: ${(parseFloat(goalAmount) / parseInt(targetMonths)).toFixed(0)} por mes
+                  </Text>
+                  <Text style={styles.calculatorSubtext}>
+                    ≈ ${(parseFloat(goalAmount) / (parseInt(targetMonths) * 30)).toFixed(0)} por día
+                  </Text>
+                </Card>
+              )}
             </>
           )}
           

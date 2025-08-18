@@ -147,13 +147,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       console.log('Perfil obtenido:', profile);
       
       // 3. Actualizar el store
+      const userWithStats = {
+        ...profile,
+        id: authUser.id, // Asegurar que el ID esté presente
+        level: 1,
+        totalXP: 0,
+        streak: 0,
+      };
+      
+      console.log('Usuario configurado en store:', userWithStats);
+      
       set({
-        user: {
-          ...profile,
-          level: 1,
-          totalXP: 0,
-          streak: 0,
-        },
+        user: userWithStats,
         supabaseUser: authUser,
         isAuthenticated: true,
         isPremium: false,
@@ -247,13 +252,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const level = calculateLevel(totalXP);
       
       // 6. Actualizar store
+      const userWithStats = {
+        ...profile,
+        id: authUser.id, // Asegurar que el ID esté presente
+        level,
+        totalXP,
+        streak: 0,
+      };
+      
+      console.log('Usuario autenticado configurado en store:', userWithStats);
+      
       set({
-        user: {
-          ...profile,
-          level,
-          totalXP,
-          streak: 0,
-        },
+        user: userWithStats,
         supabaseUser: authUser,
         isAuthenticated: true,
         isPremium,

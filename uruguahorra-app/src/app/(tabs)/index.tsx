@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card, ProgressBar } from '@components';
@@ -12,12 +12,52 @@ export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { user, updateUserXP } = useAuthStore();
-  const { goals, addContribution, getGoalProgress, getTotalSaved } = useGoalsStore();
+  const { 
+    goals, 
+    isLoading, 
+    error,
+    fetchGoals,
+    addContribution, 
+    getGoalProgress, 
+    getTotalSaved 
+  } = useGoalsStore();
   
-  const handleQuickSave = (amount: number) => {
+  const [refreshing, setRefreshing] = React.useState(false);
+  
+  // Cargar metas cuando el componente se monta o cuando el usuario cambia
+  useEffect(() => {
+    console.log('Dashboard montado, usuario:', user?.email);
+    
+    if (user?.id) {
+      console.log('Cargando metas para usuario:', user.id);
+      fetchGoals(user.id);
+    }
+  }, [user?.id]);
+  
+  // Función para refrescar metas
+  const onRefresh = React.useCallback(async () => {
+    if (!user?.id) return;
+    
+    setRefreshing(true);
+    console.log('Refrescando metas...');
+    
+    try {
+      await fetchGoals(user.id);
+    } catch (error) {
+      console.error('Error refrescando metas:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id, fetchGoals]);
+  
+  const handleQuickSave = async (amount: number) => {
     if (goals.length > 0) {
-      addContribution(goals[0].id, amount, 'manual');
+      await addContribution(goals[0].id, amount, 'manual');
       updateUserXP(amount * 2);
+      // Recargar metas para obtener el monto actualizado
+      if (user?.id) {
+        fetchGoals(user.id);
+      }
     }
   };
   
@@ -89,6 +129,11 @@ export default function DashboardScreen() {
       fontSize: 14,
       color: theme.textSecondary,
     },
+    goalDate: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
     quickSaveSection: {
       marginBottom: 24,
     },
@@ -129,11 +174,67 @@ export default function DashboardScreen() {
       shadowOpacity: 0.25,
       shadowRadius: 4,
     },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
+    errorContainer: {
+      padding: 16,
+      backgroundColor: theme.error + '20',
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    errorText: {
+      color: theme.error,
+      textAlign: 'center',
+    },
+    emptyCard: {
+      padding: 24,
+      alignItems: 'center',
+    },
+    emptyText: {
+      color: theme.textSecondary,
+      textAlign: 'center',
+      fontSize: 16,
+      marginBottom: 16,
+    },
+    createGoalButton: {
+      marginTop: 8,
+    },
   });
+  
+  // Mostrar loading mientras se cargan las metas por primera vez
+  if (isLoading && goals.length === 0) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={styles.loadingText}>Cargando tus metas...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.greeting}>¡Hola, {user?.email?.split('@')[0]}!</Text>
           <Text style={styles.subtitle}>Tu progreso de hoy</Text>
@@ -151,7 +252,7 @@ export default function DashboardScreen() {
           <Card style={styles.statCard} padding="small">
             <Text style={styles.statLabel}>Ahorrado</Text>
             <Text style={styles.statValue}>
-              ${getTotalSaved()}
+              ${getTotalSaved().toFixed(0)}
             </Text>
           </Card>
         </View>
@@ -166,54 +267,78 @@ export default function DashboardScreen() {
           <Ionicons name="shield-checkmark" size={24} color={theme.success} />
         </Card>
         
-        <View style={styles.quickSaveSection}>
-          <Text style={styles.sectionTitle}>Ahorro rápido</Text>
-          <View style={styles.quickSaveButtons}>
-            <Button
-              title="$1"
-              variant="outline"
-              onPress={() => handleQuickSave(1)}
-              style={{ flex: 1, marginRight: 8 }}
-            />
-            <Button
-              title="$2"
-              variant="outline"
-              onPress={() => handleQuickSave(2)}
-              style={{ flex: 1, marginHorizontal: 8 }}
-            />
-            <Button
-              title="$5"
-              variant="outline"
-              onPress={() => handleQuickSave(5)}
-              style={{ flex: 1, marginLeft: 8 }}
-            />
+        {goals.length > 0 && (
+          <View style={styles.quickSaveSection}>
+            <Text style={styles.sectionTitle}>Ahorro rápido</Text>
+            <View style={styles.quickSaveButtons}>
+              <Button
+                title="$50"
+                variant="outline"
+                onPress={() => handleQuickSave(50)}
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="$100"
+                variant="outline"
+                onPress={() => handleQuickSave(100)}
+                style={{ flex: 1, marginHorizontal: 8 }}
+              />
+              <Button
+                title="$200"
+                variant="outline"
+                onPress={() => handleQuickSave(200)}
+                style={{ flex: 1, marginLeft: 8 }}
+              />
+            </View>
           </View>
-        </View>
+        )}
+        
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         
         <View>
-          <Text style={styles.sectionTitle}>Mis metas</Text>
+          <Text style={styles.sectionTitle}>Mis metas activas</Text>
           {goals.length === 0 ? (
-            <Card>
-              <Text style={{ color: theme.textSecondary, textAlign: 'center' }}>
-                No tienes metas activas. ¡Crea una para empezar!
+            <Card style={styles.emptyCard}>
+              <Ionicons name="target" size={48} color={theme.textSecondary} />
+              <Text style={styles.emptyText}>
+                No tienes metas activas. ¡Crea una para empezar a ahorrar!
               </Text>
+              <Button
+                title="Crear nueva meta"
+                onPress={() => router.push('/(auth)/onboarding')}
+                style={styles.createGoalButton}
+              />
             </Card>
           ) : (
-            goals.map((goal) => (
-              <Card key={goal.id} style={styles.goalCard}>
-                <View style={styles.goalHeader}>
-                  <Text style={styles.goalName}>{goal.name}</Text>
-                  <Text style={styles.goalAmount}>
-                    ${goal.savedAmount} / ${goal.targetAmount}
-                  </Text>
-                </View>
-                <ProgressBar
-                  progress={getGoalProgress(goal.id)}
-                  showLabel
-                  color={theme.primary}
-                />
-              </Card>
-            ))
+            goals.map((goal) => {
+              const progress = getGoalProgress(goal.id);
+              const daysLeft = Math.ceil((new Date(goal.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              
+              return (
+                <Card key={goal.id} style={styles.goalCard}>
+                  <View style={styles.goalHeader}>
+                    <View>
+                      <Text style={styles.goalName}>{goal.name}</Text>
+                      <Text style={styles.goalDate}>
+                        {daysLeft > 0 ? `${daysLeft} días restantes` : 'Meta vencida'}
+                      </Text>
+                    </View>
+                    <Text style={styles.goalAmount}>
+                      ${goal.savedAmount.toFixed(0)} / ${goal.targetAmount.toFixed(0)}
+                    </Text>
+                  </View>
+                  <ProgressBar
+                    progress={progress}
+                    showLabel
+                    color={theme.primary}
+                  />
+                </Card>
+              );
+            })
           )}
         </View>
       </ScrollView>

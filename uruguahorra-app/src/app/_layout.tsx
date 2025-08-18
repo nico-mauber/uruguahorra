@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@store/useAuthStore';
 import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '@theme';
+import { logger, LogModule } from '@/utils/logger';
 
 function RootLayoutNav() {
   const router = useRouter();
@@ -14,29 +15,38 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading, checkSession } = useAuthStore();
 
   useEffect(() => {
-    console.log('RootLayout: Verificando estado de autenticación...');
+    logger.start(LogModule.NAV, 'RootLayout montado, verificando autenticación inicial');
     
     // Verificar si hay una sesión activa
     const initializeApp = async () => {
       await checkSession();
+      logger.end(LogModule.NAV, 'Verificación de sesión inicial completada');
     };
     
     initializeApp();
   }, []);
 
   useEffect(() => {
-    console.log('RootLayout: isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+    logger.debug(LogModule.NAV, 'Estado de autenticación cambió', {
+      isAuthenticated,
+      isLoading,
+      currentSegment: segments[0]
+    });
     
     if (!isLoading) {
       // Verificar si estamos en el grupo correcto
       const inAuthGroup = segments[0] === '(auth)';
       const inTabsGroup = segments[0] === '(tabs)';
       
-      if (isAuthenticated && !inTabsGroup) {
-        console.log('Usuario autenticado, navegando a tabs...');
+      // Rutas modales permitidas para usuarios autenticados
+      const modalRoutes = ['create-goal', 'import-csv', 'paywall'];
+      const isModalRoute = modalRoutes.includes(segments[0]);
+      
+      if (isAuthenticated && !inTabsGroup && !isModalRoute) {
+        logger.info(LogModule.NAV, 'Usuario autenticado, navegando a tabs');
         router.replace('/(tabs)');
-      } else if (!isAuthenticated && !inAuthGroup) {
-        console.log('Usuario no autenticado, navegando a onboarding...');
+      } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
+        logger.info(LogModule.NAV, 'Usuario no autenticado, navegando a onboarding');
         router.replace('/(auth)/onboarding');
       }
     }
@@ -64,6 +74,14 @@ function RootLayoutNav() {
     >
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="create-goal"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: 'Crear Nueva Meta',
+        }}
+      />
       <Stack.Screen
         name="import-csv"
         options={{

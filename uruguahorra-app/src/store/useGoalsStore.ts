@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { GoalsService } from '@/services/goals.service';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
+import { logger, LogModule } from '@/utils/logger';
 
 type DBGoal = Database['public']['Tables']['goals']['Row'];
 
@@ -70,33 +71,36 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
   lastFetchUserId: null,
   
   fetchGoals: async (userId: string, force: boolean = false) => {
-    console.log('fetchGoals llamado para usuario:', userId, 'force:', force);
+    logger.debug(LogModule.CACHE, 'fetchGoals llamado', { userId, force });
     
     // Verificar si ya estamos cargando
     const currentState = get();
     if (currentState.isLoading) {
-      console.log('Ya se están cargando las metas, evitando llamada duplicada');
+      logger.warn(LogModule.CACHE, 'Ya se están cargando las metas, evitando llamada duplicada');
       return;
     }
     
     // Si no es forzado, verificar si ya cargamos las metas para este usuario
     if (!force && currentState.lastFetchUserId === userId) {
-      console.log('Las metas ya fueron consultadas para este usuario, evitando recarga (use force=true para recargar)');
+      logger.info(LogModule.CACHE, 'Cache hit - Usando metas almacenadas para el usuario');
       return;
     }
     
+    logger.loading(LogModule.STORE, 'Cargando metas desde Supabase');
     set({ isLoading: true, error: null });
     
     try {
       // Obtener TODAS las metas del usuario (activas e inactivas)
       const goals = await GoalsService.getUserGoals(userId);
-      console.log('Metas obtenidas de Supabase (todas):', goals);
-      console.log('Detalle de metas:', goals.map(g => ({
-        id: g.id,
-        name: g.name,
-        is_active: g.is_active,
-        user_id: g.user_id
-      })));
+      logger.success(LogModule.STORE, `${goals.length} metas obtenidas de Supabase`, {
+        metas: goals.map(g => ({
+          id: g.id,
+          name: g.name,
+          is_active: g.is_active,
+          saved: g.saved_amount,
+          target: g.target_amount
+        }))
+      });
       
       // Convertir al formato del store
       const localGoals = goals.map(convertDBGoalToLocal);
@@ -108,9 +112,12 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
         lastFetchUserId: userId // Guardar el ID del último usuario cargado
       });
       
-      console.log('Store actualizado con metas:', localGoals.length);
+      logger.success(LogModule.STORE, 'Store de metas actualizado', {
+        totalGoals: localGoals.length,
+        userId
+      });
     } catch (error: any) {
-      console.error('Error cargando metas:', error);
+      logger.error(LogModule.STORE, 'Error cargando metas', error);
       set({ 
         isLoading: false, 
         error: error.message || 'Error al cargar las metas' 
@@ -119,12 +126,12 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
   },
   
   setGoals: (goals) => {
-    console.log('setGoals llamado con:', goals.length, 'metas');
+    logger.debug(LogModule.STORE, `setGoals: actualizando ${goals.length} metas`);
     set({ goals });
   },
   
   addGoal: (goalData) => {
-    console.log('addGoal llamado (local):', goalData);
+    logger.info(LogModule.STORE, 'Agregando meta localmente', goalData);
     set((state) => ({
       goals: [
         ...state.goals,
@@ -156,13 +163,13 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
     set({ activeGoalId: id }),
   
   addContribution: async (goalId, amount, source) => {
-    console.log('addContribution llamado:', { goalId, amount, source });
+    logger.start(LogModule.STORE, 'Agregando contribución', { goalId, amount, source });
     
     try {
       // Obtener el usuario actual
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('No hay usuario autenticado');
+        logger.error(LogModule.AUTH, 'No hay usuario autenticado para agregar contribución');
         return;
       }
       
@@ -174,7 +181,10 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
         source,
       });
       
-      console.log('Contribución creada:', contribution);
+      logger.success(LogModule.STORE, 'Contribución creada y agregada al store', {
+        contributionId: contribution.id,
+        amount: contribution.amount
+      });
       
       // Actualizar el store local
       set((state) => {
@@ -196,7 +206,7 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
         };
       });
     } catch (error) {
-      console.error('Error agregando contribución:', error);
+      logger.error(LogModule.STORE, 'Error agregando contribución', error);
       set({ error: 'Error al agregar contribución' });
     }
   },
@@ -237,7 +247,7 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
   },
   
   clearStore: () => {
-    console.log('Limpiando store de metas');
+    logger.info(LogModule.STORE, 'Limpiando store de metas completamente');
     set({
       goals: [],
       contributions: [],

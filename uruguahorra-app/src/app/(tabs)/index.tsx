@@ -7,6 +7,7 @@ import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { Ionicons } from '@expo/vector-icons';
+import { logger, LogModule } from '@/utils/logger';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -33,43 +34,50 @@ export default function DashboardScreen() {
   useEffect(() => {
     // Si ya estamos inicializando, no hacer nada
     if (initializingRef.current) {
-      console.log('Ya se está inicializando, evitando llamada duplicada');
+      logger.warn(LogModule.UI, 'Dashboard ya se está inicializando, evitando duplicado');
       return;
     }
     
     initializingRef.current = true;
-    console.log('Dashboard montado, verificando sesión...');
+    logger.start(LogModule.UI, 'Dashboard montado, iniciando verificación de sesión');
     
     const initializeUser = async () => {
       try {
         // Verificar si ya hay un usuario en el store
         const currentUser = useAuthStore.getState().user;
-        console.log('Usuario actual en store:', currentUser);
+        logger.debug(LogModule.UI, 'Estado inicial del usuario', {
+          hasUser: !!currentUser,
+          userId: currentUser?.id
+        });
         
         if (!currentUser) {
-          console.log('No hay usuario en store, verificando sesión con Supabase...');
+          logger.info(LogModule.UI, 'No hay usuario en store, verificando sesión con Supabase');
           await checkSession();
         }
         
         // Después de checkSession, obtener el usuario actualizado
         const updatedUser = useAuthStore.getState().user;
-        console.log('Usuario después de checkSession:', updatedUser);
+        logger.debug(LogModule.UI, 'Usuario actualizado tras checkSession', {
+          hasUser: !!updatedUser,
+          userId: updatedUser?.id
+        });
         
         // Solo cargar metas si no se han cargado antes
         if (updatedUser?.id && !goalsLoadedRef.current) {
-          console.log('Cargando metas por primera vez para usuario:', updatedUser.id);
+          logger.info(LogModule.UI, 'Cargando metas por primera vez', { userId: updatedUser.id });
           goalsLoadedRef.current = true; // Marcar como cargadas ANTES de la llamada
           await fetchGoals(updatedUser.id);
         } else if (goalsLoadedRef.current) {
-          console.log('Las metas ya fueron cargadas, evitando llamada duplicada');
+          logger.debug(LogModule.CACHE, 'Las metas ya fueron cargadas previamente');
         } else {
-          console.log('No hay usuario autenticado después de verificar sesión');
+          logger.warn(LogModule.UI, 'No hay usuario autenticado después de verificar sesión');
         }
       } catch (error) {
-        console.error('Error inicializando usuario:', error);
+        logger.error(LogModule.UI, 'Error inicializando dashboard', error);
         goalsLoadedRef.current = false; // Reset en caso de error
       } finally {
         setInitializing(false);
+        logger.end(LogModule.UI, 'Inicialización del dashboard completada');
       }
     };
     
@@ -104,13 +112,14 @@ export default function DashboardScreen() {
     if (!user?.id) return;
     
     setRefreshing(true);
-    console.log('Refrescando metas manualmente...');
+    logger.sync(LogModule.UI, 'Usuario solicitó refrescar metas manualmente');
     
     try {
       // Usar force=true para forzar la recarga cuando el usuario lo solicita
       await fetchGoals(user.id, true);
+      logger.success(LogModule.UI, 'Metas refrescadas exitosamente');
     } catch (error) {
-      console.error('Error refrescando metas:', error);
+      logger.error(LogModule.UI, 'Error refrescando metas', error);
     } finally {
       setRefreshing(false);
     }
@@ -118,10 +127,12 @@ export default function DashboardScreen() {
   
   const handleQuickSave = async (amount: number) => {
     if (goals.length > 0) {
+      logger.info(LogModule.UI, 'Ahorro rápido solicitado', { amount, goalId: goals[0].id });
       await addContribution(goals[0].id, amount, 'manual');
       updateUserXP(amount * 2);
-      // No es necesario recargar las metas porque addContribution ya actualiza el store local
-      // Esto evita llamadas innecesarias a la API
+      logger.success(LogModule.UI, 'Ahorro rápido completado', { amount, xpGained: amount * 2 });
+    } else {
+      logger.warn(LogModule.UI, 'Intento de ahorro rápido sin metas activas');
     }
   };
   
@@ -290,7 +301,7 @@ export default function DashboardScreen() {
   
   // Si no hay usuario después de inicializar, redirigir al login
   if (!initializing && !user) {
-    console.log('No hay usuario autenticado, redirigiendo al onboarding...');
+    logger.warn(LogModule.NAV, 'No hay usuario autenticado, redirigiendo al onboarding');
     router.replace('/(auth)/onboarding');
     return null;
   }
@@ -383,9 +394,15 @@ export default function DashboardScreen() {
               <Button
                 title="Crear nueva meta"
                 onPress={() => {
-                  // Navegar al onboarding pero marcar que es para crear meta solamente
-                  // Podrías pasar un parámetro para indicar que es solo para crear meta
-                  router.push('/(auth)/onboarding');
+                  console.log('=== BOTÓN CREAR META PRESIONADO ===');
+                  logger.info(LogModule.NAV, 'Navegando a pantalla de creación de meta');
+                  console.log('Intentando navegar a /create-goal');
+                  try {
+                    router.push('/create-goal');
+                    console.log('Navegación ejecutada');
+                  } catch (error) {
+                    console.error('Error al navegar:', error);
+                  }
                 }}
                 style={styles.createGoalButton}
               />
@@ -422,7 +439,11 @@ export default function DashboardScreen() {
       
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => router.push('/import-csv')}
+        onPress={() => {
+          console.log('=== BOTÓN FLOTANTE + PRESIONADO ===');
+          logger.info(LogModule.NAV, 'Navegando a crear meta desde botón flotante');
+          router.push('/create-goal');
+        }}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>

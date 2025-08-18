@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
+import { logger, LogModule } from '@/utils/logger';
 
 type Goal = Database['public']['Tables']['goals']['Row'];
 type GoalInsert = Database['public']['Tables']['goals']['Insert'];
@@ -13,16 +14,23 @@ export class GoalsService {
    */
   static async getUserGoals(userId: string): Promise<Goal[]> {
     try {
+      logger.database(LogModule.GOALS, 'Obteniendo todas las metas del usuario', { userId });
+      
       const { data, error } = await supabase
         .from('goals')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.GOALS, 'Error obteniendo metas', error);
+        throw error;
+      }
+      
+      logger.success(LogModule.GOALS, `${data?.length || 0} metas obtenidas`);
       return data || [];
     } catch (error) {
-      console.error('Error obteniendo metas:', error);
+      logger.error(LogModule.GOALS, 'Error fatal obteniendo metas', error);
       throw error;
     }
   }
@@ -71,7 +79,7 @@ export class GoalsService {
    */
   static async createGoal(goal: GoalInsert): Promise<Goal> {
     try {
-      console.log('GoalsService.createGoal - Datos a insertar:', goal);
+      logger.start(LogModule.GOALS, 'Creando nueva meta', goal);
       
       const { data, error } = await supabase
         .from('goals')
@@ -80,18 +88,24 @@ export class GoalsService {
         .single();
 
       if (error) {
-        console.error('Error de Supabase al crear meta:', error);
-        console.error('Código de error:', error.code);
-        console.error('Mensaje:', error.message);
-        console.error('Detalles:', error.details);
+        logger.error(LogModule.DB, 'Error de Supabase al crear meta', {
+          code: error.code,
+          message: error.message,
+          details: error.details
+        });
         throw error;
       }
       
-      console.log('Meta creada exitosamente en Supabase:', data);
+      logger.success(LogModule.GOALS, 'Meta creada exitosamente', {
+        goalId: data.id,
+        goalName: data.name
+      });
       return data;
     } catch (error: any) {
-      console.error('Error creando meta:', error);
-      console.error('Tipo de error:', error.constructor.name);
+      logger.error(LogModule.GOALS, 'Error fatal creando meta', {
+        type: error.constructor.name,
+        message: error.message
+      });
       throw error;
     }
   }
@@ -138,6 +152,12 @@ export class GoalsService {
    */
   static async addContribution(contribution: ContributionInsert): Promise<Contribution> {
     try {
+      logger.start(LogModule.GOALS, 'Agregando contribución', {
+        amount: contribution.amount,
+        goalId: contribution.goal_id,
+        source: contribution.source
+      });
+      
       // 1. Insertar la contribución
       const { data: newContribution, error: contributionError } = await supabase
         .from('micro_contributions')
@@ -145,7 +165,10 @@ export class GoalsService {
         .select()
         .single();
 
-      if (contributionError) throw contributionError;
+      if (contributionError) {
+        logger.error(LogModule.DB, 'Error insertando contribución', contributionError);
+        throw contributionError;
+      }
 
       // 2. Actualizar el monto ahorrado en la meta
       const { data: goal, error: goalError } = await supabase
@@ -157,17 +180,30 @@ export class GoalsService {
       if (goalError) throw goalError;
 
       const newSavedAmount = (goal.saved_amount || 0) + contribution.amount;
+      
+      logger.sync(LogModule.GOALS, 'Actualizando monto ahorrado', {
+        oldAmount: goal.saved_amount,
+        newAmount: newSavedAmount
+      });
 
       const { error: updateError } = await supabase
         .from('goals')
         .update({ saved_amount: newSavedAmount })
         .eq('id', contribution.goal_id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        logger.error(LogModule.DB, 'Error actualizando monto de meta', updateError);
+        throw updateError;
+      }
+      
+      logger.success(LogModule.GOALS, 'Contribución agregada exitosamente', {
+        contributionId: newContribution.id,
+        newTotal: newSavedAmount
+      });
 
       return newContribution;
     } catch (error) {
-      console.error('Error agregando contribución:', error);
+      logger.error(LogModule.GOALS, 'Error agregando contribución', error);
       throw error;
     }
   }

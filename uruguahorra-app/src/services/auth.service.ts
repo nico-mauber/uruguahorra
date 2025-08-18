@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
+import { logger, LogModule } from '@/utils/logger';
 
 type User = Database['public']['Tables']['users']['Row'];
 
@@ -9,7 +10,7 @@ export class AuthService {
    */
   static async signUp(email: string, password: string, metadata?: { country?: string; currency?: string }) {
     try {
-      console.log('AuthService.signUp - Iniciando registro para:', email);
+      logger.start(LogModule.AUTH, `Iniciando registro de nuevo usuario`, { email, metadata });
       
       // 1. Crear cuenta en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -21,7 +22,7 @@ export class AuthService {
       });
 
       if (authError) {
-        console.error('Error al crear usuario en Auth:', authError);
+        logger.error(LogModule.AUTH, 'Error al crear usuario en Supabase Auth', authError);
         throw authError;
       }
       
@@ -29,23 +30,27 @@ export class AuthService {
         throw new Error('No se pudo crear el usuario');
       }
       
-      console.log('Usuario creado en Auth con ID:', authData.user.id);
-      console.log('Sesión obtenida:', authData.session ? 'Sí' : 'No');
+      logger.success(LogModule.AUTH, 'Usuario creado en Auth exitosamente', {
+        userId: authData.user.id,
+        email: authData.user.email,
+        sessionCreated: !!authData.session
+      });
 
       // 2. Si tenemos sesión, establecerla inmediatamente
       if (authData.session) {
-        console.log('Estableciendo sesión del nuevo usuario...');
+        logger.sync(LogModule.AUTH, 'Estableciendo sesión del nuevo usuario');
         await supabase.auth.setSession({
           access_token: authData.session.access_token,
           refresh_token: authData.session.refresh_token,
         });
+        logger.success(LogModule.AUTH, 'Sesión establecida correctamente');
       }
 
       // 3. Esperar un momento para que el trigger se ejecute (si existe)
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // 4. Verificar si el perfil existe en la tabla users
-      console.log('Verificando si el perfil fue creado por el trigger...');
+      logger.database(LogModule.DB, 'Verificando si el perfil fue creado por el trigger');
       const { data: existingProfile, error: checkError } = await supabase
         .from('users')
         .select('*')
@@ -53,12 +58,12 @@ export class AuthService {
         .maybeSingle();
       
       if (checkError) {
-        console.error('Error verificando perfil existente:', checkError);
+        logger.warn(LogModule.DB, 'Error verificando perfil existente', checkError);
       }
       
       // 5. Si no existe el perfil, crearlo manualmente (RLS está desactivado)
       if (!existingProfile) {
-        console.log('Perfil no encontrado, creando manualmente...');
+        logger.info(LogModule.DB, 'Perfil no encontrado, creando manualmente');
         
         const profileData = {
           id: authData.user.id,
@@ -75,19 +80,16 @@ export class AuthService {
           .single();
 
         if (profileError) {
-          console.error('Error creando perfil de usuario:', profileError);
-          // Si el error es porque ya existe, está bien
           if (profileError.code === '23505') {
-            console.log('Perfil ya existía (creado por trigger)');
+            logger.info(LogModule.DB, 'Perfil ya existía (creado por trigger)');
           } else {
-            // No lanzamos el error para no interrumpir el registro
-            console.error('Error no crítico al crear perfil:', profileError);
+            logger.warn(LogModule.DB, 'Error no crítico al crear perfil', profileError);
           }
         } else {
-          console.log('Perfil creado exitosamente:', newProfile);
+          logger.success(LogModule.DB, 'Perfil creado exitosamente', newProfile);
         }
       } else {
-        console.log('Perfil encontrado (creado por trigger):', existingProfile);
+        logger.info(LogModule.DB, 'Perfil encontrado (creado por trigger)', existingProfile);
         
         // Actualizar metadata si es necesario
         if (metadata) {
@@ -105,10 +107,10 @@ export class AuthService {
         }
       }
 
-      console.log('Registro completado exitosamente');
+      logger.end(LogModule.AUTH, 'Registro completado exitosamente');
       return { user: authData.user, session: authData.session };
     } catch (error) {
-      console.error('Error en signUp:', error);
+      logger.error(LogModule.AUTH, 'Error fatal en signUp', error);
       throw error;
     }
   }
@@ -118,16 +120,26 @@ export class AuthService {
    */
   static async signIn(email: string, password: string) {
     try {
+      logger.start(LogModule.AUTH, 'Iniciando sesión', { email });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error al iniciar sesión', error);
+        throw error;
+      }
 
+      logger.success(LogModule.AUTH, 'Sesión iniciada exitosamente', {
+        userId: data.user?.id,
+        email: data.user?.email
+      });
+      
       return { user: data.user, session: data.session };
     } catch (error) {
-      console.error('Error en signIn:', error);
+      logger.error(LogModule.AUTH, 'Error fatal en signIn', error);
       throw error;
     }
   }
@@ -137,10 +149,17 @@ export class AuthService {
    */
   static async signOut() {
     try {
+      logger.info(LogModule.AUTH, 'Cerrando sesión de usuario');
+      
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.AUTH, 'Error al cerrar sesión', error);
+        throw error;
+      }
+      
+      logger.success(LogModule.AUTH, 'Sesión cerrada exitosamente');
     } catch (error) {
-      console.error('Error en signOut:', error);
+      logger.error(LogModule.AUTH, 'Error fatal en signOut', error);
       throw error;
     }
   }
@@ -150,11 +169,22 @@ export class AuthService {
    */
   static async getSession() {
     try {
+      logger.debug(LogModule.AUTH, 'Obteniendo sesión actual');
+      
       const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
+      if (error) {
+        logger.warn(LogModule.AUTH, 'Error obteniendo sesión', error);
+        throw error;
+      }
+      
+      logger.debug(LogModule.AUTH, 'Sesión obtenida', {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id
+      });
+      
       return data.session;
     } catch (error) {
-      console.error('Error obteniendo sesión:', error);
+      logger.error(LogModule.AUTH, 'Error obteniendo sesión', error);
       return null;
     }
   }
@@ -164,11 +194,22 @@ export class AuthService {
    */
   static async getCurrentUser() {
     try {
+      logger.debug(LogModule.AUTH, 'Obteniendo usuario actual');
+      
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      if (error) {
+        logger.warn(LogModule.AUTH, 'Error obteniendo usuario', error);
+        throw error;
+      }
+      
+      logger.debug(LogModule.AUTH, 'Usuario obtenido', {
+        userId: user?.id,
+        email: user?.email
+      });
+      
       return user;
     } catch (error) {
-      console.error('Error obteniendo usuario:', error);
+      logger.error(LogModule.AUTH, 'Error obteniendo usuario actual', error);
       return null;
     }
   }
@@ -178,16 +219,23 @@ export class AuthService {
    */
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
+      logger.database(LogModule.DB, 'Obteniendo perfil de usuario', { userId });
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.DB, 'Error obteniendo perfil de usuario', error);
+        throw error;
+      }
+      
+      logger.success(LogModule.DB, 'Perfil obtenido exitosamente', data);
       return data;
     } catch (error) {
-      console.error('Error obteniendo perfil:', error);
+      logger.error(LogModule.DB, 'Error obteniendo perfil', error);
       return null;
     }
   }

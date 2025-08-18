@@ -3,6 +3,7 @@ import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase';
+import { logger, LogModule } from '@/utils/logger';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -47,7 +48,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }),
   
   login: async (email, password) => {
-    console.log('useAuthStore.login - Iniciando sesión');
+    logger.start(LogModule.STORE, 'Iniciando proceso de login en store', { email });
     set({ isLoading: true });
     try {
       // 1. Autenticar con Supabase
@@ -55,13 +56,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       if (!authUser) throw new Error('No se pudo autenticar');
       
-      console.log('Usuario autenticado:', authUser.id);
+      logger.user(LogModule.STORE, 'Usuario autenticado en store', { userId: authUser.id });
       
       // 2. Obtener perfil del usuario
+      logger.loading(LogModule.STORE, 'Obteniendo perfil del usuario');
       let profile = await AuthService.getUserProfile(authUser.id);
       
       if (!profile) {
-        console.log('Perfil no encontrado, creando uno nuevo...');
+        logger.warn(LogModule.STORE, 'Perfil no encontrado, creando uno nuevo');
         // Si no existe perfil, crearlo
         const { data: newProfile, error: insertError } = await supabase
           .from('users')
@@ -75,9 +77,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           .single();
           
         if (insertError) {
-          console.error('Error creando perfil:', insertError);
+          logger.error(LogModule.DB, 'Error creando perfil en login', insertError);
           throw insertError;
         }
+        logger.success(LogModule.DB, 'Perfil creado durante login');
         
         profile = newProfile;
       }
@@ -97,27 +100,35 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const level = calculateLevel(totalXP);
       
       // 5. Actualizar el store
+      const finalUser = {
+        ...profile!,
+        level,
+        totalXP,
+        streak: 0, // TODO: Calcular racha real
+      };
+      
       set({
-        user: {
-          ...profile!,
-          level,
-          totalXP,
-          streak: 0, // TODO: Calcular racha real
-        },
+        user: finalUser,
         supabaseUser: authUser,
         isAuthenticated: true,
         isPremium,
         isLoading: false,
       });
+      
+      logger.success(LogModule.STORE, 'Login completado, estado actualizado', {
+        userId: finalUser.id,
+        level: finalUser.level,
+        isPremium
+      });
     } catch (error) {
-      console.error('Error en login:', error);
+      logger.error(LogModule.STORE, 'Error en login store', error);
       set({ isLoading: false });
       throw error;
     }
   },
   
   signup: async (email, password, metadata) => {
-    console.log('useAuthStore.signup - Iniciando registro');
+    logger.start(LogModule.STORE, 'Iniciando proceso de registro en store', { email, metadata });
     set({ isLoading: true });
     try {
       // 1. Registrar con Supabase
@@ -125,14 +136,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       if (!authUser) throw new Error('No se pudo crear la cuenta');
       
-      console.log('Usuario registrado, obteniendo perfil...');
+      logger.success(LogModule.STORE, 'Usuario registrado, obteniendo perfil');
       
       // 2. Intentar obtener el perfil creado
+      logger.loading(LogModule.STORE, 'Buscando perfil del nuevo usuario');
       let profile = await AuthService.getUserProfile(authUser.id);
       
       // Si no existe perfil (no debería pasar con el código actualizado), usar valores por defecto
       if (!profile) {
-        console.warn('Perfil no encontrado después del registro, usando valores por defecto');
+        logger.warn(LogModule.STORE, 'Perfil no encontrado después del registro, usando valores por defecto');
         profile = {
           id: authUser.id,
           email: authUser.email!,
@@ -144,7 +156,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         };
       }
       
-      console.log('Perfil obtenido:', profile);
+      logger.info(LogModule.STORE, 'Perfil procesado', profile);
       
       // 3. Actualizar el store
       const userWithStats = {

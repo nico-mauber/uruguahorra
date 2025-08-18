@@ -17,9 +17,9 @@ import { useGoalsStore } from '@store/useGoalsStore';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
-import { ContributionsService } from '@/services/contributions.service';
+import { GoalsService } from '@/services/goals.service';
 import { ChallengesService } from '@/services/challenges.service';
-import { LevelBadge, XPProgressBar, StreakDisplay } from '@/features/gamification';
+import { LevelBadge, XPProgressBar, StreakDisplay, LevelsService } from '@/features/gamification';
 import { GamificationService } from '@/features/gamification';
 
 export default function DashboardScreen() {
@@ -175,8 +175,8 @@ export default function DashboardScreen() {
 
       ToastService.loading(`Ahorrando $${amount}...`);
 
-      // Crear contribución
-      await ContributionsService.createContribution({
+      // 1. Crear contribución y actualizar saved_amount en la DB
+      await GoalsService.addContribution({
         user_id: user.id,
         goal_id: firstGoal.id,
         amount,
@@ -184,23 +184,40 @@ export default function DashboardScreen() {
         description: 'Ahorro rápido desde dashboard',
       });
 
-      // Actualizar datos del dashboard
-      await Promise.all([
-        fetchGoals(user.id, true),
-        loadGamificationStats(user.id),
-      ]);
-
-      // Procesar evento de gamificación
+      // 2. Procesar evento de gamificación
       const gamificationResult = await GamificationService.processGamificationEvent(
         user.id,
         'contribution',
         { amount }
       );
 
-      // Verificar desafíos de ahorro
+      // 3. Actualizar datos del dashboard DESPUÉS de crear la contribución
+      await Promise.all([
+        fetchGoals(user.id, true),  // Esto actualizará el monto ahorrado
+        loadGamificationStats(user.id),  // Esto actualizará el XP
+      ]);
+
+      // 4. Actualizar el estado local de gamificationStats inmediatamente
+      if (gamificationResult.xpEarned > 0) {
+        setGamificationStats(prevStats => {
+          if (!prevStats) return prevStats;
+          const newTotalXP = prevStats.totalXP + gamificationResult.xpEarned;
+          const newLevel = LevelsService.getLevel(newTotalXP);
+          const newLevelInfo = LevelsService.getLevelProgress(newTotalXP);
+          
+          return {
+            ...prevStats,
+            totalXP: newTotalXP,
+            level: newLevel,
+            levelInfo: newLevelInfo,
+          };
+        });
+      }
+
+      // 5. Verificar desafíos de ahorro
       await ChallengesService.checkSavingsChallenges(user.id, amount);
 
-      // Mostrar toast de éxito con XP
+      // 6. Mostrar toast de éxito con XP
       ToastService.savingSuccess(amount, firstGoal.name);
       
       if (gamificationResult.xpEarned > 0) {

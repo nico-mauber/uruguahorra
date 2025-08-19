@@ -1,157 +1,204 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
+import { authInterceptor, RateLimitError } from '@/lib/auth-interceptor';
 
 type User = Database['public']['Tables']['users']['Row'];
 
 export class AuthService {
   /**
-   * Registrar nuevo usuario
+   * Registrar nuevo usuario con protección de rate limiting
    */
   static async signUp(
     email: string,
     password: string,
     metadata?: { country?: string; currency?: string }
   ) {
+    const identifier = email.toLowerCase();
+
     try {
-      logger.start(LogModule.AUTH, `Iniciando registro de nuevo usuario`, {
-        email,
-        metadata,
-      });
-
-      // 1. Crear cuenta en Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: metadata,
-          emailRedirectTo: undefined, // No redirect for mobile
-        },
-      });
-
-      if (authError) {
-        logger.error(
-          LogModule.AUTH,
-          'Error al crear usuario en Supabase Auth',
-          authError
-        );
-        throw authError;
-      }
-
-      if (!authData.user) {
-        throw new Error('No se pudo crear el usuario');
-      }
-
-      logger.success(LogModule.AUTH, 'Usuario creado en Auth exitosamente', {
-        userId: authData.user.id,
-        email: authData.user.email,
-        sessionCreated: !!authData.session,
-      });
-
-      // 2. Si tenemos sesión, establecerla inmediatamente
-      if (authData.session) {
-        logger.sync(LogModule.AUTH, 'Estableciendo sesión del nuevo usuario');
-        await supabase.auth.setSession({
-          access_token: authData.session.access_token,
-          refresh_token: authData.session.refresh_token,
-        });
-        logger.success(LogModule.AUTH, 'Sesión establecida correctamente');
-      }
-
-      // 3. Esperar un momento para que el trigger se ejecute (si existe)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 4. Verificar si el perfil fue creado por el trigger
-      logger.info(LogModule.AUTH, 'Verificando creación de perfil...');
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-        logger.warn(
-          LogModule.AUTH,
-          'Error verificando perfil',
-          profileCheckError
-        );
-      }
-
-      // 5. Si no existe el perfil, crearlo manualmente
-      if (!existingProfile) {
-        logger.warn(
-          LogModule.AUTH,
-          'Perfil no creado por trigger, creando manualmente...'
-        );
-
-        const { data: newProfile, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email!,
-            country: metadata?.country || 'UY',
-            currency: metadata?.currency || 'UYU',
-            premium: false,
-            total_xp: 0,
-            current_level: 1,
-            current_streak: 0,
-            longest_streak: 0,
-            last_activity_date: new Date().toISOString().split('T')[0],
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          // Si el error es de duplicado, está bien (el trigger lo creó mientras esperábamos)
-          if (createError.code !== '23505') {
-            logger.error(
-              LogModule.DB,
-              'Error creando perfil manualmente',
-              createError
-            );
-            // No lanzamos error aquí, el usuario ya está creado en auth
-          }
-        } else {
-          logger.success(LogModule.DB, 'Perfil creado manualmente', {
-            profileId: newProfile?.id,
+      return await authInterceptor.withRateLimit(
+        'signup',
+        identifier,
+        async () => {
+          logger.start(LogModule.AUTH, `Iniciando registro de nuevo usuario`, {
+            email,
+            metadata,
           });
+
+          // 1. Crear cuenta en Supabase Auth
+          const { data: authData, error: authError } =
+            await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: metadata,
+                emailRedirectTo: undefined, // No redirect for mobile
+              },
+            });
+
+          if (authError) {
+            logger.error(
+              LogModule.AUTH,
+              'Error al crear usuario en Supabase Auth',
+              authError
+            );
+            throw authError;
+          }
+
+          if (!authData.user) {
+            throw new Error('No se pudo crear el usuario');
+          }
+
+          logger.success(
+            LogModule.AUTH,
+            'Usuario creado en Auth exitosamente',
+            {
+              userId: authData.user.id,
+              email: authData.user.email,
+              sessionCreated: !!authData.session,
+            }
+          );
+
+          // 2. Si tenemos sesión, establecerla inmediatamente
+          if (authData.session) {
+            logger.sync(
+              LogModule.AUTH,
+              'Estableciendo sesión del nuevo usuario'
+            );
+            await supabase.auth.setSession({
+              access_token: authData.session.access_token,
+              refresh_token: authData.session.refresh_token,
+            });
+            logger.success(LogModule.AUTH, 'Sesión establecida correctamente');
+          }
+
+          // 3. Esperar un momento para que el trigger se ejecute (si existe)
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // 4. Verificar si el perfil fue creado por el trigger
+          logger.info(LogModule.AUTH, 'Verificando creación de perfil...');
+          const { data: existingProfile, error: profileCheckError } =
+            await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authData.user.id)
+              .single();
+
+          if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+            logger.warn(
+              LogModule.AUTH,
+              'Error verificando perfil',
+              profileCheckError
+            );
+          }
+
+          // 5. Si no existe el perfil, crearlo manualmente
+          if (!existingProfile) {
+            logger.warn(
+              LogModule.AUTH,
+              'Perfil no creado por trigger, creando manualmente...'
+            );
+
+            const { data: newProfile, error: createError } = await supabase
+              .from('users')
+              .insert({
+                id: authData.user.id,
+                email: authData.user.email!,
+                country: metadata?.country || 'UY',
+                currency: metadata?.currency || 'UYU',
+                premium: false,
+                total_xp: 0,
+                current_level: 1,
+                current_streak: 0,
+                longest_streak: 0,
+                last_activity_date: new Date().toISOString().split('T')[0],
+              })
+              .select()
+              .single();
+
+            if (createError) {
+              // Si el error es de duplicado, está bien (el trigger lo creó mientras esperábamos)
+              if (createError.code !== '23505') {
+                logger.error(
+                  LogModule.DB,
+                  'Error creando perfil manualmente',
+                  createError
+                );
+                // No lanzamos error aquí, el usuario ya está creado en auth
+              }
+            } else {
+              logger.success(LogModule.DB, 'Perfil creado manualmente', {
+                profileId: newProfile?.id,
+              });
+            }
+          } else {
+            logger.success(
+              LogModule.AUTH,
+              'Perfil ya existe (creado por trigger)'
+            );
+          }
+
+          logger.end(LogModule.AUTH, 'Registro completado exitosamente');
+          return { user: authData.user, session: authData.session };
         }
-      } else {
-        logger.success(LogModule.AUTH, 'Perfil ya existe (creado por trigger)');
+      );
+    } catch (error) {
+      // Si es un error de rate limiting, mantener el mensaje original
+      if (error instanceof RateLimitError) {
+        logger.warn(LogModule.AUTH, 'Signup blocked by rate limiter', {
+          email,
+          retryAfterMs: error.retryAfterMs,
+        });
+        throw error;
       }
 
-      logger.end(LogModule.AUTH, 'Registro completado exitosamente');
-      return { user: authData.user, session: authData.session };
-    } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en signUp', error);
       throw error;
     }
   }
 
   /**
-   * Iniciar sesión
+   * Iniciar sesión con protección de rate limiting
    */
   static async signIn(email: string, password: string) {
+    const identifier = email.toLowerCase();
+
     try {
-      logger.start(LogModule.AUTH, 'Iniciando sesión', { email });
+      return await authInterceptor.withRateLimit(
+        'login',
+        identifier,
+        async () => {
+          logger.start(LogModule.AUTH, 'Iniciando sesión', { email });
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
-      if (error) {
-        logger.error(LogModule.AUTH, 'Error al iniciar sesión', error);
+          if (error) {
+            logger.error(LogModule.AUTH, 'Error al iniciar sesión', error);
+            throw error;
+          }
+
+          logger.success(LogModule.AUTH, 'Sesión iniciada exitosamente', {
+            userId: data.user?.id,
+            email: data.user?.email,
+          });
+
+          return { user: data.user, session: data.session };
+        }
+      );
+    } catch (error) {
+      // Si es un error de rate limiting, mantener el mensaje original
+      if (error instanceof RateLimitError) {
+        logger.warn(LogModule.AUTH, 'Login blocked by rate limiter', {
+          email,
+          retryAfterMs: error.retryAfterMs,
+        });
         throw error;
       }
 
-      logger.success(LogModule.AUTH, 'Sesión iniciada exitosamente', {
-        userId: data.user?.id,
-        email: data.user?.email,
-      });
-
-      return { user: data.user, session: data.session };
-    } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en signIn', error);
       throw error;
     }
@@ -297,25 +344,42 @@ export class AuthService {
   }
 
   /**
-   * Solicitar restablecimiento de contraseña
+   * Solicitar restablecimiento de contraseña con protección de rate limiting
    */
   static async resetPassword(email: string) {
+    const identifier = email.toLowerCase();
+
     try {
-      logger.info(
-        LogModule.AUTH,
-        'Solicitando restablecimiento de contraseña',
-        { email }
+      return await authInterceptor.withRateLimit(
+        'passwordReset',
+        identifier,
+        async () => {
+          logger.info(
+            LogModule.AUTH,
+            'Solicitando restablecimiento de contraseña',
+            { email }
+          );
+
+          const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+          if (error) {
+            logger.error(LogModule.AUTH, 'Error en resetPassword', error);
+            throw error;
+          }
+
+          logger.success(LogModule.AUTH, 'Email de restablecimiento enviado');
+        }
       );
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-
-      if (error) {
-        logger.error(LogModule.AUTH, 'Error en resetPassword', error);
+    } catch (error) {
+      // Si es un error de rate limiting, mantener el mensaje original
+      if (error instanceof RateLimitError) {
+        logger.warn(LogModule.AUTH, 'Password reset blocked by rate limiter', {
+          email,
+          retryAfterMs: error.retryAfterMs,
+        });
         throw error;
       }
 
-      logger.success(LogModule.AUTH, 'Email de restablecimiento enviado');
-    } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en resetPassword', error);
       throw error;
     }
@@ -383,34 +447,58 @@ export class AuthService {
   }
 
   /**
-   * Verificar OTP recibido por email
+   * Verificar OTP recibido por email con protección de rate limiting
    */
   static async verifyOTP(email: string, token: string) {
+    const identifier = email.toLowerCase();
+
     try {
-      logger.start(LogModule.AUTH, 'Verificando OTP', { email, token: '***' });
+      return await authInterceptor.withRateLimit(
+        'otpVerification',
+        identifier,
+        async () => {
+          logger.start(LogModule.AUTH, 'Verificando OTP', {
+            email,
+            token: '***',
+          });
 
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
+          const { data, error } = await supabase.auth.verifyOtp({
+            email,
+            token,
+            type: 'email',
+          });
 
-      if (error) {
-        logger.error(LogModule.AUTH, 'Error verificando OTP', error);
+          if (error) {
+            logger.error(LogModule.AUTH, 'Error verificando OTP', error);
+            throw error;
+          }
+
+          if (!data.user) {
+            throw new Error('No se pudo autenticar el usuario');
+          }
+
+          logger.success(LogModule.AUTH, 'OTP verificado exitosamente', {
+            userId: data.user.id,
+            email: data.user.email,
+          });
+
+          return { user: data.user, session: data.session };
+        }
+      );
+    } catch (error) {
+      // Si es un error de rate limiting, mantener el mensaje original
+      if (error instanceof RateLimitError) {
+        logger.warn(
+          LogModule.AUTH,
+          'OTP verification blocked by rate limiter',
+          {
+            email,
+            retryAfterMs: error.retryAfterMs,
+          }
+        );
         throw error;
       }
 
-      if (!data.user) {
-        throw new Error('No se pudo autenticar el usuario');
-      }
-
-      logger.success(LogModule.AUTH, 'OTP verificado exitosamente', {
-        userId: data.user.id,
-        email: data.user.email,
-      });
-
-      return { user: data.user, session: data.session };
-    } catch (error) {
       logger.error(LogModule.AUTH, 'Error fatal en verifyOTP', error);
       throw error;
     }

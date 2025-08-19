@@ -20,6 +20,10 @@ import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
 import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
+import { handleError, getUserErrorMessage } from '@/utils/error-handler';
+import { ERROR_MESSAGES } from '@/utils/error-messages';
+import { RateLimitError } from '@/lib/auth-interceptor';
+import { logger, LogModule } from '@/utils/logger';
 
 export default function OnboardingScreen() {
   const { theme } = useTheme();
@@ -124,13 +128,31 @@ export default function OnboardingScreen() {
         }
       }
     } catch (error: unknown) {
-      console.error('Error detallado en autenticación:', error);
+      // Manejar error de forma segura
+      const appError = handleError(error, {
+        action: isNewUser ? 'SIGNUP' : 'LOGIN',
+        userId: email,
+      });
 
-      // Manejar errores comunes
-      if (
-        error.message?.includes('already registered') ||
-        error.message?.includes('User already registered')
-      ) {
+      // Log interno sin exponer información sensible
+      logger.error(LogModule.AUTH, 'Error en autenticación', {
+        errorCode: appError.code,
+        category: appError.category,
+        isNewUser,
+        // NO incluir: email, password, error.message original
+      });
+
+      // Manejo especial para rate limiting
+      if (error instanceof RateLimitError) {
+        Alert.alert('Límite de intentos', error.message);
+        return;
+      }
+
+      // Obtener mensaje seguro para el usuario
+      const userMessage = getUserErrorMessage(error);
+
+      // Manejar casos específicos sin exponer detalles técnicos
+      if (userMessage === ERROR_MESSAGES.AUTH.USER_EXISTS) {
         Alert.alert(
           'Usuario existente',
           'Este email ya está registrado. ¿Deseas iniciar sesión?',
@@ -140,26 +162,23 @@ export default function OnboardingScreen() {
               text: 'Iniciar sesión',
               onPress: () => {
                 setIsNewUser(false);
-                // No llamar handleAuth aquí para evitar loop, solo cambiar el modo
               },
             },
           ]
         );
-      } else if (error.message?.includes('Invalid login')) {
-        Alert.alert('Error', 'Email o contraseña incorrectos');
+      } else if (userMessage === ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS) {
+        Alert.alert('Error', ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
       } else if (
-        error.code === '42501' ||
-        error.message?.includes('row-level security')
+        appError.category === 'forbidden' ||
+        appError.code === 'AUTH003'
       ) {
         Alert.alert(
-          'Error de configuración',
-          'Hay un problema con los permisos. Por favor, contacta al administrador o intenta iniciar sesión en lugar de registrarte.'
+          'Error de permisos',
+          ERROR_MESSAGES.GENERIC.PERMISSION_DENIED
         );
       } else {
-        Alert.alert(
-          'Error',
-          error.message || 'No se pudo completar la autenticación'
-        );
+        // Mensaje genérico seguro
+        Alert.alert('Error', userMessage);
       }
     } finally {
       setIsLoading(false);

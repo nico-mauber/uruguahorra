@@ -10,6 +10,7 @@ import {
   StreaksService,
   calculateLevel,
 } from '@/features/gamification';
+import { RateLimitError } from '@/lib/auth-interceptor';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -25,6 +26,7 @@ interface AuthStore {
   isAuthenticated: boolean;
   isLoading: boolean;
   isPremium: boolean;
+  rateLimitError: string | null;
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (
@@ -37,6 +39,7 @@ interface AuthStore {
   updateStreak: (streak: number) => void;
   checkSession: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  clearRateLimitError: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -45,20 +48,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   isPremium: false,
+  rateLimitError: null,
 
   setUser: (user) =>
     set({
       user,
       isAuthenticated: !!user,
+      rateLimitError: null, // Limpiar errores de rate limit al establecer usuario
     }),
 
   login: async (email, password) => {
     logger.start(LogModule.STORE, 'Iniciando proceso de login en store', {
       email,
     });
-    set({ isLoading: true });
+    set({ isLoading: true, rateLimitError: null });
     try {
-      // 1. Autenticar con Supabase
+      // 1. Autenticar con Supabase (ahora incluye rate limiting)
       const { user: authUser } = await AuthService.signIn(email, password);
 
       if (!authUser) throw new Error('No se pudo autenticar');
@@ -126,6 +131,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isAuthenticated: true,
         isPremium,
         isLoading: false,
+        rateLimitError: null,
       });
 
       logger.success(LogModule.STORE, 'Login completado, estado actualizado', {
@@ -135,7 +141,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
     } catch (error) {
       logger.error(LogModule.STORE, 'Error en login store', error);
-      set({ isLoading: false });
+
+      // Manejar errores de rate limiting específicamente
+      const rateLimitError =
+        error instanceof RateLimitError ? error.message : null;
+
+      set({
+        isLoading: false,
+        rateLimitError,
+      });
+
       throw error;
     }
   },
@@ -145,9 +160,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       email,
       metadata,
     });
-    set({ isLoading: true });
+    set({ isLoading: true, rateLimitError: null });
     try {
-      // 1. Registrar con Supabase (ahora maneja la creación del perfil internamente)
+      // 1. Registrar con Supabase (ahora maneja la creación del perfil internamente y rate limiting)
       const { user: authUser, session } = await AuthService.signUp(
         email,
         password,
@@ -228,10 +243,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isAuthenticated: true,
         isPremium: false,
         isLoading: false,
+        rateLimitError: null,
       });
     } catch (error: unknown) {
       logger.error(LogModule.STORE, 'Error en signup store', error);
-      set({ isLoading: false });
+
+      // Manejar errores de rate limiting específicamente
+      const rateLimitError =
+        error instanceof RateLimitError ? error.message : null;
+
+      set({
+        isLoading: false,
+        rateLimitError,
+      });
+
       throw error;
     }
   },
@@ -245,6 +270,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         supabaseUser: null,
         isAuthenticated: false,
         isPremium: false,
+        rateLimitError: null, // Limpiar errores de rate limit al cerrar sesión
       });
       logger.success(LogModule.STORE, 'Sesión cerrada exitosamente');
     } catch (error) {
@@ -418,6 +444,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       throw error;
     }
   },
+
+  clearRateLimitError: () => set({ rateLimitError: null }),
 }));
 
 // Configurar listener para cambios de autenticación
@@ -437,6 +465,7 @@ AuthService.onAuthStateChange((event, session) => {
       supabaseUser: null,
       isAuthenticated: false,
       isPremium: false,
+      rateLimitError: null,
     });
     logger.success(LogModule.AUTH, 'Store limpiado tras logout');
   }

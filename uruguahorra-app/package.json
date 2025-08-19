@@ -39,6 +39,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "scheduler": "^0.26.0",
+    "zod": "^4.0.17",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

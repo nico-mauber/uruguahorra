@@ -1,21 +1,44 @@
 import { supabase } from '@/lib/supabase';
-import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { ContributionsService } from './contributions.service';
 import { categorize, getCategoryDisplayName } from '@/utils/categorizer';
 import Papa from 'papaparse';
+import {
+  TransactionSchema,
+  TransactionInsertSchema,
+  CSVRowSchema,
+  type Transaction,
+  type CSVRow,
+} from '@/schemas';
+import { createSupabaseValidator } from '@/utils/supabase-validator';
+import {
+  sanitizeString,
+  validateNumber,
+  validateDate,
+} from '@/utils/validation-helpers';
+import {
+  createFileError,
+  createValidationError,
+  handleError,
+} from '@/utils/error-handler';
+import { CSV_ERROR_MESSAGES, ERROR_MESSAGES } from '@/utils/error-messages';
+import { ErrorCode } from '@/types/errors';
 
-type TransactionRaw = Database['public']['Tables']['transactions_raw']['Row'];
-type TransactionRawInsert =
-  Database['public']['Tables']['transactions_raw']['Insert'];
+// Crear validador para transacciones
+const transactionValidator = createSupabaseValidator(
+  TransactionSchema,
+  'transactions'
+);
 
-interface CSVRow {
-  date: string;
-  description: string;
-  amount: number;
-  category?: string;
-  account?: string;
-}
+// Límites de seguridad para importación CSV
+const CSV_LIMITS = {
+  MAX_FILE_SIZE: 2 * 1024 * 1024, // 2MB máximo para archivos CSV
+  MAX_ROWS: 1000, // Límite de filas para evitar sobrecarga
+  BATCH_SIZE: 100, // Procesar en lotes de 100 registros
+  PROCESSING_TIMEOUT: 30000, // 30 segundos timeout
+};
+
+// CSVRow ahora viene de schemas/index.ts
 
 interface ImportResult {
   totalProcessed: number;
@@ -34,10 +57,20 @@ export class TransactionsService {
     goalId?: string
   ): Promise<ImportResult> {
     try {
+      // Validar límite de filas
+      if (csvData.length > CSV_LIMITS.MAX_ROWS) {
+        throw createFileError(
+          `Too many rows: ${csvData.length} > ${CSV_LIMITS.MAX_ROWS}`,
+          ERROR_MESSAGES.FILE.TOO_MANY_ROWS,
+          ErrorCode.FILE_PROCESSING_ERROR
+        );
+      }
+
       logger.start(LogModule.DB, 'Iniciando importación de CSV', {
         userId,
         rowCount: csvData.length,
         goalId,
+        limits: CSV_LIMITS,
       });
 
       const result: ImportResult = {
@@ -54,68 +87,129 @@ export class TransactionsService {
         const row = csvData[i];
 
         try {
-          // Validar datos requeridos
-          if (!row.date) {
-            throw new Error(`Fila ${i + 1}: Fecha requerida`);
+          // Validar fila con esquema Zod
+          const validationResult = CSVRowSchema.safeParse(row);
+
+          if (!validationResult.success) {
+            const firstError = validationResult.error.errors[0];
+            throw createValidationError(
+              `Row ${i + 1}: ${firstError.message}`,
+              firstError.path.join('.'),
+              CSV_ERROR_MESSAGES.ROW_ERROR(i + 1)
+            );
           }
 
-          if (!row.description) {
-            throw new Error(`Fila ${i + 1}: Descripción requerida`);
-          }
+          const validatedRow = validationResult.data;
 
-          if (isNaN(row.amount) || row.amount === 0) {
-            throw new Error(`Fila ${i + 1}: Monto inválido`);
-          }
-
-          // Parsear fecha
-          const transactionDate = new Date(row.date);
-          if (isNaN(transactionDate.getTime())) {
-            throw new Error(`Fila ${i + 1}: Fecha inválida (${row.date})`);
-          }
+          // Validar y parsear fecha
+          const transactionDate = validateDate(validatedRow.date, {
+            pastOnly: true,
+          });
 
           // Auto-categorizar si no hay categoría
           const finalCategory =
-            row.category?.trim() ||
-            getCategoryDisplayName(categorize(row.description));
+            validatedRow.category ||
+            getCategoryDisplayName(categorize(validatedRow.description));
 
-          const transaction: TransactionRawInsert = {
+          // Sanitizar y validar datos de transacción
+          const transactionData = {
             user_id: userId,
             transaction_date: transactionDate.toISOString(),
-            description: row.description.trim(),
-            amount: Math.abs(row.amount), // Tomar valor absoluto
-            category: finalCategory,
-            account: row.account?.trim() || null,
+            description: sanitizeString(validatedRow.description, {
+              maxLength: 500,
+              trim: true,
+              removeHtml: true,
+            }),
+            amount: validateNumber(Math.abs(validatedRow.amount), {
+              positive: true,
+              decimals: 2,
+            }),
+            category: sanitizeString(finalCategory, { maxLength: 50 }),
+            account: validatedRow.account
+              ? sanitizeString(validatedRow.account, { maxLength: 100 })
+              : null,
             imported_at: new Date().toISOString(),
           };
+
+          // Validar con esquema de inserción
+          const transaction = TransactionInsertSchema.parse(transactionData);
 
           transactionsToInsert.push(transaction);
           result.successfulImports++;
         } catch (error: unknown) {
-          result.errors.push(error.message);
+          // Manejar error de forma segura sin exponer detalles técnicos
+          const appError = handleError(error, {
+            action: 'PROCESS_CSV_ROW',
+            userId,
+          });
+
+          // Mensaje genérico para el usuario
+          result.errors.push(CSV_ERROR_MESSAGES.ROW_ERROR(i + 1));
+
+          // Log interno con detalles completos (no expuestos)
           logger.warn(LogModule.DB, 'Error procesando fila CSV', {
             rowIndex: i,
-            error: error.message,
+            errorCode: appError.code,
+            category: appError.category,
+            // Solo en desarrollo incluir el mensaje original
+            ...((__DEV__ || process.env.NODE_ENV === 'development') && {
+              originalError:
+                error instanceof Error ? error.message : String(error),
+            }),
           });
         }
       }
 
       if (transactionsToInsert.length === 0) {
-        throw new Error('No hay transacciones válidas para importar');
+        throw createFileError(
+          'No valid transactions to import',
+          ERROR_MESSAGES.TRANSACTIONS.NO_VALID_ROWS,
+          ErrorCode.FILE_PROCESSING_ERROR
+        );
       }
 
-      // Insertar transacciones en la base de datos
-      const { data: insertedTransactions, error: insertError } = await supabase
-        .from('transactions_raw')
-        .insert(transactionsToInsert)
-        .select();
+      // Insertar transacciones en lotes para mejor rendimiento
+      const insertedTransactions: Transaction[] = [];
 
-      if (insertError) {
-        logger.error(
+      for (
+        let i = 0;
+        i < transactionsToInsert.length;
+        i += CSV_LIMITS.BATCH_SIZE
+      ) {
+        const batch = transactionsToInsert.slice(i, i + CSV_LIMITS.BATCH_SIZE);
+
+        logger.info(
           LogModule.DB,
-          'Error insertando transacciones',
-          insertError
+          `Insertando lote ${Math.floor(i / CSV_LIMITS.BATCH_SIZE) + 1}`,
+          {
+            batchSize: batch.length,
+            progress: `${i + batch.length}/${transactionsToInsert.length}`,
+          }
         );
-        throw insertError;
+
+        const batchResponse = await supabase
+          .from('transactions_raw')
+          .insert(batch)
+          .select();
+
+        if (batchResponse.error) {
+          logger.error(
+            LogModule.DB,
+            `Error insertando lote ${Math.floor(i / CSV_LIMITS.BATCH_SIZE) + 1}`,
+            batchResponse.error
+          );
+          // Continuar con el siguiente lote en lugar de fallar completamente
+          result.errors.push(
+            `Error en lote ${Math.floor(i / CSV_LIMITS.BATCH_SIZE) + 1}`
+          );
+        } else {
+          // Validar respuesta del batch
+          const validatedBatch = transactionValidator.assertArray(
+            batchResponse,
+            'insertBatch'
+          );
+          insertedTransactions.push(...validatedBatch);
+        }
       }
 
       // Si se especifica un goalId, crear contribuciones automáticamente
@@ -168,7 +262,7 @@ export class TransactionsService {
     userId: string,
     limit: number = 50,
     offset: number = 0
-  ): Promise<TransactionRaw[]> {
+  ): Promise<Transaction[]> {
     try {
       logger.database(LogModule.DB, 'Obteniendo transacciones del usuario', {
         userId,
@@ -176,23 +270,33 @@ export class TransactionsService {
         offset,
       });
 
-      const { data, error } = await supabase
+      const response = await supabase
         .from('transactions_raw')
         .select('*')
         .eq('user_id', userId)
         .order('transaction_date', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo transacciones', error);
-        throw error;
+      if (response.error) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo transacciones',
+          response.error
+        );
+        throw response.error;
       }
+
+      // Validar respuesta
+      const data = transactionValidator.assertArray(
+        response,
+        'getUserTransactions'
+      );
 
       logger.success(
         LogModule.DB,
-        `${data?.length || 0} transacciones obtenidas`
+        `${data.length} transacciones obtenidas y validadas`
       );
-      return data || [];
+      return data;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal obteniendo transacciones', error);
       throw error;
@@ -535,7 +639,8 @@ export class TransactionsService {
       // Recopilar errores de parsing
       if (parseResult.errors.length > 0) {
         parseResult.errors.forEach((error) => {
-          errors.push(`Línea ${error.row || 0}: ${error.message}`);
+          // No exponer error.message original
+          errors.push(CSV_ERROR_MESSAGES.ROW_ERROR(error.row || 0));
         });
       }
 
@@ -574,7 +679,8 @@ export class TransactionsService {
     } catch (error: unknown) {
       return {
         isValid: false,
-        errors: [`Error validando archivo: ${error.message}`],
+        // Mensaje genérico sin exponer detalles técnicos
+        errors: [ERROR_MESSAGES.FILE.PARSE_ERROR],
       };
     }
   }

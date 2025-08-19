@@ -14,7 +14,15 @@
       "Bash(PLATFORM=web npx expo start --web --clear)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:github.com)",
+      "Bash(git diff:*)",
+      "Bash(npm ls:*)",
+      "WebFetch(domain:supabase.com)"
     ],
     "defaultMode": "acceptEdits"
   }

@@ -10,6 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
 import { Button } from './Button';
+import { errorHandler, getUserErrorMessage } from '@/utils/error-handler';
+import { ERROR_MESSAGES } from '@/utils/error-messages';
 
 interface Props {
   children: ReactNode;
@@ -21,25 +23,56 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  errorId: string | null;
+  userMessage: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorId: null,
+      userMessage: ERROR_MESSAGES.GENERIC.UNKNOWN,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    // Actualizar el estado para mostrar la UI de error
-    return { hasError: true, error, errorInfo: null };
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    // Generar ID único para el error
+    const errorId = `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Obtener mensaje seguro para el usuario (sin exponer detalles técnicos)
+    const userMessage = getUserErrorMessage(error);
+
+    return {
+      hasError: true,
+      error,
+      errorInfo: null,
+      errorId,
+      userMessage,
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log del error
+    // Manejar el error de forma segura
+    const appError = errorHandler.handle(error, {
+      action: 'RENDER_ERROR',
+      resource: errorInfo.componentStack?.split('\n')[0] || 'Unknown Component',
+    });
+
+    // Log interno con detalles completos (no expuestos al usuario)
     logger.error(LogModule.UI, 'Error capturado por ErrorBoundary', {
-      error: error.message,
-      stack: error.stack,
+      errorId: this.state.errorId,
+      errorCode: appError.code,
+      category: appError.category,
       componentStack: errorInfo.componentStack,
+      // Solo en desarrollo incluir stack trace
+      ...((__DEV__ || process.env.NODE_ENV === 'development') && {
+        errorMessage: error.message,
+        stack: error.stack,
+      }),
     });
 
     this.setState({
@@ -52,7 +85,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   reset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorId: null,
+      userMessage: ERROR_MESSAGES.GENERIC.UNKNOWN,
+    });
   };
 
   render() {
@@ -72,17 +111,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <Text style={styles.title}>¡Oops! Algo salió mal</Text>
 
-            <Text style={styles.subtitle}>
-              La aplicación encontró un error inesperado. No te preocupes, tus
-              datos están seguros.
-            </Text>
+            <Text style={styles.subtitle}>{this.state.userMessage}</Text>
 
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorTitle}>Detalles del error:</Text>
-              <Text style={styles.errorText}>
-                {this.state.error?.message || 'Error desconocido'}
-              </Text>
-            </View>
+            {/* Mostrar ID del error para soporte (sin detalles técnicos) */}
+            {this.state.errorId && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorTitle}>Código de referencia:</Text>
+                <Text style={styles.errorText}>{this.state.errorId}</Text>
+                <Text style={styles.errorHint}>
+                  Proporciona este código al contactar soporte
+                </Text>
+              </View>
+            )}
 
             <View style={styles.buttons}>
               <Button
@@ -95,25 +135,31 @@ export class ErrorBoundary extends Component<Props, State> {
                 title="Reportar problema"
                 variant="outline"
                 onPress={() => {
-                  // Aquí podrías integrar con un servicio de reporte de errores
-                  // como Sentry, Bugsnag, etc.
-                  logger.error(LogModule.UI, 'Usuario reportó error', {
-                    error: this.state.error?.message,
-                    stack: this.state.error?.stack,
+                  // Log seguro sin exponer información sensible
+                  logger.info(LogModule.UI, 'Usuario reportó error', {
+                    errorId: this.state.errorId,
+                    // NO incluir: error.message, stack trace, etc.
                   });
+                  // TODO: Integrar con servicio de reporte (Sentry, etc.)
                 }}
                 style={styles.reportButton}
               />
             </View>
 
-            {__DEV__ && (
+            {/* Solo mostrar detalles técnicos en desarrollo */}
+            {(__DEV__ || process.env.NODE_ENV === 'development') && (
               <View style={styles.debugContainer}>
                 <Text style={styles.debugTitle}>
                   Debug Info (Development Only):
                 </Text>
-                <Text style={styles.debugText}>{this.state.error?.stack}</Text>
+                <Text style={styles.debugText}>
+                  Error: {this.state.error?.message}
+                </Text>
+                <Text style={styles.debugText} numberOfLines={10}>
+                  Stack: {this.state.error?.stack}
+                </Text>
                 {this.state.errorInfo?.componentStack && (
-                  <Text style={styles.debugText}>
+                  <Text style={styles.debugText} numberOfLines={10}>
                     Component Stack: {this.state.errorInfo.componentStack}
                   </Text>
                 )}
@@ -176,6 +222,12 @@ const styles = StyleSheet.create({
     color: '#822727',
     fontFamily: 'monospace',
   },
+  errorHint: {
+    fontSize: 11,
+    color: '#666666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   buttons: {
     width: '100%',
     gap: 12,
@@ -210,10 +262,21 @@ const styles = StyleSheet.create({
 // Hook para usar error boundaries de forma más sencilla
 export const useErrorHandler = () => {
   return (error: Error, errorInfo?: ErrorInfo) => {
+    // Usar el error handler seguro
+    const appError = errorHandler.handle(error, {
+      action: 'MANUAL_ERROR',
+      resource: errorInfo?.componentStack?.split('\n')[0] || 'Unknown',
+    });
+
+    // Log seguro sin exponer información sensible
     logger.error(LogModule.UI, 'Error manejado manualmente', {
-      error: error.message,
-      stack: error.stack,
-      ...errorInfo,
+      errorCode: appError.code,
+      category: appError.category,
+      // Solo en desarrollo
+      ...((__DEV__ || process.env.NODE_ENV === 'development') && {
+        originalError: error.message,
+        stack: error.stack,
+      }),
     });
   };
 };
@@ -222,18 +285,22 @@ export const useErrorHandler = () => {
 export const SimpleErrorBoundary: React.FC<{
   children: ReactNode;
   message?: string;
-}> = ({ children, message = 'Ha ocurrido un error' }) => {
+}> = ({ children, message }) => {
   return (
     <ErrorBoundary
-      fallback={(error, reset) => (
-        <View style={styles.simpleContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
-          <Text style={styles.simpleMessage}>{message}</Text>
-          <TouchableOpacity onPress={reset} style={styles.simpleButton}>
-            <Text style={styles.simpleButtonText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      fallback={(error, reset) => {
+        // Usar mensaje seguro, no el error original
+        const safeMessage = message || getUserErrorMessage(error);
+        return (
+          <View style={styles.simpleContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
+            <Text style={styles.simpleMessage}>{safeMessage}</Text>
+            <TouchableOpacity onPress={reset} style={styles.simpleButton}>
+              <Text style={styles.simpleButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }}
     >
       {children}
     </ErrorBoundary>

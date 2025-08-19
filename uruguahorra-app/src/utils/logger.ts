@@ -1,7 +1,10 @@
 /**
  * Sistema de Logging Centralizado para Uruguahorra
  * Proporciona logging con niveles, colores y prefijos por módulo
+ * Incluye sanitización de datos sensibles para prevenir inyección de logs
  */
+
+import { SecureLogger } from './secure-logger';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -137,8 +140,22 @@ class Logger {
     let formattedMsg = `${timestamp} ${moduleColor}[${module}]${colors.reset} ${levelColor}${emojiStr}${levelName}:${colors.reset} ${message}`;
 
     if (data !== undefined) {
-      formattedMsg +=
-        '\n' + colors.dim + JSON.stringify(data, null, 2) + colors.reset;
+      // Sanitizar datos antes de loguear para prevenir inyección y exposición de datos sensibles
+      const sanitizedData = SecureLogger.sanitizeData(data);
+      try {
+        formattedMsg +=
+          '\n' +
+          colors.dim +
+          JSON.stringify(sanitizedData, null, 2) +
+          colors.reset;
+      } catch (error) {
+        // Si hay error al serializar, usar formato seguro
+        formattedMsg +=
+          '\n' +
+          colors.dim +
+          SecureLogger.createSafeSummary(data) +
+          colors.reset;
+      }
     }
 
     return formattedMsg;
@@ -187,7 +204,10 @@ class Logger {
   }
 
   error(module: LogModule, message: string, data?: unknown) {
-    this.log(LogLevel.ERROR, module, message, emojis.error, data);
+    // Manejo especial para errores para asegurar que se sanitizan correctamente
+    const sanitizedData =
+      data instanceof Error ? SecureLogger.sanitizeError(data) : data;
+    this.log(LogLevel.ERROR, module, message, emojis.error, sanitizedData);
   }
 
   // Métodos especializados con emojis

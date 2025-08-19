@@ -1,0 +1,550 @@
+/**
+ * Esquemas de validación runtime con Zod
+ * Previene CWE-20: Improper Input Validation
+ *
+ * Estos esquemas validan datos en runtime, complementando
+ * el type checking de TypeScript que solo funciona en compile time
+ */
+
+import { z } from 'zod';
+
+// ============================================
+// ESQUEMAS BASE Y COMUNES
+// ============================================
+
+/**
+ * UUID v4 válido
+ */
+export const UUIDSchema = z.string().uuid({
+  message: 'ID inválido',
+});
+
+/**
+ * Email válido
+ */
+export const EmailSchema = z.string().email({
+  message: 'Email inválido',
+});
+
+/**
+ * Fecha ISO 8601
+ */
+export const DateTimeSchema = z.string().datetime({
+  message: 'Fecha inválida',
+});
+
+/**
+ * Fecha simple YYYY-MM-DD
+ */
+export const DateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+  message: 'Fecha debe ser formato YYYY-MM-DD',
+});
+
+/**
+ * Monto monetario positivo
+ */
+export const MoneyAmountSchema = z
+  .number()
+  .positive({ message: 'El monto debe ser positivo' })
+  .finite({ message: 'El monto debe ser un número válido' })
+  .transform((val) => Math.round(val * 100) / 100); // Redondear a 2 decimales
+
+/**
+ * Porcentaje válido (0-100)
+ */
+export const PercentageSchema = z
+  .number()
+  .min(0, { message: 'El porcentaje debe ser mayor o igual a 0' })
+  .max(100, { message: 'El porcentaje debe ser menor o igual a 100' });
+
+/**
+ * Código de país ISO
+ */
+export const CountryCodeSchema = z
+  .string()
+  .length(2, { message: 'Código de país debe ser de 2 caracteres' })
+  .toUpperCase();
+
+/**
+ * Código de moneda ISO
+ */
+export const CurrencyCodeSchema = z
+  .string()
+  .length(3, { message: 'Código de moneda debe ser de 3 caracteres' })
+  .toUpperCase();
+
+// ============================================
+// ESQUEMA DE USUARIO
+// ============================================
+
+export const UserSchema = z.object({
+  id: UUIDSchema,
+  email: EmailSchema,
+  country: CountryCodeSchema.nullable().default('UY'),
+  currency: CurrencyCodeSchema.nullable().default('UYU'),
+  premium: z.boolean().default(false),
+  total_xp: z.number().int().min(0).default(0),
+  current_level: z.number().int().min(1).default(1),
+  current_streak: z.number().int().min(0).default(0),
+  longest_streak: z.number().int().min(0).default(0),
+  last_activity_date: DateSchema.nullable(),
+  created_at: DateTimeSchema,
+  updated_at: DateTimeSchema.optional(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+
+/**
+ * Esquema para crear usuario
+ */
+export const UserInsertSchema = UserSchema.omit({
+  created_at: true,
+  updated_at: true,
+}).partial({
+  total_xp: true,
+  current_level: true,
+  current_streak: true,
+  longest_streak: true,
+  last_activity_date: true,
+});
+
+export type UserInsert = z.infer<typeof UserInsertSchema>;
+
+/**
+ * Esquema para actualizar usuario
+ */
+export const UserUpdateSchema = UserSchema.partial().omit({
+  id: true,
+  email: true,
+  created_at: true,
+});
+
+export type UserUpdate = z.infer<typeof UserUpdateSchema>;
+
+// ============================================
+// ESQUEMA DE META (GOAL)
+// ============================================
+
+export const GoalTypeSchema = z.enum([
+  'savings',
+  'emergency_fund',
+  'vacation',
+  'home',
+  'vehicle',
+  'education',
+  'investment',
+  'other',
+]);
+
+export type GoalType = z.infer<typeof GoalTypeSchema>;
+
+export const GoalSchema = z
+  .object({
+    id: UUIDSchema,
+    user_id: UUIDSchema,
+    name: z
+      .string()
+      .min(1, { message: 'El nombre es requerido' })
+      .max(100, { message: 'El nombre es muy largo' }),
+    description: z.string().max(500).nullable(),
+    type: GoalTypeSchema,
+    target_amount: MoneyAmountSchema,
+    current_amount: MoneyAmountSchema.default(0),
+    deadline: DateSchema.nullable(),
+    is_active: z.boolean().default(true),
+    is_completed: z.boolean().default(false),
+    progress_percentage: PercentageSchema.default(0),
+    monthly_target: MoneyAmountSchema.nullable(),
+    vacation_destination: z.string().max(100).nullable(),
+    vacation_duration_days: z.number().int().min(1).nullable(),
+    home_type: z.string().max(50).nullable(),
+    home_location: z.string().max(200).nullable(),
+    vehicle_brand: z.string().max(50).nullable(),
+    vehicle_model: z.string().max(50).nullable(),
+    vehicle_year: z.number().int().min(1900).max(2030).nullable(),
+    education_institution: z.string().max(200).nullable(),
+    education_program: z.string().max(200).nullable(),
+    education_duration_months: z.number().int().min(1).nullable(),
+    created_at: DateTimeSchema,
+    updated_at: DateTimeSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      // Validar que current_amount no exceda target_amount
+      return data.current_amount <= data.target_amount;
+    },
+    {
+      message: 'El monto actual no puede exceder el monto objetivo',
+      path: ['current_amount'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Si hay deadline, debe ser futura
+      if (data.deadline) {
+        return new Date(data.deadline) > new Date();
+      }
+      return true;
+    },
+    {
+      message: 'La fecha límite debe ser futura',
+      path: ['deadline'],
+    }
+  );
+
+export type Goal = z.infer<typeof GoalSchema>;
+
+export const GoalInsertSchema = GoalSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+  progress_percentage: true,
+}).partial({
+  current_amount: true,
+  is_active: true,
+  is_completed: true,
+});
+
+export type GoalInsert = z.infer<typeof GoalInsertSchema>;
+
+export const GoalUpdateSchema = GoalSchema.partial().omit({
+  id: true,
+  user_id: true,
+  created_at: true,
+});
+
+export type GoalUpdate = z.infer<typeof GoalUpdateSchema>;
+
+// ============================================
+// ESQUEMA DE TRANSACCIÓN
+// ============================================
+
+export const TransactionSchema = z.object({
+  id: UUIDSchema,
+  user_id: UUIDSchema,
+  transaction_date: DateTimeSchema,
+  description: z
+    .string()
+    .min(1, { message: 'La descripción es requerida' })
+    .max(500, { message: 'La descripción es muy larga' }),
+  amount: MoneyAmountSchema,
+  category: z.string().max(50).nullable(),
+  account: z.string().max(100).nullable(),
+  imported_at: DateTimeSchema,
+  created_at: DateTimeSchema.optional(),
+});
+
+export type Transaction = z.infer<typeof TransactionSchema>;
+
+export const TransactionInsertSchema = TransactionSchema.omit({
+  id: true,
+  created_at: true,
+});
+
+export type TransactionInsert = z.infer<typeof TransactionInsertSchema>;
+
+// ============================================
+// ESQUEMA DE CONTRIBUCIÓN
+// ============================================
+
+export const ContributionSourceSchema = z.enum([
+  'manual',
+  'automatic',
+  'roundup',
+  'cashback',
+  'interest',
+]);
+
+export type ContributionSource = z.infer<typeof ContributionSourceSchema>;
+
+export const ContributionSchema = z.object({
+  id: UUIDSchema,
+  user_id: UUIDSchema,
+  goal_id: UUIDSchema,
+  amount: MoneyAmountSchema,
+  source: ContributionSourceSchema,
+  description: z.string().max(500).nullable(),
+  transaction_id: UUIDSchema.nullable(),
+  created_at: DateTimeSchema,
+});
+
+export type Contribution = z.infer<typeof ContributionSchema>;
+
+export const ContributionInsertSchema = ContributionSchema.omit({
+  id: true,
+}).partial({
+  created_at: true,
+});
+
+export type ContributionInsert = z.infer<typeof ContributionInsertSchema>;
+
+// ============================================
+// ESQUEMA DE SUSCRIPCIÓN
+// ============================================
+
+export const SubscriptionPlanSchema = z.enum(['free', 'premium', 'pro']);
+export const SubscriptionStatusSchema = z.enum([
+  'active',
+  'canceled',
+  'expired',
+  'trial',
+]);
+export const SubscriptionProviderSchema = z.enum([
+  'apple',
+  'google',
+  'stripe',
+  'mercadopago',
+]);
+
+export const SubscriptionSchema = z
+  .object({
+    id: UUIDSchema,
+    user_id: UUIDSchema,
+    plan: SubscriptionPlanSchema,
+    status: SubscriptionStatusSchema,
+    provider: SubscriptionProviderSchema.nullable(),
+    provider_subscription_id: z.string().max(200).nullable(),
+    start_date: DateTimeSchema,
+    end_date: DateTimeSchema.nullable(),
+    trial_end_date: DateTimeSchema.nullable(),
+    auto_renew: z.boolean().default(true),
+    price: MoneyAmountSchema.nullable(),
+    currency: CurrencyCodeSchema.nullable(),
+    created_at: DateTimeSchema,
+    updated_at: DateTimeSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      // Si hay end_date, debe ser posterior a start_date
+      if (data.end_date) {
+        return new Date(data.end_date) > new Date(data.start_date);
+      }
+      return true;
+    },
+    {
+      message: 'La fecha de fin debe ser posterior a la fecha de inicio',
+      path: ['end_date'],
+    }
+  );
+
+export type Subscription = z.infer<typeof SubscriptionSchema>;
+
+export const SubscriptionInsertSchema = SubscriptionSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).partial({
+  auto_renew: true,
+});
+
+export type SubscriptionInsert = z.infer<typeof SubscriptionInsertSchema>;
+
+// ============================================
+// ESQUEMA DE DESAFÍO
+// ============================================
+
+export const ChallengeDifficultySchema = z.enum([
+  'easy',
+  'medium',
+  'hard',
+  'expert',
+]);
+export const ChallengeFrequencySchema = z.enum([
+  'daily',
+  'weekly',
+  'monthly',
+  'once',
+]);
+
+export const ChallengeSchema = z.object({
+  id: UUIDSchema,
+  title: z
+    .string()
+    .min(1, { message: 'El título es requerido' })
+    .max(200, { message: 'El título es muy largo' }),
+  description: z.string().max(1000),
+  difficulty: ChallengeDifficultySchema,
+  frequency: ChallengeFrequencySchema,
+  xp_reward: z.number().int().min(0),
+  target_amount: MoneyAmountSchema.nullable(),
+  target_days: z.number().int().min(1).nullable(),
+  target_transactions: z.number().int().min(1).nullable(),
+  icon: z.string().max(50).nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .nullable(),
+  is_active: z.boolean().default(true),
+  created_at: DateTimeSchema,
+  updated_at: DateTimeSchema.optional(),
+});
+
+export type Challenge = z.infer<typeof ChallengeSchema>;
+
+// ============================================
+// ESQUEMAS DE PAGINACIÓN Y FILTROS
+// ============================================
+
+export const PaginationSchema = z.object({
+  limit: z
+    .number()
+    .int()
+    .min(1, { message: 'El límite debe ser al menos 1' })
+    .max(100, { message: 'El límite máximo es 100' })
+    .default(20),
+  offset: z
+    .number()
+    .int()
+    .min(0, { message: 'El offset debe ser positivo' })
+    .default(0),
+});
+
+export type Pagination = z.infer<typeof PaginationSchema>;
+
+export const DateRangeSchema = z
+  .object({
+    start: DateSchema,
+    end: DateSchema,
+  })
+  .refine(
+    (data) => {
+      return new Date(data.end) >= new Date(data.start);
+    },
+    {
+      message:
+        'La fecha de fin debe ser posterior o igual a la fecha de inicio',
+      path: ['end'],
+    }
+  );
+
+export type DateRange = z.infer<typeof DateRangeSchema>;
+
+// ============================================
+// ESQUEMAS PARA CSV
+// ============================================
+
+export const CSVRowSchema = z.object({
+  date: z.string().min(1, { message: 'La fecha es requerida' }),
+  description: z.string().min(1, { message: 'La descripción es requerida' }),
+  amount: z.number({
+    required_error: 'El monto es requerido',
+    invalid_type_error: 'El monto debe ser un número',
+  }),
+  category: z.string().optional(),
+  account: z.string().optional(),
+});
+
+export type CSVRow = z.infer<typeof CSVRowSchema>;
+
+export const CSVImportSchema = z.object({
+  rows: z
+    .array(CSVRowSchema)
+    .min(1, { message: 'El archivo debe contener al menos una fila' })
+    .max(1000, { message: 'El archivo no puede contener más de 1000 filas' }),
+  goalId: UUIDSchema.optional(),
+});
+
+export type CSVImport = z.infer<typeof CSVImportSchema>;
+
+// ============================================
+// ESQUEMAS DE RESPUESTA DE API
+// ============================================
+
+/**
+ * Respuesta exitosa de Supabase
+ */
+export const SupabaseSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.object({
+    data: dataSchema,
+    error: z.null(),
+  });
+
+/**
+ * Respuesta de error de Supabase
+ */
+export const SupabaseErrorSchema = z.object({
+  data: z.null(),
+  error: z.object({
+    message: z.string(),
+    code: z.string().optional(),
+    details: z.string().optional(),
+    hint: z.string().optional(),
+  }),
+});
+
+/**
+ * Respuesta de Supabase (unión discriminada)
+ */
+export const SupabaseResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.discriminatedUnion('error', [
+    z.object({
+      data: dataSchema,
+      error: z.null(),
+    }),
+    z.object({
+      data: z.null(),
+      error: z.object({
+        message: z.string(),
+        code: z.string().optional(),
+        details: z.string().optional(),
+        hint: z.string().optional(),
+      }),
+    }),
+  ]);
+
+// ============================================
+// HELPERS DE VALIDACIÓN
+// ============================================
+
+/**
+ * Valida y transforma datos con manejo de errores
+ */
+export function validateData<T>(
+  schema: z.ZodType<T>,
+  data: unknown,
+  _options?: {
+    strict?: boolean;
+    abortEarly?: boolean;
+  }
+): { success: true; data: T } | { success: false; errors: z.ZodError } {
+  const result = schema.safeParse(data);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  return { success: false, errors: result.error };
+}
+
+/**
+ * Valida datos y lanza error si falla
+ */
+export function assertValidData<T>(
+  schema: z.ZodType<T>,
+  data: unknown,
+  errorMessage?: string
+): T {
+  const result = schema.safeParse(data);
+
+  if (!result.success) {
+    const error = new Error(errorMessage || 'Validation failed');
+    (error as Record<string, unknown>).validationErrors = result.error.errors;
+    throw error;
+  }
+
+  return result.data;
+}
+
+/**
+ * Crea un validador reutilizable
+ */
+export function createValidator<T>(schema: z.ZodType<T>) {
+  return {
+    parse: (data: unknown): T => schema.parse(data),
+    safeParse: (data: unknown) => schema.safeParse(data),
+    validate: (data: unknown) => validateData(schema, data),
+    assert: (data: unknown, errorMessage?: string) =>
+      assertValidData(schema, data, errorMessage),
+    isValid: (data: unknown): boolean => schema.safeParse(data).success,
+  };
+}

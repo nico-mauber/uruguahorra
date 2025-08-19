@@ -491,7 +491,8 @@ export default function ImportCSVScreen() {
               style={styles.infoIcon}
             />
             <Text style={styles.infoText}>
-              El archivo debe contener columnas: Fecha, Descripción, Monto
+              El archivo debe contener columnas: Fecha, Descripción, Monto (máx.
+              1000 filas)
             </Text>
           </View>
           <View style={styles.infoItem}>

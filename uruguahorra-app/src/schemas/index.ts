@@ -244,6 +244,36 @@ export const TransactionInsertSchema = TransactionSchema.omit({
 export type TransactionInsert = z.infer<typeof TransactionInsertSchema>;
 
 // ============================================
+// ESQUEMA DE TRANSACTION RAW (para CSV imports)
+// ============================================
+
+export const TransactionRawSchema = z.object({
+  id: UUIDSchema,
+  user_id: UUIDSchema,
+  goal_id: UUIDSchema.nullable(),
+  original_description: z
+    .string()
+    .min(1, { message: 'La descripción es requerida' })
+    .max(500, { message: 'La descripción es muy larga' }),
+  amount: MoneyAmountSchema,
+  transaction_date: DateSchema, // DATE en la DB (no TIMESTAMPTZ)
+  category: z.string().max(50).nullable(),
+  imported_at: DateTimeSchema,
+  is_processed: z.boolean().default(false),
+});
+
+export type TransactionRaw = z.infer<typeof TransactionRawSchema>;
+
+export const TransactionRawInsertSchema = TransactionRawSchema.omit({
+  id: true,
+}).partial({
+  imported_at: true,
+  is_processed: true,
+});
+
+export type TransactionRawInsert = z.infer<typeof TransactionRawInsertSchema>;
+
+// ============================================
 // ESQUEMA DE CONTRIBUCIÓN
 // ============================================
 

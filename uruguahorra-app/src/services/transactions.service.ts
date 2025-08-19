@@ -4,10 +4,11 @@ import { ContributionsService } from './contributions.service';
 import { categorize, getCategoryDisplayName } from '@/utils/categorizer';
 import Papa from 'papaparse';
 import {
-  TransactionSchema,
-  TransactionInsertSchema,
+  TransactionRawSchema,
+  TransactionRawInsertSchema,
   CSVRowSchema,
-  type Transaction,
+  type TransactionRaw,
+  type TransactionRawInsert,
   type CSVRow,
 } from '@/schemas';
 import { createSupabaseValidator } from '@/utils/supabase-validator';
@@ -24,10 +25,10 @@ import {
 import { CSV_ERROR_MESSAGES, ERROR_MESSAGES } from '@/utils/error-messages';
 import { ErrorCode } from '@/types/errors';
 
-// Crear validador para transacciones
-const transactionValidator = createSupabaseValidator(
-  TransactionSchema,
-  'transactions'
+// Crear validador para transacciones raw
+const transactionRawValidator = createSupabaseValidator(
+  TransactionRawSchema,
+  'transactions_raw'
 );
 
 // Límites de seguridad para importación CSV
@@ -111,11 +112,12 @@ export class TransactionsService {
             validatedRow.category ||
             getCategoryDisplayName(categorize(validatedRow.description));
 
-          // Sanitizar y validar datos de transacción
+          // Sanitizar y validar datos de transacción raw
           const transactionData = {
             user_id: userId,
-            transaction_date: transactionDate.toISOString(),
-            description: sanitizeString(validatedRow.description, {
+            goal_id: goalId || null,
+            transaction_date: transactionDate.toISOString().split('T')[0], // Solo fecha (YYYY-MM-DD)
+            original_description: sanitizeString(validatedRow.description, {
               maxLength: 500,
               trim: true,
               removeHtml: true,
@@ -125,14 +127,12 @@ export class TransactionsService {
               decimals: 2,
             }),
             category: sanitizeString(finalCategory, { maxLength: 50 }),
-            account: validatedRow.account
-              ? sanitizeString(validatedRow.account, { maxLength: 100 })
-              : null,
             imported_at: new Date().toISOString(),
+            is_processed: false,
           };
 
-          // Validar con esquema de inserción
-          const transaction = TransactionInsertSchema.parse(transactionData);
+          // Validar con esquema de inserción para transaction raw
+          const transaction = TransactionRawInsertSchema.parse(transactionData);
 
           transactionsToInsert.push(transaction);
           result.successfulImports++;
@@ -169,7 +169,7 @@ export class TransactionsService {
       }
 
       // Insertar transacciones en lotes para mejor rendimiento
-      const insertedTransactions: Transaction[] = [];
+      const insertedTransactions: TransactionRaw[] = [];
 
       for (
         let i = 0;
@@ -204,7 +204,7 @@ export class TransactionsService {
           );
         } else {
           // Validar respuesta del batch
-          const validatedBatch = transactionValidator.assertArray(
+          const validatedBatch = transactionRawValidator.assertArray(
             batchResponse,
             'insertBatch'
           );
@@ -220,8 +220,8 @@ export class TransactionsService {
             goal_id: goalId,
             amount: transaction.amount,
             source: 'automatic' as const,
-            description: `Importado: ${transaction.description}`,
-            created_at: transaction.transaction_date,
+            description: `Importado: ${transaction.original_description}`,
+            created_at: transaction.transaction_date + 'T00:00:00Z', // Convertir DATE a TIMESTAMPTZ
           }));
 
           const createdContributions =
@@ -262,7 +262,7 @@ export class TransactionsService {
     userId: string,
     limit: number = 50,
     offset: number = 0
-  ): Promise<Transaction[]> {
+  ): Promise<TransactionRaw[]> {
     try {
       logger.database(LogModule.DB, 'Obteniendo transacciones del usuario', {
         userId,
@@ -287,7 +287,7 @@ export class TransactionsService {
       }
 
       // Validar respuesta
-      const data = transactionValidator.assertArray(
+      const data = transactionRawValidator.assertArray(
         response,
         'getUserTransactions'
       );
@@ -708,9 +708,10 @@ export class TransactionsService {
       // Calcular distribución por categorías
       const categoryDistribution: Record<string, number> = {};
       rows.forEach((row) => {
-        const category = row.category || 'Otros';
-        categoryDistribution[category] =
-          (categoryDistribution[category] || 0) + 1;
+        const finalCategory =
+          row.category || getCategoryDisplayName(categorize(row.description));
+        categoryDistribution[finalCategory] =
+          (categoryDistribution[finalCategory] || 0) + 1;
       });
 
       return {
@@ -724,6 +725,99 @@ export class TransactionsService {
       logger.error(
         LogModule.PROCESSING,
         'Error generando vista previa de CSV',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener estadísticas de transacciones del usuario
+   */
+  static async getTransactionStats(userId: string): Promise<{
+    totalTransactions: number;
+    totalAmount: number;
+    byCategory: Record<string, number>;
+    byMonth: Record<string, number>;
+    lastImport: string | null;
+  }> {
+    try {
+      logger.database(
+        LogModule.DB,
+        'Calculando estadísticas de transacciones',
+        { userId }
+      );
+
+      const { data, error } = await supabase
+        .from('transactions_raw')
+        .select('amount, category, imported_at')
+        .eq('user_id', userId);
+
+      if (error) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo transacciones para estadísticas',
+          error
+        );
+        throw handleError(error, {
+          action: 'GET_TRANSACTION_STATS',
+          userId,
+        });
+      }
+
+      const transactions = data || [];
+      const totalTransactions = transactions.length;
+      const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+      // Agrupar por categoría
+      const byCategory = transactions.reduce(
+        (acc, t) => {
+          const category = t.category || 'Otros';
+          acc[category] = (acc[category] || 0) + t.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Agrupar por mes
+      const byMonth = transactions.reduce(
+        (acc, t) => {
+          const month = t.imported_at.substring(0, 7); // YYYY-MM
+          acc[month] = (acc[month] || 0) + t.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Última importación
+      const sortedTransactions = transactions.sort(
+        (a, b) =>
+          new Date(b.imported_at).getTime() - new Date(a.imported_at).getTime()
+      );
+      const lastImport =
+        sortedTransactions.length > 0
+          ? sortedTransactions[0].imported_at
+          : null;
+
+      const stats = {
+        totalTransactions,
+        totalAmount,
+        byCategory,
+        byMonth,
+        lastImport,
+      };
+
+      logger.success(
+        LogModule.DB,
+        'Estadísticas de transacciones calculadas',
+        stats
+      );
+
+      return stats;
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error calculando estadísticas de transacciones',
         error
       );
       throw error;

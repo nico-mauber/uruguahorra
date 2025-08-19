@@ -51,7 +51,12 @@ function RootLayoutNav() {
     const currentRoute = segments[0];
     const inAuthGroup = currentRoute === '(auth)';
     const inTabsGroup = currentRoute === '(tabs)';
-    const modalRoutes = ['create-goal', 'import-csv', 'paywall'];
+    const modalRoutes = [
+      'create-goal',
+      'import-csv',
+      'paywall',
+      'transactions',
+    ];
     const isModalRoute = modalRoutes.includes(currentRoute);
 
     // Solo navegar si no estamos ya en la ruta correcta
@@ -99,6 +104,14 @@ function RootLayoutNav() {
           presentation: 'modal',
           headerShown: true,
           title: 'Premium',
+        }}
+      />
+      <Stack.Screen
+        name="transactions"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: 'Transacciones',
         }}
       />
     </Stack>

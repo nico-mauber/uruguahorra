@@ -327,7 +327,141 @@ export class ToastService {
   }
 }
 
-// Configuración básica para el toast (sin dependencias circulares)
-export const toastConfig = {};
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+// Configuración personalizada para los tipos de toast
+export const toastConfig = {
+  success: (props: { text1: string; text2?: string }) => (
+    <View style={[styles.toastContainer, styles.successToast]}>
+      <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, styles.successTitle]}>{props.text1}</Text>
+        {props.text2 ? (
+          <Text style={[styles.message, styles.successMessage]}>
+            {props.text2}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  ),
+  error: (props: { text1: string; text2?: string }) => (
+    <View style={[styles.toastContainer, styles.errorToast]}>
+      <Ionicons name="alert-circle" size={24} color="#EF4444" />
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, styles.errorTitle]}>{props.text1}</Text>
+        {props.text2 ? (
+          <Text style={[styles.message, styles.errorMessage]}>
+            {props.text2}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  ),
+  info: (props: { text1: string; text2?: string }) => (
+    <View style={[styles.toastContainer, styles.infoToast]}>
+      <Ionicons name="information-circle" size={24} color="#3B82F6" />
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, styles.infoTitle]}>{props.text1}</Text>
+        {props.text2 ? (
+          <Text style={[styles.message, styles.infoMessage]}>
+            {props.text2}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  ),
+  warning: (props: { text1: string; text2?: string }) => (
+    <View style={[styles.toastContainer, styles.warningToast]}>
+      <Ionicons name="warning" size={24} color="#F59E0B" />
+      <View style={styles.textContainer}>
+        <Text style={[styles.title, styles.warningTitle]}>{props.text1}</Text>
+        {props.text2 ? (
+          <Text style={[styles.message, styles.warningMessage]}>
+            {props.text2}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  ),
+};
+
+const styles = StyleSheet.create({
+  toastContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  textContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  message: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  // Success styles
+  successToast: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  successTitle: {
+    color: '#047857',
+  },
+  successMessage: {
+    color: '#065F46',
+  },
+  // Error styles
+  errorToast: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorTitle: {
+    color: '#DC2626',
+  },
+  errorMessage: {
+    color: '#991B1B',
+  },
+  // Info styles
+  infoToast: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  infoTitle: {
+    color: '#1D4ED8',
+  },
+  infoMessage: {
+    color: '#1E40AF',
+  },
+  // Warning styles
+  warningToast: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  warningTitle: {
+    color: '#D97706',
+  },
+  warningMessage: {
+    color: '#92400E',
+  },
+});
 
 export default ToastService;

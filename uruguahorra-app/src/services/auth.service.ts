@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { authInterceptor, RateLimitError } from '@/lib/auth-interceptor';
-import { ProfileSyncService } from './profile-sync.service';
+// import { ProfileSyncService } from './profile-sync.service'; // TODO: Implement profile sync
 
 type User = Database['public']['Tables']['users']['Row'];
 
@@ -75,10 +75,13 @@ export class AuthService {
           }
 
           // 3. Esperar a que el trigger cree el perfil automáticamente
-          logger.info(LogModule.AUTH, 'Esperando creación automática del perfil...');
+          logger.info(
+            LogModule.AUTH,
+            'Esperando creación automática del perfil...'
+          );
 
           // Pequeña espera para que el trigger procese
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
           // Verificar que el perfil fue creado
           const profile = await this.getUserProfile(authData.user.id);

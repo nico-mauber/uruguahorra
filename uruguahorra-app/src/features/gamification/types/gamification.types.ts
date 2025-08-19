@@ -22,7 +22,7 @@ export interface StreakData {
   id: string;
   user_id: string;
   current_streak: number;
-  max_streak: number;
+  longest_streak: number;
   last_activity_at: string;
   streak_protections_used: number;
   protection_reset_date: string;

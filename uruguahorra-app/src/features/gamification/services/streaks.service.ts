@@ -83,7 +83,7 @@ export class StreaksService {
       logger.success(LogModule.DB, 'Racha actualizada exitosamente', {
         userId,
         currentStreak: updatedStreak.current_streak,
-        maxStreak: updatedStreak.max_streak,
+        maxStreak: updatedStreak.longest_streak,
       });
 
       return updatedStreak;
@@ -228,7 +228,7 @@ export class StreaksService {
 
       const { data, error } = await supabase
         .from('user_streaks')
-        .select('current_streak, max_streak, streak_protections_used');
+        .select('current_streak, longest_streak, streak_protections_used');
 
       if (error) {
         logger.error(
@@ -247,7 +247,7 @@ export class StreaksService {
             streaks.length
           : 0;
       const maxStreak =
-        streaks.length > 0 ? Math.max(...streaks.map((s) => s.max_streak)) : 0;
+        streaks.length > 0 ? Math.max(...streaks.map((s) => s.longest_streak)) : 0;
       const protectionsUsed = streaks.reduce(
         (sum, s) => sum + s.streak_protections_used,
         0
@@ -286,7 +286,7 @@ export class StreaksService {
       .insert({
         user_id: userId,
         current_streak: 1,
-        max_streak: 1,
+        longest_streak: 1,
         last_activity_at: timestamp.toISOString(),
         streak_protections_used: 0,
         protection_reset_date: this.getNextResetDate()
@@ -312,13 +312,13 @@ export class StreaksService {
     timestamp: Date
   ): Promise<StreakData> {
     const newCurrentStreak = streak.current_streak + 1;
-    const newMaxStreak = Math.max(streak.max_streak, newCurrentStreak);
+    const newMaxStreak = Math.max(streak.longest_streak, newCurrentStreak);
 
     const { data, error } = await supabase
       .from('user_streaks')
       .update({
         current_streak: newCurrentStreak,
-        max_streak: newMaxStreak,
+        longest_streak: newMaxStreak,
         last_activity_at: timestamp.toISOString(),
         updated_at: new Date().toISOString(),
       })

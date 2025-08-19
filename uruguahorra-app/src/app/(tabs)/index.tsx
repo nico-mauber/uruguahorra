@@ -101,10 +101,15 @@ export default function DashboardScreen() {
         level: 1,
         levelInfo: { level: 1, progress: 0, nextLevelXP: 4, currentLevelXP: 0 },
         streak: {
+          id: '',
+          user_id: '',
           current_streak: 0,
-          max_streak: 0,
+          longest_streak: 0,
           last_activity_at: new Date().toISOString(),
           streak_protections_used: 0,
+          protection_reset_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
         activeQuests: [],
       });

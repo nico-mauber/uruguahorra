@@ -81,14 +81,14 @@ export const StreakDisplay: React.FC<StreakDisplayProps> = ({
             Racha actual
           </Text>
 
-          {streak.max_streak > 0 && (
+          {streak.longest_streak > 0 && (
             <Text
               style={[
                 styles.maxStreakLabel,
                 { fontSize: sizeConfig.labelSize - 1 },
               ]}
             >
-              Mejor: {streak.max_streak} días
+              Mejor: {streak.longest_streak} días
             </Text>
           )}
         </View>

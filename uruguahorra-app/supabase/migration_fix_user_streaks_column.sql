@@ -1,0 +1,3 @@
+-- ARCHIVO ELIMINADO - NO USAR
+-- Este archivo fue eliminado porque solo debe existir complete_database_schema.sql
+-- Usar únicamente: complete_database_schema.sql (Versión 2.7)

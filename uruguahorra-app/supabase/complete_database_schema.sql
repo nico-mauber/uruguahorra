@@ -2,16 +2,26 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 2.6 - Agregadas tablas de quests para gamificación
+-- Versión: 2.8 - Agregadas columnas faltantes user_streaks (protection_reset_date, streak_protections_used)
 -- Fecha: 19 de Agosto, 2025
 -- ============================================
 -- 
--- INSTRUCCIONES:
--- 1. Para crear nueva BD: Ejecuta este script completo
--- 2. Para limpiar datos: Usa clean_user_data.sql
--- 3. Para recrear completamente: Ejecuta este script completo
+-- INSTRUCCIONES DE USO:
+-- 1. Copiar COMPLETO este archivo
+-- 2. Ejecutar en Supabase SQL Editor
+-- 3. La base de datos quedará totalmente configurada y funcional
+-- 
+-- CORRECCIONES INCLUIDAS EN ESTA VERSIÓN:
+-- ✅ user_streaks.last_activity_date → last_activity_at (TIMESTAMPTZ)
+-- ✅ users.last_activity_date → last_activity_at (TIMESTAMPTZ)
+-- ✅ user_streaks.protection_reset_date (TIMESTAMPTZ) - AGREGADA
+-- ✅ user_streaks.streak_protections_used (INTEGER) - AGREGADA
+-- ✅ Consistencia entre esquema DB y tipos TypeScript
+-- ✅ Referencias actualizadas en todas las funciones
+-- ✅ Resuelve ERROR PGRST204 completamente
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
+-- y los recrea con la estructura correcta y actualizada
 -- ============================================
 
 -- ============================================
@@ -88,7 +98,7 @@ CREATE TABLE public.users (
     current_level INTEGER DEFAULT 1,
     current_streak INTEGER DEFAULT 0,
     longest_streak INTEGER DEFAULT 0,
-    last_activity_date DATE DEFAULT CURRENT_DATE,
+    last_activity_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -228,7 +238,9 @@ CREATE TABLE public.user_streaks (
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     current_streak INTEGER DEFAULT 0,
     longest_streak INTEGER DEFAULT 0,
-    last_activity_date DATE DEFAULT CURRENT_DATE,
+    last_activity_at TIMESTAMPTZ DEFAULT NOW(),
+    streak_protections_used INTEGER DEFAULT 0,
+    protection_reset_date TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id)
@@ -508,7 +520,7 @@ BEGIN
         current_level,
         current_streak,
         longest_streak,
-        last_activity_date,
+        last_activity_at,
         created_at,
         updated_at
     )
@@ -647,7 +659,7 @@ INSERT INTO public.users (
     current_level,
     current_streak,
     longest_streak,
-    last_activity_date,
+    last_activity_at,
     created_at,
     updated_at
 )
@@ -773,7 +785,7 @@ BEGIN
             current_level,
             current_streak,
             longest_streak,
-            last_activity_date,
+            last_activity_at,
             created_at,
             updated_at
         )

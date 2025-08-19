@@ -25,6 +25,7 @@ export class AuthService {
         password,
         options: {
           data: metadata,
+          emailRedirectTo: undefined, // No redirect for mobile
         },
       });
 
@@ -58,11 +59,66 @@ export class AuthService {
       }
 
       // 3. Esperar un momento para que el trigger se ejecute (si existe)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // 4. El perfil se crea automáticamente por trigger
-      // Esperar a que el trigger termine de procesar
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // 4. Verificar si el perfil fue creado por el trigger
+      logger.info(LogModule.AUTH, 'Verificando creación de perfil...');
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        logger.warn(
+          LogModule.AUTH,
+          'Error verificando perfil',
+          profileCheckError
+        );
+      }
+
+      // 5. Si no existe el perfil, crearlo manualmente
+      if (!existingProfile) {
+        logger.warn(
+          LogModule.AUTH,
+          'Perfil no creado por trigger, creando manualmente...'
+        );
+
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email!,
+            country: metadata?.country || 'UY',
+            currency: metadata?.currency || 'UYU',
+            premium: false,
+            total_xp: 0,
+            current_level: 1,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: new Date().toISOString().split('T')[0],
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          // Si el error es de duplicado, está bien (el trigger lo creó mientras esperábamos)
+          if (createError.code !== '23505') {
+            logger.error(
+              LogModule.DB,
+              'Error creando perfil manualmente',
+              createError
+            );
+            // No lanzamos error aquí, el usuario ya está creado en auth
+          }
+        } else {
+          logger.success(LogModule.DB, 'Perfil creado manualmente', {
+            profileId: newProfile?.id,
+          });
+        }
+      } else {
+        logger.success(LogModule.AUTH, 'Perfil ya existe (creado por trigger)');
+      }
 
       logger.end(LogModule.AUTH, 'Registro completado exitosamente');
       return { user: authData.user, session: authData.session };
@@ -188,6 +244,12 @@ export class AuthService {
         .single();
 
       if (error) {
+        // Si el error es que no se encontró el perfil, no es un error crítico
+        if (error.code === 'PGRST116') {
+          logger.info(LogModule.DB, 'Perfil no encontrado (esperado para usuarios nuevos)', { userId });
+          return null;
+        }
+        
         logger.error(LogModule.DB, 'Error obteniendo perfil de usuario', error);
         throw error;
       }
@@ -195,7 +257,10 @@ export class AuthService {
       logger.success(LogModule.DB, 'Perfil obtenido exitosamente', data);
       return data;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error obteniendo perfil', error);
+      // Solo loguear como error si no es un error de "no encontrado"
+      if (error?.code !== 'PGRST116') {
+        logger.error(LogModule.DB, 'Error obteniendo perfil', error);
+      }
       return null;
     }
   }

@@ -9,6 +9,7 @@ import {
   RefreshControl,
   TextInput,
   Keyboard,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,10 +48,44 @@ export default function DashboardScreen() {
   const [pendingSaveAmount, setPendingSaveAmount] = React.useState(0);
   const [manualAmount, setManualAmount] = React.useState('');
   const [showManualInput, setShowManualInput] = React.useState(false);
+  const [fabExpanded, setFabExpanded] = React.useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
   const initializingRef = useRef(false);
+
+  // Funciones para animar el FAB
+  const toggleFab = () => {
+    const toValue = fabExpanded ? 0 : 1;
+    
+    Animated.parallel([
+      Animated.spring(fadeAnim, {
+        toValue,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }),
+      Animated.spring(rotateAnim, {
+        toValue,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }),
+    ]).start();
+    
+    setFabExpanded(!fabExpanded);
+  };
+
+  const handleFabAction = (action: 'goal' | 'csv') => {
+    toggleFab();
+    if (action === 'goal') {
+      router.push('/create-goal');
+    } else {
+      router.push('/import-csv');
+    }
+  };
 
   // Función para cargar estadísticas de gamificación
   const loadGamificationStats = async (userId: string) => {
@@ -470,17 +505,66 @@ export default function DashboardScreen() {
       position: 'absolute',
       bottom: 24,
       right: 20,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
       backgroundColor: theme.primary,
       justifyContent: 'center',
       alignItems: 'center',
+      elevation: 10,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      zIndex: 100,
+    },
+    addButtonExpanded: {
+      backgroundColor: theme.error,
+    },
+    fabOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      zIndex: 98,
+    },
+    fabOption: {
+      position: 'absolute',
+      bottom: 24,
+      right: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      zIndex: 99,
+    },
+    fabOptionButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.secondary,
+      justifyContent: 'center',
+      alignItems: 'center',
       elevation: 8,
-      shadowColor: '#000',
+      shadowColor: theme.secondary,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
       shadowRadius: 4,
+    },
+    fabOptionLabel: {
+      marginRight: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.surface,
+      borderRadius: 16,
+      fontSize: 14,
+      fontWeight: '500',
+      color: theme.text,
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
     },
     loadingContainer: {
       flex: 1,
@@ -706,6 +790,7 @@ export default function DashboardScreen() {
           </View>
         )}
 
+
         {goals.length > 0 && (
           <View style={styles.goalsSection}>
             <View style={styles.goalHeader}>
@@ -759,23 +844,88 @@ export default function DashboardScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          try {
-            logger.info(LogModule.NAV, 'Navegando a crear meta desde FAB');
-            router.push('/create-goal');
-          } catch (error: unknown) {
-            logger.error(
-              LogModule.NAV,
-              'Error navegando a crear meta desde FAB',
-              error
-            );
-            ToastService.handleError(error);
-          }
-        }}
+      {/* FAB Expandible con Opciones */}
+      {fabExpanded && (
+        <TouchableOpacity 
+          style={styles.fabOverlay} 
+          onPress={toggleFab}
+          activeOpacity={1}
+        />
+      )}
+      
+      {/* Opciones del FAB */}
+      <Animated.View
+        style={[
+          styles.fabOption,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -140],
+                }),
+              },
+            ],
+          },
+        ]}
+        pointerEvents={fabExpanded ? 'auto' : 'none'}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <TouchableOpacity
+          style={styles.fabOptionButton}
+          onPress={() => handleFabAction('goal')}
+        >
+          <Ionicons name="flag" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.fabOptionLabel}>Nueva Meta</Text>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.fabOption,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -70],
+                }),
+              },
+            ],
+          },
+        ]}
+        pointerEvents={fabExpanded ? 'auto' : 'none'}
+      >
+        <TouchableOpacity
+          style={styles.fabOptionButton}
+          onPress={() => handleFabAction('csv')}
+        >
+          <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.fabOptionLabel}>Importar CSV</Text>
+      </Animated.View>
+
+      {/* Botón FAB Principal */}
+      <TouchableOpacity
+        style={[styles.addButton, fabExpanded && styles.addButtonExpanded]}
+        onPress={toggleFab}
+        activeOpacity={0.9}
+      >
+        <Animated.View
+          style={{
+            transform: [
+              {
+                rotate: rotateAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '45deg'],
+                }),
+              },
+            ],
+          }}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Animated.View>
       </TouchableOpacity>
 
       <GoalSelectionModal

@@ -82,44 +82,38 @@ export class GoalsService {
   /**
    * Crear nueva meta
    */
-  static async createGoal(goal: GoalInsert): Promise<Goal> {
+  static async createGoal(
+    goalData: Omit<GoalInsert, 'user_id'>
+  ): Promise<Goal> {
     try {
-      logger.start(LogModule.GOALS, 'Creando nueva meta', goal);
+      logger.start(LogModule.GOALS, 'Creando nueva meta', goalData);
 
-      // 1. Verificar sesión activa antes de crear meta
+      // 1. Obtener el usuario actual de la sesión
       const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (sessionError) {
-        logger.error(LogModule.AUTH, 'Error obteniendo sesión', sessionError);
-        throw new Error('Error de autenticación: ' + sessionError.message);
+      if (userError) {
+        logger.error(LogModule.AUTH, 'Error obteniendo usuario', userError);
+        throw new Error('Error de autenticación: ' + userError.message);
       }
 
-      if (!session) {
-        logger.error(LogModule.AUTH, 'No hay sesión activa');
+      if (!user) {
+        logger.error(LogModule.AUTH, 'No hay usuario autenticado');
         throw new Error('Debes iniciar sesión para crear una meta');
       }
 
-      logger.info(LogModule.AUTH, 'Sesión verificada para creación de meta', {
-        userId: session.user.id,
-        goalUserId: goal.user_id,
-        sessionExpires: session.expires_at,
+      logger.info(LogModule.AUTH, 'Usuario verificado para creación de meta', {
+        userId: user.id,
+        email: user.email,
       });
 
-      // 2. Verificar que el usuario coincide
-      if (session.user.id !== goal.user_id) {
-        logger.error(
-          LogModule.AUTH,
-          'Usuario de sesión no coincide con user_id de la meta',
-          {
-            sessionUserId: session.user.id,
-            goalUserId: goal.user_id,
-          }
-        );
-        throw new Error('Error de autorización: usuario no válido');
-      }
+      // 2. Crear el objeto goal con el user_id de la sesión actual
+      const goal: GoalInsert = {
+        ...goalData,
+        user_id: user.id, // Usar SIEMPRE el ID del usuario autenticado
+      };
 
       // 3. Intentar crear la meta
       const { data, error } = await supabase
@@ -137,7 +131,7 @@ export class GoalsService {
             {
               code: error.code,
               message: error.message,
-              sessionUserId: session.user.id,
+              userId: user.id,
               goalData: goal,
             }
           );
@@ -152,28 +146,36 @@ export class GoalsService {
               'Sesión refrescada, reintentando creación...'
             );
 
-            const { data: retryData, error: retryError } = await supabase
-              .from('goals')
-              .insert(goal)
-              .select()
-              .single();
+            // Obtener el usuario nuevamente después del refresh
+            const {
+              data: { user: refreshedUser },
+            } = await supabase.auth.getUser();
 
-            if (retryError) {
-              logger.error(
-                LogModule.DB,
-                'Reintento fallido tras refresh de sesión',
-                retryError
+            if (refreshedUser) {
+              const refreshedGoal = { ...goal, user_id: refreshedUser.id };
+              const { data: retryData, error: retryError } = await supabase
+                .from('goals')
+                .insert(refreshedGoal)
+                .select()
+                .single();
+
+              if (retryError) {
+                logger.error(
+                  LogModule.DB,
+                  'Reintento fallido tras refresh de sesión',
+                  retryError
+                );
+                throw new Error(
+                  'No tienes permisos para crear metas. Verifica tu sesión.'
+                );
+              }
+
+              logger.success(
+                LogModule.GOALS,
+                'Meta creada exitosamente tras refresh'
               );
-              throw new Error(
-                'No tienes permisos para crear metas. Verifica tu sesión.'
-              );
+              return retryData;
             }
-
-            logger.success(
-              LogModule.GOALS,
-              'Meta creada exitosamente tras refresh'
-            );
-            return retryData;
           }
 
           throw new Error(

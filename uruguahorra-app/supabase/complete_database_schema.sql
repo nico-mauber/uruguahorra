@@ -3,8 +3,17 @@
 -- ============================================
 -- Archivo maestro unificado para crear la base de datos completa desde cero
 -- Incluye: Schema completo, RLS, políticas, índices, funciones, triggers, vistas y datos semilla
--- Versión: 2.0
--- Fecha: 2024-12-19
+-- Versión: 2.1
+-- Fecha actualización: 2024-12-19
+-- 
+-- IMPORTANTE: Este archivo es el ÚNICO necesario para crear la base de datos
+-- Ejecutar completo en Supabase SQL Editor
+-- 
+-- Cambios v2.1:
+-- - Mejorada función handle_new_user() con todos los campos necesarios
+-- - Agregada sincronización automática de usuarios existentes sin perfil
+-- - Agregada verificación de integridad del trigger
+-- - Resumen detallado al final de la ejecución
 -- ============================================
 
 -- ============================================
@@ -83,8 +92,30 @@ $$ language 'plpgsql';
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.users (id, email)
-    VALUES (NEW.id, NEW.email)
+    INSERT INTO public.users (
+        id, 
+        email, 
+        country, 
+        currency, 
+        premium, 
+        total_xp, 
+        current_level, 
+        current_streak, 
+        longest_streak, 
+        last_activity_date
+    )
+    VALUES (
+        NEW.id, 
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'country', 'UY'),
+        COALESCE(NEW.raw_user_meta_data->>'currency', 'UYU'),
+        false,
+        0,
+        1,
+        0,
+        0,
+        CURRENT_DATE
+    )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
@@ -768,17 +799,137 @@ COMMENT ON COLUMN public.user_streaks.streak_protections_used IS 'Protecciones u
 COMMENT ON COLUMN public.weekly_quests.challenge_ids IS 'Array de UUIDs de challenges para esta quest';
 
 -- ============================================
+-- PASO 13: SINCRONIZAR USUARIOS EXISTENTES
+-- ============================================
+-- Crear perfiles para usuarios de auth.users que no tienen perfil en public.users
+-- Esto es necesario cuando el trigger no funcionó correctamente
+
+DO $$
+DECLARE
+    usuarios_sin_perfil INTEGER;
+    usuarios_sincronizados INTEGER;
+BEGIN
+    -- Contar usuarios sin perfil
+    SELECT COUNT(*) INTO usuarios_sin_perfil
+    FROM auth.users au
+    LEFT JOIN public.users pu ON au.id = pu.id
+    WHERE pu.id IS NULL;
+    
+    IF usuarios_sin_perfil > 0 THEN
+        RAISE NOTICE '⚠️  Encontrados % usuarios sin perfil, creando...', usuarios_sin_perfil;
+        
+        -- Crear perfiles faltantes
+        INSERT INTO public.users (
+            id,
+            email,
+            country,
+            currency,
+            premium,
+            total_xp,
+            current_level,
+            current_streak,
+            longest_streak,
+            last_activity_date,
+            created_at,
+            updated_at
+        )
+        SELECT 
+            au.id,
+            au.email,
+            COALESCE(au.raw_user_meta_data->>'country', 'UY'),
+            COALESCE(au.raw_user_meta_data->>'currency', 'UYU'),
+            false,
+            0,
+            1,
+            0,
+            0,
+            CURRENT_DATE,
+            au.created_at,
+            NOW()
+        FROM auth.users au
+        LEFT JOIN public.users pu ON au.id = pu.id
+        WHERE pu.id IS NULL
+        ON CONFLICT (id) DO NOTHING;
+        
+        GET DIAGNOSTICS usuarios_sincronizados = ROW_COUNT;
+        RAISE NOTICE '✅ Creados % perfiles de usuario', usuarios_sincronizados;
+    ELSE
+        RAISE NOTICE '✅ Todos los usuarios tienen perfil';
+    END IF;
+END
+$$;
+
+-- ============================================
+-- PASO 14: VERIFICACIÓN DE INTEGRIDAD
+-- ============================================
+
+-- Verificar que el trigger existe y está activo
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.triggers 
+        WHERE trigger_name = 'on_auth_user_created'
+        AND event_object_schema = 'auth'
+        AND event_object_table = 'users'
+    ) THEN
+        RAISE WARNING '⚠️  El trigger on_auth_user_created no existe o no está activo';
+        -- Intentar recrearlo
+        CREATE TRIGGER on_auth_user_created
+            AFTER INSERT ON auth.users
+            FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+        RAISE NOTICE '✅ Trigger recreado exitosamente';
+    ELSE
+        RAISE NOTICE '✅ Trigger on_auth_user_created verificado';
+    END IF;
+END
+$$;
+
+-- Mostrar resumen de usuarios
+DO $$
+DECLARE
+    total_auth_users INTEGER;
+    total_profiles INTEGER;
+    users_without_profile INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO total_auth_users FROM auth.users;
+    SELECT COUNT(*) INTO total_profiles FROM public.users;
+    SELECT COUNT(*) INTO users_without_profile
+    FROM auth.users au
+    LEFT JOIN public.users pu ON au.id = pu.id
+    WHERE pu.id IS NULL;
+    
+    RAISE NOTICE '======================================';
+    RAISE NOTICE '📊 RESUMEN DE USUARIOS';
+    RAISE NOTICE '======================================';
+    RAISE NOTICE 'Usuarios en auth.users: %', total_auth_users;
+    RAISE NOTICE 'Perfiles en public.users: %', total_profiles;
+    RAISE NOTICE 'Usuarios sin perfil: %', users_without_profile;
+    
+    IF users_without_profile = 0 THEN
+        RAISE NOTICE '✅ Sincronización completa';
+    ELSE
+        RAISE WARNING '⚠️  Hay % usuarios sin perfil', users_without_profile;
+    END IF;
+END
+$$;
+
+-- ============================================
 -- FIN DEL SCRIPT
 -- ============================================
 
 -- Verificación final
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Base de datos creada exitosamente';
+    RAISE NOTICE '======================================';
+    RAISE NOTICE '✅ BASE DE DATOS CREADA EXITOSAMENTE';
+    RAISE NOTICE '======================================';
     RAISE NOTICE '📊 Tablas creadas: 17';
     RAISE NOTICE '🔍 Vistas creadas: 6';
     RAISE NOTICE '🔒 RLS habilitado en todas las tablas';
     RAISE NOTICE '📈 Índices optimizados creados';
     RAISE NOTICE '🎯 Datos semilla insertados';
+    RAISE NOTICE '👤 Usuarios sincronizados';
+    RAISE NOTICE '✅ Trigger de usuarios verificado';
+    RAISE NOTICE '======================================';
 END
 $$;

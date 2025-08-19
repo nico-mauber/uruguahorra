@@ -52,7 +52,18 @@ The app uses Supabase with 13 tables including:
 - `transactions_raw` - Imported financial data
 - Additional tables for user progress, audit logs, and paywall events
 
-All tables have optimized RLS policies. **UNIFIED MIGRATION**: Use `supabase/master_database_schema.sql` - single file that creates the complete database from scratch.
+All tables have optimized RLS policies.
+
+**DATABASE MANAGEMENT**: 
+- `supabase/complete_database_schema.sql` - ÚNICO archivo necesario para crear toda la base de datos desde cero (v2.1)
+- `supabase/clean_user_data.sql` - Script para limpiar datos de usuarios (mantiene estructura)
+- El archivo complete_database_schema.sql incluye:
+  - Creación de todas las tablas y relaciones
+  - Triggers automáticos (incluye sincronización de usuarios)
+  - RLS policies completas
+  - Datos semilla
+  - Verificación de integridad
+  - Sincronización automática de usuarios existentes sin perfil
 
 ## Development Workflow
 

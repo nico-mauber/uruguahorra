@@ -129,26 +129,36 @@ export default function CreateGoalScreen() {
       const monthsToAdd = parseInt(targetMonths) || 3;
       targetDate.setMonth(targetDate.getMonth() + monthsToAdd);
 
+      // No incluir user_id, el servicio lo obtendrá de la sesión
+      // Personalizar el nombre de la meta según el tipo y los detalles adicionales
+      let finalGoalName = goalName.trim();
+      
+      // Agregar información adicional al nombre de la meta
+      if (goalType === 'travel' && travelDestination) {
+        finalGoalName = `${finalGoalName} - ${travelDestination}`;
+      } else if (goalType === 'purchase' && purchaseDescription) {
+        finalGoalName = `${finalGoalName} - ${purchaseDescription}`;
+      }
+      
       const goalData = {
-        user_id: user.id,
-        name: goalName.trim(),
+        name: finalGoalName,
         target_amount: parsedAmount,
         target_date: targetDate.toISOString().split('T')[0],
         saved_amount: 0,
         is_active: true,
         category: goalType,
-        // Agregar datos adicionales según el tipo
-        ...(goalType === 'travel' &&
-          travelDestination && { destination: travelDestination }),
-        ...(goalType === 'debt' &&
-          debtInterestRate && { interest_rate: parseFloat(debtInterestRate) }),
-        ...(goalType === 'purchase' &&
-          purchaseDescription && { description: purchaseDescription }),
+        // Establecer color e ícono según el tipo
+        color: goalType === 'travel' ? '#10B981' : 
+               goalType === 'debt' ? '#EF4444' : 
+               goalType === 'purchase' ? '#8B5CF6' : '#3B82F6',
+        icon: goalType === 'travel' ? 'airplane' : 
+              goalType === 'debt' ? 'card' : 
+              goalType === 'purchase' ? 'cart' : 'shield',
       };
 
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
 
-      // Crear la meta en Supabase
+      // Crear la meta en Supabase (el servicio agregará el user_id)
       const createdGoal = await GoalsService.createGoal(goalData);
 
       logger.success(LogModule.GOALS, 'Meta creada exitosamente', {

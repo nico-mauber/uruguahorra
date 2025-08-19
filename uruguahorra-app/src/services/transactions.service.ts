@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { ContributionsService } from './contributions.service';
+import { categorize, getCategoryDisplayName } from '@/utils/categorizer';
+import Papa from 'papaparse';
 
 type TransactionRaw = Database['public']['Tables']['transactions_raw']['Row'];
 type TransactionRawInsert =
@@ -71,12 +73,17 @@ export class TransactionsService {
             throw new Error(`Fila ${i + 1}: Fecha inválida (${row.date})`);
           }
 
+          // Auto-categorizar si no hay categoría
+          const finalCategory =
+            row.category?.trim() ||
+            getCategoryDisplayName(categorize(row.description));
+
           const transaction: TransactionRawInsert = {
             user_id: userId,
             transaction_date: transactionDate.toISOString(),
             description: row.description.trim(),
             amount: Math.abs(row.amount), // Tomar valor absoluto
-            category: row.category?.trim() || null,
+            category: finalCategory,
             account: row.account?.trim() || null,
             imported_at: new Date().toISOString(),
           };
@@ -377,22 +384,33 @@ export class TransactionsService {
   }
 
   /**
-   * Procesar texto CSV y convertir a array de objetos
+   * Procesar texto CSV y convertir a array de objetos usando PapaParse
    */
   static parseCSV(csvText: string): CSVRow[] {
     try {
-      logger.info(LogModule.PROCESSING, 'Parseando texto CSV');
+      logger.info(LogModule.PROCESSING, 'Parseando texto CSV con PapaParse');
 
-      const lines = csvText.split('\n').filter((line) => line.trim() !== '');
+      // Parsear CSV con PapaParse
+      const parseResult = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        trimHeaders: true,
+        dynamicTyping: true,
+      });
 
-      if (lines.length < 2) {
-        throw new Error(
-          'El archivo CSV debe tener al menos una fila de encabezados y una fila de datos'
+      if (parseResult.errors.length > 0) {
+        logger.warn(
+          LogModule.PROCESSING,
+          'Errores en parsing CSV',
+          parseResult.errors
         );
       }
 
-      // Parsear encabezados
-      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+      if (!parseResult.data || parseResult.data.length === 0) {
+        throw new Error(
+          'El archivo CSV está vacío o no contiene datos válidos'
+        );
+      }
 
       // Mapear nombres de columnas comunes
       const columnMap: Record<string, string> = {
@@ -412,78 +430,79 @@ export class TransactionsService {
         account: 'account',
       };
 
-      const mappedHeaders = headers.map((h) => columnMap[h] || h);
-
-      // Validar encabezados requeridos
-      if (!mappedHeaders.includes('date')) {
-        throw new Error(
-          'El CSV debe incluir una columna de fecha (fecha, date)'
-        );
-      }
-
-      if (!mappedHeaders.includes('description')) {
-        throw new Error(
-          'El CSV debe incluir una columna de descripción (descripcion, description, concepto, detalle)'
-        );
-      }
-
-      if (!mappedHeaders.includes('amount')) {
-        throw new Error(
-          'El CSV debe incluir una columna de monto (monto, amount, importe, valor)'
-        );
-      }
-
-      // Parsear filas de datos
+      // Procesar y mapear datos
       const rows: CSVRow[] = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map((v) => v.trim());
-
-        if (values.length !== headers.length) {
-          logger.warn(
-            LogModule.PROCESSING,
-            `Fila ${i + 1} tiene número incorrecto de columnas, omitiendo`
-          );
-          continue;
-        }
-
+      for (const rawRow of parseResult.data) {
         const row: Partial<CSVRow> = {};
 
-        for (let j = 0; j < mappedHeaders.length; j++) {
-          const header = mappedHeaders[j];
-          const value = values[j];
+        // Mapear columnas
+        Object.keys(rawRow).forEach((key) => {
+          const normalizedKey = key.toLowerCase().trim();
+          const mappedKey = columnMap[normalizedKey] || normalizedKey;
+          const value = rawRow[key];
 
-          switch (header) {
+          switch (mappedKey) {
             case 'date':
-              row.date = value;
+              if (value) {
+                // Manejar diferentes formatos de fecha
+                row.date = String(value);
+              }
               break;
             case 'description':
-              row.description = value;
+              if (value) {
+                row.description = String(value).trim();
+              }
               break;
-            case 'amount': {
-              // Limpiar el valor del monto (remover símbolos de moneda, comas, etc.)
-              const cleanAmount = value.replace(/[^\d.-]/g, '');
-              row.amount = parseFloat(cleanAmount);
+            case 'amount':
+              if (value !== null && value !== undefined) {
+                // Si es string, limpiar símbolos de moneda
+                const cleanValue = String(value).replace(/[^\d.-]/g, '');
+                const parsed = parseFloat(cleanValue);
+                if (!isNaN(parsed)) {
+                  row.amount = parsed;
+                }
+              }
               break;
-            }
             case 'category':
-              row.category = value;
+              if (value) {
+                row.category = String(value).trim();
+              }
               break;
             case 'account':
-              row.account = value;
+              if (value) {
+                row.account = String(value).trim();
+              }
               break;
           }
-        }
+        });
 
-        if (row.date && row.description && !isNaN(row.amount!)) {
+        // Validar que tenga los campos requeridos
+        if (
+          row.date &&
+          row.description &&
+          typeof row.amount === 'number' &&
+          !isNaN(row.amount)
+        ) {
+          // Auto-categorizar si no tiene categoría
+          if (!row.category) {
+            row.category = getCategoryDisplayName(categorize(row.description));
+          }
           rows.push(row as CSVRow);
         }
       }
 
+      if (rows.length === 0) {
+        throw new Error(
+          'No se encontraron transacciones válidas. Verifica que el CSV tenga columnas: fecha/date, descripcion/description, monto/amount'
+        );
+      }
+
       logger.success(
         LogModule.PROCESSING,
-        `${rows.length} filas parseadas exitosamente`
+        `${rows.length} transacciones parseadas exitosamente de ${parseResult.data.length} filas`
       );
+
       return rows;
     } catch (error) {
       logger.error(LogModule.PROCESSING, 'Error parseando CSV', error);
@@ -506,23 +525,48 @@ export class TransactionsService {
         return { isValid: false, errors };
       }
 
-      const lines = csvText.split('\n').filter((line) => line.trim() !== '');
+      // Intentar parsear con PapaParse
+      const parseResult = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        preview: 5, // Solo validar las primeras 5 filas para performance
+      });
 
-      if (lines.length < 2) {
-        errors.push(
-          'El archivo debe tener al menos una fila de encabezados y una fila de datos'
-        );
+      // Recopilar errores de parsing
+      if (parseResult.errors.length > 0) {
+        parseResult.errors.forEach((error) => {
+          errors.push(`Línea ${error.row || 0}: ${error.message}`);
+        });
       }
 
-      // Validar que las filas tengan el mismo número de columnas
-      const headerColumns = lines[0].split(',').length;
-      for (let i = 1; i < Math.min(lines.length, 6); i++) {
-        // Validar solo las primeras 5 filas de datos
-        const rowColumns = lines[i].split(',').length;
-        if (rowColumns !== headerColumns) {
+      // Validar que haya datos
+      if (!parseResult.data || parseResult.data.length === 0) {
+        errors.push('No se encontraron datos válidos en el archivo');
+      }
+
+      // Validar que tenga columnas requeridas
+      if (parseResult.data && parseResult.data.length > 0) {
+        const firstRow = parseResult.data[0];
+        const headers = Object.keys(firstRow).map((h) => h.toLowerCase());
+
+        const hasDate = headers.some((h) => ['fecha', 'date'].includes(h));
+        const hasDescription = headers.some((h) =>
+          ['descripcion', 'description', 'concepto', 'detalle'].includes(h)
+        );
+        const hasAmount = headers.some((h) =>
+          ['monto', 'amount', 'importe', 'valor'].includes(h)
+        );
+
+        if (!hasDate) {
+          errors.push('Falta columna de fecha (fecha/date)');
+        }
+        if (!hasDescription) {
           errors.push(
-            `La fila ${i + 1} tiene ${rowColumns} columnas, pero se esperaban ${headerColumns}`
+            'Falta columna de descripción (descripcion/description/concepto/detalle)'
           );
+        }
+        if (!hasAmount) {
+          errors.push('Falta columna de monto (monto/amount/importe/valor)');
         }
       }
 
@@ -543,17 +587,32 @@ export class TransactionsService {
     sampleRows: CSVRow[];
     headers: string[];
     estimatedContributions: number;
+    categoryDistribution: Record<string, number>;
   } {
     try {
-      const lines = csvText.split('\n').filter((line) => line.trim() !== '');
-      const headers = lines[0].split(',').map((h) => h.trim());
       const rows = this.parseCSV(csvText);
+      const parseResult = Papa.parse(csvText, {
+        header: true,
+        preview: 1,
+      });
+
+      const headers =
+        parseResult.data.length > 0 ? Object.keys(parseResult.data[0]) : [];
+
+      // Calcular distribución por categorías
+      const categoryDistribution: Record<string, number> = {};
+      rows.forEach((row) => {
+        const category = row.category || 'Otros';
+        categoryDistribution[category] =
+          (categoryDistribution[category] || 0) + 1;
+      });
 
       return {
         rowCount: rows.length,
         sampleRows: rows.slice(0, 5), // Primeras 5 filas como muestra
         headers,
         estimatedContributions: rows.filter((r) => r.amount > 0).length,
+        categoryDistribution,
       };
     } catch (error) {
       logger.error(

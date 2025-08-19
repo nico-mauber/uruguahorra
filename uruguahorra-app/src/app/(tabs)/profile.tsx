@@ -131,6 +131,7 @@ export default function ProfileScreen() {
     },
     menuIcon: {
       marginRight: 16,
+      marginLeft: 8,
     },
     menuText: {
       flex: 1,

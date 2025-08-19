@@ -147,8 +147,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     });
     set({ isLoading: true });
     try {
-      // 1. Registrar con Supabase
-      const { user: authUser } = await AuthService.signUp(
+      // 1. Registrar con Supabase (ahora maneja la creación del perfil internamente)
+      const { user: authUser, session } = await AuthService.signUp(
         email,
         password,
         metadata
@@ -158,38 +158,68 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       logger.success(LogModule.STORE, 'Usuario registrado, obteniendo perfil');
 
-      // 2. Intentar obtener el perfil creado
+      // 2. Obtener el perfil creado (debería existir ahora)
       logger.loading(LogModule.STORE, 'Buscando perfil del nuevo usuario');
       let profile = await AuthService.getUserProfile(authUser.id);
 
-      // Si no existe perfil, usar valores por defecto
+      // Si por alguna razón aún no existe, crear valores por defecto
       if (!profile) {
         logger.warn(
           LogModule.STORE,
-          'Perfil no encontrado, usando valores por defecto'
+          'Perfil aún no encontrado, creando valores por defecto'
         );
-        profile = {
-          id: authUser.id,
-          email: authUser.email!,
-          country: metadata?.country || 'UY',
-          currency: metadata?.currency || 'UYU',
-          premium: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
+
+        // Intentar crear el perfil una vez más
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email: authUser.email!,
+            country: metadata?.country || 'UY',
+            currency: metadata?.currency || 'UYU',
+            premium: false,
+            total_xp: 0,
+            current_level: 1,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: new Date().toISOString().split('T')[0],
+          })
+          .select()
+          .single();
+
+        if (!createError && newProfile) {
+          profile = newProfile;
+        } else {
+          // Usar valores por defecto en memoria
+          profile = {
+            id: authUser.id,
+            email: authUser.email!,
+            country: metadata?.country || 'UY',
+            currency: metadata?.currency || 'UYU',
+            premium: false,
+            total_xp: 0,
+            current_level: 1,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        }
       }
 
-      // 3. Actualizar el store
+      // 3. Actualizar el store con el ID correcto del usuario autenticado
       const userWithStats = {
         ...profile,
-        id: authUser.id,
-        level: 1,
-        totalXP: 0,
-        streak: 0,
+        id: authUser.id, // SIEMPRE usar el ID del auth user
+        level: profile.current_level || 1,
+        totalXP: profile.total_xp || 0,
+        streak: profile.current_streak || 0,
       };
 
       logger.success(LogModule.STORE, 'Usuario registrado exitosamente', {
         userId: userWithStats.id,
+        hasSession: !!session,
       });
 
       set({
@@ -269,11 +299,48 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       // 3. Obtener perfil
-      const profile = await AuthService.getUserProfile(authUser.id);
+      let profile = await AuthService.getUserProfile(authUser.id);
 
+      // 4. Si no existe perfil, crearlo
       if (!profile) {
-        set({ isLoading: false });
-        return;
+        logger.warn(
+          LogModule.STORE,
+          'Perfil no encontrado para usuario existente, creando...',
+          { userId: authUser.id }
+        );
+
+        // Intentar crear el perfil
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email: authUser.email!,
+            country: 'UY',
+            currency: 'UYU',
+            premium: false,
+            total_xp: 0,
+            current_level: 1,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: new Date().toISOString().split('T')[0],
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          logger.error(
+            LogModule.DB,
+            'Error creando perfil para usuario existente',
+            createError
+          );
+          set({ isLoading: false });
+          return;
+        }
+
+        profile = newProfile;
+        logger.success(LogModule.DB, 'Perfil creado exitosamente', {
+          profileId: profile?.id,
+        });
       }
 
       // 4. Verificar premium

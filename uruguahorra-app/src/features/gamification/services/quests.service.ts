@@ -88,7 +88,8 @@ export class QuestsService {
         .select('*')
         .eq('week_start_date', weekStartDate.toISOString().split('T')[0])
         .eq('is_active', true)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (existingError && existingError.code !== 'PGRST116') {
         // Si es error de tabla no encontrada o RLS, retornar quest por defecto
@@ -104,7 +105,7 @@ export class QuestsService {
             'No se puede acceder a weekly_quests, retornando quest por defecto'
           );
           return {
-            id: 'default-quest',
+            id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
             week_start_date: weekStartDate.toISOString().split('T')[0],
             challenge_ids: [],
             is_active: true,
@@ -150,7 +151,7 @@ export class QuestsService {
             'No se puede crear quest semanal, retornando quest por defecto'
           );
           return {
-            id: 'default-quest',
+            id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
             week_start_date: weekStartDate.toISOString().split('T')[0],
             challenge_ids: challengeIds,
             is_active: true,
@@ -183,7 +184,7 @@ export class QuestsService {
           'Sistema de quests no disponible, retornando quest por defecto'
         );
         return {
-          id: 'default-quest',
+          id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
           week_start_date: getWeekStartDate().toISOString().split('T')[0],
           challenge_ids: [],
           is_active: true,
@@ -542,10 +543,17 @@ export class QuestsService {
       .select('*')
       .eq('week_start_date', weekStartDate.toISOString().split('T')[0])
       .eq('is_active', true)
-      .single();
+      .limit(1)
+      .maybeSingle(); // Usar maybeSingle() en lugar de single()
 
-    if (error) {
+    // Si hay error que no sea PGRST116 (no results), lanzarlo
+    if (error && error.code !== 'PGRST116') {
       throw error;
+    }
+
+    // Si no hay datos, generar quest para esta semana
+    if (!data) {
+      return await this.generateWeeklyQuest();
     }
 
     return data;

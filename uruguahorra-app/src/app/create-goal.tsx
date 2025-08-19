@@ -89,40 +89,11 @@ export default function CreateGoalScreen() {
         return;
       }
 
-      // Verificar sesión activa con Supabase
-      logger.info(LogModule.AUTH, 'Verificando sesión antes de crear meta');
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        logger.error(LogModule.AUTH, 'Sesión inválida o expirada', {
-          sessionError,
-          hasSession: !!session,
-        });
-        Alert.alert(
-          'Error de Sesión',
-          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-          [
-            {
-              text: 'Ir al inicio',
-              onPress: () => router.replace('/(auth)/onboarding'),
-            },
-          ]
-        );
-        return;
-      }
-
-      logger.info(
-        LogModule.GOALS,
-        'Usuario y sesión verificados, procediendo con creación',
-        {
-          userId: user.id,
-          sessionUserId: session.user.id,
-          sessionExpires: session.expires_at,
-        }
-      );
+      // Si el usuario está en el store, está autenticado. Punto.
+      logger.info(LogModule.GOALS, 'Usuario autenticado, procediendo con creación', {
+        userId: user.id,
+        email: user.email,
+      });
 
       // Calcular fecha objetivo
       const targetDate = new Date();
@@ -168,8 +139,8 @@ export default function CreateGoalScreen() {
 
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
 
-      // Crear la meta en Supabase (el servicio agregará el user_id)
-      const createdGoal = await GoalsService.createGoal(goalData);
+      // Crear la meta en Supabase
+      const createdGoal = await GoalsService.createGoal(user.id, goalData);
 
       logger.success(LogModule.GOALS, 'Meta creada exitosamente', {
         goalId: createdGoal.id,

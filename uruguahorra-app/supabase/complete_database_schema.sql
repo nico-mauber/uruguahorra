@@ -132,6 +132,7 @@ CREATE TABLE public.challenges (
     description TEXT,
     type TEXT DEFAULT 'savings',
     difficulty TEXT DEFAULT 'easy',
+    requirement_type TEXT DEFAULT 'savings' CHECK (requirement_type IN ('savings', 'transactions', 'streak', 'goals')),
     xp_reward INTEGER DEFAULT 50,
     target_value DECIMAL(10,2),
     duration_days INTEGER,
@@ -237,10 +238,9 @@ CREATE TABLE public.user_streaks (
 CREATE TABLE public.user_xp_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL CHECK (event_type IN ('contribution', 'challenge_complete', 'daily_streak', 'quest_complete')),
     xp_earned INTEGER NOT NULL,
-    source TEXT NOT NULL,
-    source_id UUID,
-    description TEXT,
+    event_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -353,7 +353,7 @@ CREATE INDEX idx_user_streaks_user_id ON public.user_streaks(user_id);
 
 -- Índices para user_xp_log
 CREATE INDEX idx_user_xp_log_user_id ON public.user_xp_log(user_id);
-CREATE INDEX idx_user_xp_log_source ON public.user_xp_log(source);
+CREATE INDEX idx_user_xp_log_event_type ON public.user_xp_log(event_type);
 CREATE INDEX idx_user_xp_log_date ON public.user_xp_log(created_at DESC);
 
 -- Índices para weekly_quests
@@ -400,12 +400,16 @@ ALTER TABLE public.user_quest_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.paywall_events ENABLE ROW LEVEL SECURITY;
 
--- Políticas para USERS (SOLO SELECT Y UPDATE)
+-- Políticas para USERS (SELECT, UPDATE, E INSERT PARA TRIGGERS)
 CREATE POLICY "users_can_select_own" ON public.users
     FOR SELECT USING (auth.uid() = id);
 
 CREATE POLICY "users_can_update_own" ON public.users
     FOR UPDATE USING (auth.uid() = id);
+
+-- CRÍTICO: Permitir INSERT para que el trigger de creación automática funcione
+CREATE POLICY "users_can_insert_own" ON public.users
+    FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Políticas para GOALS
 CREATE POLICY "goals_all_own" ON public.goals
@@ -484,10 +488,16 @@ CREATE POLICY "paywall_events_all_own" ON public.paywall_events
 -- PASO 6: FUNCIONES Y TRIGGERS
 -- ============================================
 
--- Función para crear perfiles automáticamente
+-- Función para crear perfiles automáticamente (SECURITY DEFINER para saltear RLS)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger 
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
+    RAISE NOTICE 'Creando perfil para usuario: % (%)', NEW.email, NEW.id;
+    
+    -- Intentar insertar el perfil del usuario
     INSERT INTO public.users (
         id,
         email,
@@ -503,24 +513,29 @@ BEGIN
         updated_at
     )
     VALUES (
-        new.id,
-        new.email,
-        COALESCE(new.raw_user_meta_data->>'country', 'UY'),
-        COALESCE(new.raw_user_meta_data->>'currency', 'UYU'),
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'country', 'UY'),
+        COALESCE(NEW.raw_user_meta_data->>'currency', 'UYU'),
         false,
         0,
         1,
         0,
         0,
         CURRENT_DATE,
-        new.created_at,
+        NEW.created_at,
         NOW()
     )
     ON CONFLICT (id) DO NOTHING;
     
-    RETURN new;
+    RAISE NOTICE 'Perfil creado exitosamente para usuario: %', NEW.id;
+    RETURN NEW;
+EXCEPTION 
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error creando perfil para %: %', NEW.id, SQLERRM;
+        RETURN NEW; -- No fallar el registro de auth incluso si falla el perfil
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Función para actualizar timestamps
 CREATE OR REPLACE FUNCTION public.update_updated_at()

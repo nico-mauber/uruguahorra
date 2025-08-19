@@ -85,36 +85,29 @@ export class GoalsService {
    * Crear nueva meta
    */
   static async createGoal(
+    userId: string,
     goalData: Omit<GoalInsert, 'user_id'>
   ): Promise<Goal> {
     try {
-      logger.start(LogModule.GOALS, 'Creando nueva meta', goalData);
-
-      // 1. Obtener el usuario actual de la sesión
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        logger.error(LogModule.AUTH, 'Error obteniendo usuario', userError);
-        throw new Error('Error de autenticación: ' + userError.message);
-      }
-
-      if (!user) {
-        logger.error(LogModule.AUTH, 'No hay usuario autenticado');
-        throw new Error('Debes iniciar sesión para crear una meta');
-      }
-
-      logger.info(LogModule.AUTH, 'Usuario verificado para creación de meta', {
-        userId: user.id,
-        email: user.email,
+      logger.start(LogModule.GOALS, 'Creando nueva meta', {
+        userId,
+        goalData,
       });
 
-      // 2. Crear el objeto goal con el user_id de la sesión actual
+      // Verificar que tengamos un userId válido
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('ID de usuario inválido');
+      }
+
+      logger.info(LogModule.GOALS, 'Creando meta para usuario', {
+        userId,
+        goalName: goalData.name,
+      });
+
+      // Crear el objeto goal con el user_id proporcionado
       const goal: GoalInsert = {
         ...goalData,
-        user_id: user.id, // Usar SIEMPRE el ID del usuario autenticado
+        user_id: userId,
       };
 
       // 3. Intentar crear la meta

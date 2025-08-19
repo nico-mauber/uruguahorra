@@ -435,11 +435,37 @@ AuthService.onAuthStateChange((event, session) => {
   logger.debug(LogModule.AUTH, 'Auth state changed', {
     event,
     hasSession: !!session,
+    userId: session?.user?.id || 'none',
   });
+
+  const currentState = useAuthStore.getState();
 
   if (event === 'SIGNED_IN' && session) {
     logger.info(LogModule.AUTH, 'Usuario autenticado, verificando sesión');
-    useAuthStore.getState().checkSession();
+    
+    // Verificar si es un usuario diferente al actual
+    if (currentState.user && currentState.user.id !== session.user.id) {
+      logger.warn(LogModule.AUTH, 'Cambio de usuario detectado, limpiando store primero', {
+        previousUserId: currentState.user.id,
+        newUserId: session.user.id,
+      });
+      
+      // Limpiar store primero
+      useAuthStore.setState({
+        user: null,
+        supabaseUser: null,
+        isAuthenticated: false,
+        isPremium: false,
+        rateLimitError: null,
+        isLoading: false,
+      });
+    }
+    
+    // Verificar sesión con el nuevo usuario
+    setTimeout(() => {
+      useAuthStore.getState().checkSession();
+    }, 100);
+    
   } else if (event === 'SIGNED_OUT') {
     logger.info(LogModule.AUTH, 'Usuario salió, limpiando store');
     useAuthStore.setState({
@@ -448,7 +474,16 @@ AuthService.onAuthStateChange((event, session) => {
       isAuthenticated: false,
       isPremium: false,
       rateLimitError: null,
+      isLoading: false,
     });
     logger.success(LogModule.AUTH, 'Store limpiado tras logout');
+    
+  } else if (event === 'TOKEN_REFRESHED' && session) {
+    logger.info(LogModule.AUTH, 'Token refrescado, actualizando store si es necesario');
+    
+    if (currentState.user && currentState.user.id !== session.user.id) {
+      logger.warn(LogModule.AUTH, 'Usuario cambió durante refresh, re-verificando sesión');
+      useAuthStore.getState().checkSession();
+    }
   }
 });

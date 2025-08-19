@@ -24,7 +24,11 @@
       "Bash(npm ls:*)",
       "WebFetch(domain:supabase.com)",
       "Bash(mv:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(touch:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm cache:*)",
+      "Bash(npm run web:*)"
     ],
     "defaultMode": "acceptEdits"
   }

@@ -37,9 +37,9 @@ export const ERROR_MESSAGES = {
   // Archivos
   FILE: {
     TOO_LARGE: 'El archivo es demasiado grande. Máximo permitido: 2MB.',
-    INVALID_TYPE: 'Tipo de archivo no permitido. Solo se aceptan archivos CSV.',
+    INVALID_TYPE: 'Tipo de archivo no permitido.',
     EMPTY: 'El archivo está vacío.',
-    PARSE_ERROR: 'No se pudo leer el archivo. Verifica que sea un CSV válido.',
+    PARSE_ERROR: 'No se pudo leer el archivo.',
     TOO_MANY_ROWS: 'El archivo tiene demasiadas filas. Máximo permitido: 1000.',
     INVALID_STRUCTURE: 'La estructura del archivo no es correcta.',
     MISSING_COLUMNS: 'El archivo no tiene las columnas requeridas.',
@@ -91,20 +91,6 @@ export const ERROR_MESSAGES = {
     PERMISSION_DENIED: 'No tienes permisos para realizar esta acción.',
     NOT_FOUND: 'No se encontró lo que buscabas.',
   },
-} as const;
-
-/**
- * Mensajes para errores específicos de CSV
- */
-export const CSV_ERROR_MESSAGES = {
-  ROW_ERROR: (row: number) => `Error en fila ${row}`,
-  MISSING_DATE: (row: number) => `Fila ${row}: Fecha requerida`,
-  MISSING_DESCRIPTION: (row: number) => `Fila ${row}: Descripción requerida`,
-  INVALID_AMOUNT: (row: number) => `Fila ${row}: Monto inválido`,
-  INVALID_DATE: (row: number) => `Fila ${row}: Fecha inválida`,
-  PARSE_ERROR: 'Error al leer el archivo CSV',
-  EMPTY_FILE: 'El archivo está vacío',
-  TOO_MANY_ERRORS: 'Demasiados errores en el archivo',
 } as const;
 
 /**

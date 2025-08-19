@@ -9,8 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Button, Card } from '@components';
+import { Card } from '@components';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { TransactionsService } from '@/services/transactions.service';
@@ -26,7 +25,6 @@ import {
 
 export default function TransactionsScreen() {
   const { theme } = useTheme();
-  const router = useRouter();
   const { user } = useAuthStore();
 
   const [transactions, setTransactions] = useState<TransactionRaw[]>([]);
@@ -443,14 +441,8 @@ export default function TransactionsScreen() {
             />
             <Text style={styles.emptyTitle}>No hay transacciones</Text>
             <Text style={styles.emptyText}>
-              Aún no has importado ningún archivo CSV.{'\n'}
-              Importa tus movimientos bancarios para verlos aquí.
+              Aún no hay transacciones registradas.
             </Text>
-            <Button
-              title="Importar CSV"
-              onPress={() => router.push('/import-csv')}
-              style={styles.importButton}
-            />
           </View>
         ) : (
           <View style={styles.emptyState}>

@@ -51,12 +51,7 @@ function RootLayoutNav() {
     const currentRoute = segments[0];
     const inAuthGroup = currentRoute === '(auth)';
     const inTabsGroup = currentRoute === '(tabs)';
-    const modalRoutes = [
-      'create-goal',
-      'import-csv',
-      'paywall',
-      'transactions',
-    ];
+    const modalRoutes = ['create-goal', 'paywall', 'transactions'];
     const isModalRoute = modalRoutes.includes(currentRoute);
 
     // Solo navegar si no estamos ya en la ruta correcta
@@ -88,14 +83,6 @@ function RootLayoutNav() {
           presentation: 'modal',
           headerShown: true,
           title: 'Crear Nueva Meta',
-        }}
-      />
-      <Stack.Screen
-        name="import-csv"
-        options={{
-          presentation: 'modal',
-          headerShown: true,
-          title: 'Importar CSV',
         }}
       />
       <Stack.Screen

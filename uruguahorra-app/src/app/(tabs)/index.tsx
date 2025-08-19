@@ -78,13 +78,9 @@ export default function DashboardScreen() {
     setFabExpanded(!fabExpanded);
   };
 
-  const handleFabAction = (action: 'goal' | 'csv') => {
+  const handleFabAction = () => {
     toggleFab();
-    if (action === 'goal') {
-      router.push('/create-goal');
-    } else {
-      router.push('/import-csv');
-    }
+    router.push('/create-goal');
   };
 
   // Función para cargar estadísticas de gamificación
@@ -872,37 +868,11 @@ export default function DashboardScreen() {
       >
         <TouchableOpacity
           style={styles.fabOptionButton}
-          onPress={() => handleFabAction('goal')}
+          onPress={handleFabAction}
         >
           <Ionicons name="flag" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.fabOptionLabel}>Nueva Meta</Text>
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.fabOption,
-          {
-            opacity: fadeAnim,
-            transform: [
-              {
-                translateY: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -70],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents={fabExpanded ? 'auto' : 'none'}
-      >
-        <TouchableOpacity
-          style={styles.fabOptionButton}
-          onPress={() => handleFabAction('csv')}
-        >
-          <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.fabOptionLabel}>Importar CSV</Text>
       </Animated.View>
 
       {/* Botón FAB Principal */}

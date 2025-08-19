@@ -18,7 +18,6 @@ import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
-import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 
 export default function CreateGoalScreen() {
@@ -90,10 +89,14 @@ export default function CreateGoalScreen() {
       }
 
       // Si el usuario está en el store, está autenticado. Punto.
-      logger.info(LogModule.GOALS, 'Usuario autenticado, procediendo con creación', {
-        userId: user.id,
-        email: user.email,
-      });
+      logger.info(
+        LogModule.GOALS,
+        'Usuario autenticado, procediendo con creación',
+        {
+          userId: user.id,
+          email: user.email,
+        }
+      );
 
       // Calcular fecha objetivo
       const targetDate = new Date();

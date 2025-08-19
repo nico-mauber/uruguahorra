@@ -77,7 +77,8 @@ export const CurrencyCodeSchema = z
 // ESQUEMA DE USUARIO
 // ============================================
 
-export const UserSchema = z.object({
+// Schema base de usuario
+const UserBaseSchema = z.object({
   id: UUIDSchema,
   email: EmailSchema,
   country: CountryCodeSchema.nullable().default('UY'),
@@ -92,12 +93,14 @@ export const UserSchema = z.object({
   updated_at: DateTimeSchema.optional(),
 });
 
+export const UserSchema = UserBaseSchema;
+
 export type User = z.infer<typeof UserSchema>;
 
 /**
  * Esquema para crear usuario
  */
-export const UserInsertSchema = UserSchema.omit({
+export const UserInsertSchema = UserBaseSchema.omit({
   created_at: true,
   updated_at: true,
 }).partial({
@@ -113,7 +116,7 @@ export type UserInsert = z.infer<typeof UserInsertSchema>;
 /**
  * Esquema para actualizar usuario
  */
-export const UserUpdateSchema = UserSchema.partial().omit({
+export const UserUpdateSchema = UserBaseSchema.partial().omit({
   id: true,
   email: true,
   created_at: true,
@@ -138,63 +141,65 @@ export const GoalTypeSchema = z.enum([
 
 export type GoalType = z.infer<typeof GoalTypeSchema>;
 
-export const GoalSchema = z
-  .object({
-    id: UUIDSchema,
-    user_id: UUIDSchema,
-    name: z
-      .string()
-      .min(1, { message: 'El nombre es requerido' })
-      .max(100, { message: 'El nombre es muy largo' }),
-    description: z.string().max(500).nullable(),
-    type: GoalTypeSchema,
-    target_amount: MoneyAmountSchema,
-    current_amount: MoneyAmountSchema.default(0),
-    deadline: DateSchema.nullable(),
-    is_active: z.boolean().default(true),
-    is_completed: z.boolean().default(false),
-    progress_percentage: PercentageSchema.default(0),
-    monthly_target: MoneyAmountSchema.nullable(),
-    vacation_destination: z.string().max(100).nullable(),
-    vacation_duration_days: z.number().int().min(1).nullable(),
-    home_type: z.string().max(50).nullable(),
-    home_location: z.string().max(200).nullable(),
-    vehicle_brand: z.string().max(50).nullable(),
-    vehicle_model: z.string().max(50).nullable(),
-    vehicle_year: z.number().int().min(1900).max(2030).nullable(),
-    education_institution: z.string().max(200).nullable(),
-    education_program: z.string().max(200).nullable(),
-    education_duration_months: z.number().int().min(1).nullable(),
-    created_at: DateTimeSchema,
-    updated_at: DateTimeSchema.optional(),
-  })
-  .refine(
-    (data) => {
-      // Validar que current_amount no exceda target_amount
-      return data.current_amount <= data.target_amount;
-    },
-    {
-      message: 'El monto actual no puede exceder el monto objetivo',
-      path: ['current_amount'],
+// Schema base sin refinamientos
+const GoalBaseSchema = z.object({
+  id: UUIDSchema,
+  user_id: UUIDSchema,
+  name: z
+    .string()
+    .min(1, { message: 'El nombre es requerido' })
+    .max(100, { message: 'El nombre es muy largo' }),
+  description: z.string().max(500).nullable(),
+  type: GoalTypeSchema,
+  target_amount: MoneyAmountSchema,
+  current_amount: MoneyAmountSchema.default(0),
+  deadline: DateSchema.nullable(),
+  is_active: z.boolean().default(true),
+  is_completed: z.boolean().default(false),
+  progress_percentage: PercentageSchema.default(0),
+  monthly_target: MoneyAmountSchema.nullable(),
+  vacation_destination: z.string().max(100).nullable(),
+  vacation_duration_days: z.number().int().min(1).nullable(),
+  home_type: z.string().max(50).nullable(),
+  home_location: z.string().max(200).nullable(),
+  vehicle_brand: z.string().max(50).nullable(),
+  vehicle_model: z.string().max(50).nullable(),
+  vehicle_year: z.number().int().min(1900).max(2030).nullable(),
+  education_institution: z.string().max(200).nullable(),
+  education_program: z.string().max(200).nullable(),
+  education_duration_months: z.number().int().min(1).nullable(),
+  created_at: DateTimeSchema,
+  updated_at: DateTimeSchema.optional(),
+});
+
+// Schema con refinamientos
+export const GoalSchema = GoalBaseSchema.refine(
+  (data) => {
+    // Validar que current_amount no exceda target_amount
+    return data.current_amount <= data.target_amount;
+  },
+  {
+    message: 'El monto actual no puede exceder el monto objetivo',
+    path: ['current_amount'],
+  }
+).refine(
+  (data) => {
+    // Si hay deadline, debe ser futura
+    if (data.deadline) {
+      return new Date(data.deadline) > new Date();
     }
-  )
-  .refine(
-    (data) => {
-      // Si hay deadline, debe ser futura
-      if (data.deadline) {
-        return new Date(data.deadline) > new Date();
-      }
-      return true;
-    },
-    {
-      message: 'La fecha límite debe ser futura',
-      path: ['deadline'],
-    }
-  );
+    return true;
+  },
+  {
+    message: 'La fecha límite debe ser futura',
+    path: ['deadline'],
+  }
+);
 
 export type Goal = z.infer<typeof GoalSchema>;
 
-export const GoalInsertSchema = GoalSchema.omit({
+// Usar GoalBaseSchema para omit y partial
+export const GoalInsertSchema = GoalBaseSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
@@ -207,7 +212,7 @@ export const GoalInsertSchema = GoalSchema.omit({
 
 export type GoalInsert = z.infer<typeof GoalInsertSchema>;
 
-export const GoalUpdateSchema = GoalSchema.partial().omit({
+export const GoalUpdateSchema = GoalBaseSchema.partial().omit({
   id: true,
   user_id: true,
   created_at: true,
@@ -219,7 +224,8 @@ export type GoalUpdate = z.infer<typeof GoalUpdateSchema>;
 // ESQUEMA DE TRANSACCIÓN
 // ============================================
 
-export const TransactionSchema = z.object({
+// Schema base de transacción
+const TransactionBaseSchema = z.object({
   id: UUIDSchema,
   user_id: UUIDSchema,
   transaction_date: DateTimeSchema,
@@ -234,44 +240,16 @@ export const TransactionSchema = z.object({
   created_at: DateTimeSchema.optional(),
 });
 
+export const TransactionSchema = TransactionBaseSchema;
+
 export type Transaction = z.infer<typeof TransactionSchema>;
 
-export const TransactionInsertSchema = TransactionSchema.omit({
+export const TransactionInsertSchema = TransactionBaseSchema.omit({
   id: true,
   created_at: true,
 });
 
 export type TransactionInsert = z.infer<typeof TransactionInsertSchema>;
-
-// ============================================
-// ESQUEMA DE TRANSACTION RAW (para CSV imports)
-// ============================================
-
-export const TransactionRawSchema = z.object({
-  id: UUIDSchema,
-  user_id: UUIDSchema,
-  goal_id: UUIDSchema.nullable(),
-  original_description: z
-    .string()
-    .min(1, { message: 'La descripción es requerida' })
-    .max(500, { message: 'La descripción es muy larga' }),
-  amount: MoneyAmountSchema,
-  transaction_date: DateSchema, // DATE en la DB (no TIMESTAMPTZ)
-  category: z.string().max(50).nullable(),
-  imported_at: DateTimeSchema,
-  is_processed: z.boolean().default(false),
-});
-
-export type TransactionRaw = z.infer<typeof TransactionRawSchema>;
-
-export const TransactionRawInsertSchema = TransactionRawSchema.omit({
-  id: true,
-}).partial({
-  imported_at: true,
-  is_processed: true,
-});
-
-export type TransactionRawInsert = z.infer<typeof TransactionRawInsertSchema>;
 
 // ============================================
 // ESQUEMA DE CONTRIBUCIÓN
@@ -287,7 +265,8 @@ export const ContributionSourceSchema = z.enum([
 
 export type ContributionSource = z.infer<typeof ContributionSourceSchema>;
 
-export const ContributionSchema = z.object({
+// Schema base de contribución
+const ContributionBaseSchema = z.object({
   id: UUIDSchema,
   user_id: UUIDSchema,
   goal_id: UUIDSchema,
@@ -298,9 +277,11 @@ export const ContributionSchema = z.object({
   created_at: DateTimeSchema,
 });
 
+export const ContributionSchema = ContributionBaseSchema;
+
 export type Contribution = z.infer<typeof ContributionSchema>;
 
-export const ContributionInsertSchema = ContributionSchema.omit({
+export const ContributionInsertSchema = ContributionBaseSchema.omit({
   id: true,
 }).partial({
   created_at: true,
@@ -326,40 +307,43 @@ export const SubscriptionProviderSchema = z.enum([
   'mercadopago',
 ]);
 
-export const SubscriptionSchema = z
-  .object({
-    id: UUIDSchema,
-    user_id: UUIDSchema,
-    plan: SubscriptionPlanSchema,
-    status: SubscriptionStatusSchema,
-    provider: SubscriptionProviderSchema.nullable(),
-    provider_subscription_id: z.string().max(200).nullable(),
-    start_date: DateTimeSchema,
-    end_date: DateTimeSchema.nullable(),
-    trial_end_date: DateTimeSchema.nullable(),
-    auto_renew: z.boolean().default(true),
-    price: MoneyAmountSchema.nullable(),
-    currency: CurrencyCodeSchema.nullable(),
-    created_at: DateTimeSchema,
-    updated_at: DateTimeSchema.optional(),
-  })
-  .refine(
-    (data) => {
-      // Si hay end_date, debe ser posterior a start_date
-      if (data.end_date) {
-        return new Date(data.end_date) > new Date(data.start_date);
-      }
-      return true;
-    },
-    {
-      message: 'La fecha de fin debe ser posterior a la fecha de inicio',
-      path: ['end_date'],
+// Schema base sin refinamientos
+const SubscriptionBaseSchema = z.object({
+  id: UUIDSchema,
+  user_id: UUIDSchema,
+  plan: SubscriptionPlanSchema,
+  status: SubscriptionStatusSchema,
+  provider: SubscriptionProviderSchema.nullable(),
+  provider_subscription_id: z.string().max(200).nullable(),
+  start_date: DateTimeSchema,
+  end_date: DateTimeSchema.nullable(),
+  trial_end_date: DateTimeSchema.nullable(),
+  auto_renew: z.boolean().default(true),
+  price: MoneyAmountSchema.nullable(),
+  currency: CurrencyCodeSchema.nullable(),
+  created_at: DateTimeSchema,
+  updated_at: DateTimeSchema.optional(),
+});
+
+// Schema con refinamientos
+export const SubscriptionSchema = SubscriptionBaseSchema.refine(
+  (data) => {
+    // Si hay end_date, debe ser posterior a start_date
+    if (data.end_date) {
+      return new Date(data.end_date) > new Date(data.start_date);
     }
-  );
+    return true;
+  },
+  {
+    message: 'La fecha de fin debe ser posterior a la fecha de inicio',
+    path: ['end_date'],
+  }
+);
 
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
-export const SubscriptionInsertSchema = SubscriptionSchema.omit({
+// Usar SubscriptionBaseSchema para omit y partial
+export const SubscriptionInsertSchema = SubscriptionBaseSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
@@ -448,33 +432,6 @@ export const DateRangeSchema = z
   );
 
 export type DateRange = z.infer<typeof DateRangeSchema>;
-
-// ============================================
-// ESQUEMAS PARA CSV
-// ============================================
-
-export const CSVRowSchema = z.object({
-  date: z.string().min(1, { message: 'La fecha es requerida' }),
-  description: z.string().min(1, { message: 'La descripción es requerida' }),
-  amount: z.number({
-    required_error: 'El monto es requerido',
-    invalid_type_error: 'El monto debe ser un número',
-  }),
-  category: z.string().optional(),
-  account: z.string().optional(),
-});
-
-export type CSVRow = z.infer<typeof CSVRowSchema>;
-
-export const CSVImportSchema = z.object({
-  rows: z
-    .array(CSVRowSchema)
-    .min(1, { message: 'El archivo debe contener al menos una fila' })
-    .max(1000, { message: 'El archivo no puede contener más de 1000 filas' }),
-  goalId: UUIDSchema.optional(),
-});
-
-export type CSVImport = z.infer<typeof CSVImportSchema>;
 
 // ============================================
 // ESQUEMAS DE RESPUESTA DE API

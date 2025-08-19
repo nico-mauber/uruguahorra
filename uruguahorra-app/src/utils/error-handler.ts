@@ -369,7 +369,7 @@ export class ErrorHandler {
       case ErrorCategory.EXTERNAL_SERVICE:
         return LogModule.API;
       case ErrorCategory.FILE_PROCESSING:
-        return LogModule.CSV;
+        return LogModule.APP;
       default:
         return LogModule.APP;
     }

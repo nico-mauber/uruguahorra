@@ -232,14 +232,14 @@ class Logger {
     ];
 
     // Verificar el mensaje
-    if (suppressPatterns.some(pattern => message.includes(pattern))) {
+    if (suppressPatterns.some((pattern) => message.includes(pattern))) {
       return true;
     }
 
     // Verificar los datos del error
     if (data && typeof data === 'object') {
       const dataStr = JSON.stringify(data);
-      if (suppressPatterns.some(pattern => dataStr.includes(pattern))) {
+      if (suppressPatterns.some((pattern) => dataStr.includes(pattern))) {
         return true;
       }
     }
@@ -284,7 +284,13 @@ class Logger {
   devError(module: LogModule, message: string, data?: unknown) {
     // Solo en desarrollo, y solo en consola del navegador/debugging
     if (isDevelopment) {
-      this.log(LogLevel.DEBUG, module, `[DEV ERROR] ${message}`, emojis.warn, data);
+      this.log(
+        LogLevel.DEBUG,
+        module,
+        `[DEV ERROR] ${message}`,
+        emojis.warn,
+        data
+      );
     }
   }
 

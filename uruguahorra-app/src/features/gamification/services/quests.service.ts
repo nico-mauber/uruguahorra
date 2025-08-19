@@ -137,7 +137,11 @@ export class QuestsService {
 
       if (createError) {
         // Este error es esperado si las quests no están configuradas - no mostrar al usuario
-        logger.devError(LogModule.DB, 'Error creando quest semanal', createError);
+        logger.devError(
+          LogModule.DB,
+          'Error creando quest semanal',
+          createError
+        );
 
         // Si es error de RLS o tabla no existe, retornar quest por defecto
         if (

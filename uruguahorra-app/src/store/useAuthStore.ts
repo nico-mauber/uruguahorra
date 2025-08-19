@@ -442,14 +442,18 @@ AuthService.onAuthStateChange((event, session) => {
 
   if (event === 'SIGNED_IN' && session) {
     logger.info(LogModule.AUTH, 'Usuario autenticado, verificando sesión');
-    
+
     // Verificar si es un usuario diferente al actual
     if (currentState.user && currentState.user.id !== session.user.id) {
-      logger.warn(LogModule.AUTH, 'Cambio de usuario detectado, limpiando store primero', {
-        previousUserId: currentState.user.id,
-        newUserId: session.user.id,
-      });
-      
+      logger.warn(
+        LogModule.AUTH,
+        'Cambio de usuario detectado, limpiando store primero',
+        {
+          previousUserId: currentState.user.id,
+          newUserId: session.user.id,
+        }
+      );
+
       // Limpiar store primero
       useAuthStore.setState({
         user: null,
@@ -460,12 +464,11 @@ AuthService.onAuthStateChange((event, session) => {
         isLoading: false,
       });
     }
-    
+
     // Verificar sesión con el nuevo usuario
     setTimeout(() => {
       useAuthStore.getState().checkSession();
     }, 100);
-    
   } else if (event === 'SIGNED_OUT') {
     logger.info(LogModule.AUTH, 'Usuario salió, limpiando store');
     useAuthStore.setState({
@@ -477,12 +480,17 @@ AuthService.onAuthStateChange((event, session) => {
       isLoading: false,
     });
     logger.success(LogModule.AUTH, 'Store limpiado tras logout');
-    
   } else if (event === 'TOKEN_REFRESHED' && session) {
-    logger.info(LogModule.AUTH, 'Token refrescado, actualizando store si es necesario');
-    
+    logger.info(
+      LogModule.AUTH,
+      'Token refrescado, actualizando store si es necesario'
+    );
+
     if (currentState.user && currentState.user.id !== session.user.id) {
-      logger.warn(LogModule.AUTH, 'Usuario cambió durante refresh, re-verificando sesión');
+      logger.warn(
+        LogModule.AUTH,
+        'Usuario cambió durante refresh, re-verificando sesión'
+      );
       useAuthStore.getState().checkSession();
     }
   }

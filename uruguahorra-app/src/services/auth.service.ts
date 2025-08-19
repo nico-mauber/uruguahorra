@@ -231,7 +231,8 @@ export class AuthService {
 
       return user;
     } catch (error) {
-      logger.error(LogModule.AUTH, 'Error obteniendo usuario actual', error);
+      // Este es un error esperado cuando no hay sesión - no mostrar al usuario
+      logger.devError(LogModule.AUTH, 'Error obteniendo usuario actual', error);
       return null;
     }
   }

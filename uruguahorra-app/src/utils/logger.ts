@@ -36,7 +36,8 @@ export type LogData =
 
 // Configuración dinámica basada en entorno
 const isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
-const CURRENT_LOG_LEVEL = isDevelopment ? LogLevel.DEBUG : LogLevel.WARN;
+// En producción/móvil, solo mostrar errores críticos (no warnings)
+const CURRENT_LOG_LEVEL = isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
 const ENABLE_TIMESTAMPS = isDevelopment;
 const ENABLE_COLORS = isDevelopment;
 
@@ -204,10 +205,46 @@ class Logger {
   }
 
   error(module: LogModule, message: string, data?: unknown) {
+    // Filtrar errores que no deben mostrarse al usuario final
+    if (this.shouldSuppressError(message, data)) {
+      // En lugar de ERROR, usar DEBUG para estos casos
+      this.log(LogLevel.DEBUG, module, message, emojis.warn, data);
+      return;
+    }
+
     // Manejo especial para errores para asegurar que se sanitizan correctamente
     const sanitizedData =
       data instanceof Error ? SecureLogger.sanitizeError(data) : data;
     this.log(LogLevel.ERROR, module, message, emojis.error, sanitizedData);
+  }
+
+  private shouldSuppressError(message: string, data?: unknown): boolean {
+    // Lista de errores que no deben mostrarse al usuario final
+    const suppressPatterns = [
+      'AuthSessionMissingError',
+      'Auth session missing',
+      'Error obteniendo usuario actual',
+      'row-level security policy',
+      'violates row-level security',
+      'Error creando quest semanal',
+      'Sesión inválida o expirada',
+      'No hay usuario autenticado',
+    ];
+
+    // Verificar el mensaje
+    if (suppressPatterns.some(pattern => message.includes(pattern))) {
+      return true;
+    }
+
+    // Verificar los datos del error
+    if (data && typeof data === 'object') {
+      const dataStr = JSON.stringify(data);
+      if (suppressPatterns.some(pattern => dataStr.includes(pattern))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Métodos especializados con emojis
@@ -241,6 +278,14 @@ class Logger {
 
   sync(module: LogModule, message: string, data?: unknown) {
     this.log(LogLevel.DEBUG, module, message, emojis.sync, data);
+  }
+
+  // Método para errores de desarrollo que nunca deben mostrarse al usuario
+  devError(module: LogModule, message: string, data?: unknown) {
+    // Solo en desarrollo, y solo en consola del navegador/debugging
+    if (isDevelopment) {
+      this.log(LogLevel.DEBUG, module, `[DEV ERROR] ${message}`, emojis.warn, data);
+    }
   }
 
   // Método para medir tiempo de ejecución

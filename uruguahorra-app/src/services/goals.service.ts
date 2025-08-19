@@ -11,20 +11,19 @@ type ContributionInsert =
 
 export class GoalsService {
   /**
-   * Obtener todas las metas del usuario
+   * Obtener todas las metas activas del usuario
    */
   static async getUserGoals(userId: string): Promise<Goal[]> {
     try {
-      logger.database(
-        LogModule.GOALS,
-        'Obteniendo todas las metas del usuario',
-        { userId }
-      );
+      logger.database(LogModule.GOALS, 'Obteniendo metas activas del usuario', {
+        userId,
+      });
 
       const { data, error } = await supabase
         .from('goals')
         .select('*')
         .eq('user_id', userId)
+        .eq('is_active', true) // Solo metas activas
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -32,7 +31,10 @@ export class GoalsService {
         throw error;
       }
 
-      logger.success(LogModule.GOALS, `${data?.length || 0} metas obtenidas`);
+      logger.success(
+        LogModule.GOALS,
+        `${data?.length || 0} metas activas obtenidas`
+      );
       return data || [];
     } catch (error) {
       logger.error(LogModule.GOALS, 'Error fatal obteniendo metas', error);
@@ -228,16 +230,20 @@ export class GoalsService {
   /**
    * Eliminar meta (soft delete - marcar como inactiva)
    */
-  static async deleteGoal(goalId: string): Promise<void> {
+  static async deleteGoal(goalId: string, userId?: string): Promise<void> {
     try {
+      logger.info(LogModule.GOALS, 'Eliminando meta', { goalId, userId });
+
       const { error } = await supabase
         .from('goals')
         .update({ is_active: false })
         .eq('id', goalId);
 
       if (error) throw error;
+
+      logger.success(LogModule.GOALS, 'Meta marcada como inactiva', { goalId });
     } catch (error) {
-      console.error('Error eliminando meta:', error);
+      logger.error(LogModule.GOALS, 'Error eliminando meta', error);
       throw error;
     }
   }

@@ -9,6 +9,7 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
@@ -79,37 +80,88 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     }
   }, [visible, goal?.id, loadContributions]);
 
-  const handleDeleteGoal = () => {
-    Alert.alert(
-      'Eliminar meta',
-      `¿Estás seguro de que quieres eliminar "${goal.name}"? Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            if (!user?.id) return;
+  const handleDeleteGoal = async () => {
+    if (!goal) {
+      logger.warn(LogModule.UI, 'No hay meta para eliminar');
+      return;
+    }
 
-            setIsDeleting(true);
-            try {
-              await GoalsService.deleteGoal(goal.id, user.id);
-              ToastService.success(
-                'Meta eliminada',
-                `"${goal.name}" ha sido eliminada`
-              );
-              onGoalUpdate?.();
-              onClose();
-            } catch (error) {
-              logger.error(LogModule.UI, 'Error eliminando meta', error);
-              ToastService.handleError(error);
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+    logger.info(LogModule.UI, 'Iniciando proceso de eliminación de meta', {
+      goalId: goal.id,
+      goalName: goal.name,
+    });
+
+    // Para web, usar window.confirm en lugar de Alert.alert
+    const isWeb = Platform.OS === 'web';
+
+    const confirmDelete = () => {
+      if (isWeb) {
+        return window.confirm(
+          `¿Estás seguro de que quieres eliminar "${goal.name}"? Esta acción no se puede deshacer.`
+        );
+      }
+      return new Promise<boolean>((resolve) => {
+        Alert.alert(
+          'Eliminar meta',
+          `¿Estás seguro de que quieres eliminar "${goal.name}"? Esta acción no se puede deshacer.`,
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+              onPress: () => resolve(false),
+            },
+            {
+              text: 'Eliminar',
+              style: 'destructive',
+              onPress: () => resolve(true),
+            },
+          ]
+        );
+      });
+    };
+
+    const shouldDelete = isWeb ? confirmDelete() : await confirmDelete();
+
+    if (!shouldDelete) {
+      logger.info(LogModule.UI, 'Eliminación cancelada por el usuario');
+      return;
+    }
+
+    if (!user?.id) {
+      logger.error(LogModule.UI, 'No hay usuario para eliminar meta');
+      ToastService.error('Error', 'No se pudo identificar el usuario');
+      return;
+    }
+
+    logger.info(LogModule.UI, 'Eliminando meta', {
+      goalId: goal.id,
+      userId: user.id,
+    });
+
+    setIsDeleting(true);
+    try {
+      await GoalsService.deleteGoal(goal.id, user.id);
+      ToastService.success(
+        'Meta eliminada',
+        `"${goal.name}" ha sido eliminada correctamente`
+      );
+
+      // Llamar a onGoalUpdate para refrescar la lista
+      if (onGoalUpdate) {
+        await onGoalUpdate();
+      }
+
+      // Cerrar el modal
+      onClose();
+    } catch (error) {
+      logger.error(LogModule.UI, 'Error eliminando meta', error);
+      ToastService.error(
+        'Error',
+        'No se pudo eliminar la meta. Por favor intenta de nuevo.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const calculateProgress = () => {

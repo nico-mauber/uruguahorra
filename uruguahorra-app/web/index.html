@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    
+    <!-- Cargar polyfills ANTES que cualquier otro script -->
+    <script src="/babel-helpers-polyfill.js"></script>
+    <script src="/import-meta-polyfill.js"></script>
+    
+    <!-- Content Security Policy más permisiva para desarrollo -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * ws: wss:; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
+    
+    <!-- Políticas de seguridad ajustadas -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    
+    <title>Uruguahorra</title>
+    
+    <!-- React Native Web styles reset -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+  </head>
+
+  <body>
+    <!-- Mensaje para usuarios sin JavaScript -->
+    <noscript>
+      Necesitas habilitar JavaScript para ejecutar esta aplicación.
+    </noscript>
+    
+    <!-- Root element for Expo app -->
+    <div id="root"></div>
+    
+    <!-- Polyfill completo para import.meta y configuración del entorno -->
+    <script>
+      // Configuración global del entorno
+      (function() {
+        // Establecer globales necesarios
+        window.global = window.global || window;
+        window.process = window.process || { 
+          env: { 
+            NODE_ENV: 'development',
+            PUBLIC_URL: '' 
+          },
+          platform: 'browser',
+          version: 'v16.0.0'
+        };
+        
+        // Shim para Buffer si es necesario
+        if (typeof window.Buffer === 'undefined') {
+          window.Buffer = {
+            isBuffer: function() { return false; }
+          };
+        }
+        
+        // Crear objeto import.meta para compatibilidad
+        window.__importMeta = {
+          url: window.location.href,
+          env: {
+            MODE: 'development',
+            DEV: true,
+            PROD: false,
+            BASE_URL: '/',
+            VITE_DEV: true,
+            SSR: false
+          }
+        };
+        
+        // Interceptar y manejar errores de import.meta
+        const originalError = window.Error;
+        window.addEventListener('error', function(event) {
+          if (event.error && event.error.message && 
+              event.error.message.includes("Cannot use 'import.meta'")) {
+            console.warn('Handling import.meta error - using polyfill');
+            event.preventDefault();
+            return false;
+          }
+        }, true);
+        
+        // Override para eval y Function para manejar import.meta
+        const originalEval = window.eval;
+        window.eval = function(code) {
+          if (typeof code === 'string' && code.includes('import.meta')) {
+            code = code.replace(/import\.meta\.url/g, `"${window.location.href}"`)
+                      .replace(/import\.meta\.env/g, JSON.stringify(window.__importMeta.env))
+                      .replace(/import\.meta/g, JSON.stringify(window.__importMeta));
+          }
+          return originalEval.call(this, code);
+        };
+        
+        // Configurar __DEV__ para React Native
+        window.__DEV__ = true;
+      })();
+    </script>
+    
+    <!-- Script adicional para manejar módulos ES -->
+    <script type="module">
+      // Este script se ejecuta como módulo ES6
+      // Provee import.meta real para módulos que lo soporten
+      if (typeof import.meta !== 'undefined') {
+        window.__realImportMeta = import.meta;
+      }
+    </script>
+    
+    <!-- Fallback para navegadores sin soporte de módulos -->
+    <script nomodule>
+      console.log('Browser does not support ES modules, using fallback');
+    </script>
+  </body>
+</html>

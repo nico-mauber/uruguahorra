@@ -1,0 +1,30 @@
+==================================================
+         COMO INICIAR URUGUAHORRA APP
+==================================================
+
+REQUISITOS PREVIOS:
+- Node.js instalado
+- Expo Go app en tu celular (para pruebas móviles)
+
+INSTALACIÓN (primera vez):
+1. npm install
+
+INICIAR LA APLICACIÓN:
+
+📱 PARA MÓVIL (iOS/Android):
+   npm start
+   
+   - Escanea el código QR con Expo Go (Android)
+   - Escanea el código QR con la cámara (iOS)
+
+🌐 PARA WEB:
+   npm run web
+   
+   - Se abrirá automáticamente en http://localhost:8081
+
+==================================================
+IMPORTANTE: 
+- Cada plataforma usa configuraciones diferentes
+- Web aplica transformaciones especiales para import.meta
+- Móvil usa la configuración estándar de React Native
+==================================================

@@ -5,7 +5,15 @@
       "Bash(npm start)",
       "Bash(npm run lint)",
       "Bash(npx expo:*)",
-      "Bash(npm run format:*)"
+      "Bash(npm run format:*)",
+      "Bash(mkdir:*)",
+      "Bash(curl:*)",
+      "Bash(EXPO_PUBLIC_PLATFORM=web npx expo start --web --clear)",
+      "Bash(rm:*)",
+      "Bash(kill:*)",
+      "Bash(PLATFORM=web npx expo start --web --clear)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)"
     ],
     "defaultMode": "acceptEdits"
   }

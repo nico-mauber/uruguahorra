@@ -170,7 +170,7 @@ export class AuthInterceptor {
 
         // Si acaba de ser bloqueado, notificar
         if (state.isBlocked) {
-          logger.security(
+          logger.warn(
             LogModule.AUTH,
             'User blocked after multiple failed attempts',
             {

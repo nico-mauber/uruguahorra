@@ -55,15 +55,16 @@ The app uses Supabase with 13 tables including:
 All tables have optimized RLS policies.
 
 **DATABASE MANAGEMENT**: 
-- `supabase/complete_database_schema.sql` - ÚNICO archivo necesario para crear toda la base de datos desde cero (v2.1)
+- `supabase/database_setup.sql` - Script principal para configurar la base de datos
 - `supabase/clean_user_data.sql` - Script para limpiar datos de usuarios (mantiene estructura)
-- El archivo complete_database_schema.sql incluye:
-  - Creación de todas las tablas y relaciones
-  - Triggers automáticos (incluye sincronización de usuarios)
-  - RLS policies completas
-  - Datos semilla
-  - Verificación de integridad
-  - Sincronización automática de usuarios existentes sin perfil
+
+**Script Principal (database_setup.sql):**
+- 🏗️ Crea todas las tablas esenciales (users, goals, micro_contributions, transactions_raw)
+- 🔒 Configura políticas RLS seguras (previene errores 403)
+- ⚙️ Configura triggers automáticos para nuevos usuarios
+- 🔄 Sincroniza usuarios existentes sin perfil
+- 📊 Incluye verificación final del estado
+- ✅ Listo para producción
 
 ## Development Workflow
 

@@ -22,7 +22,9 @@
       "WebFetch(domain:github.com)",
       "Bash(git diff:*)",
       "Bash(npm ls:*)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(mv:*)",
+      "Bash(sed:*)"
     ],
     "defaultMode": "acceptEdits"
   }

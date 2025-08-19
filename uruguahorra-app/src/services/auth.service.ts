@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { authInterceptor, RateLimitError } from '@/lib/auth-interceptor';
+import { ProfileSyncService } from './profile-sync.service';
 
 type User = Database['public']['Tables']['users']['Row'];
 
@@ -73,69 +74,24 @@ export class AuthService {
             logger.success(LogModule.AUTH, 'Sesión establecida correctamente');
           }
 
-          // 3. Esperar un momento para que el trigger se ejecute (si existe)
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // 3. Esperar a que el trigger cree el perfil automáticamente
+          logger.info(LogModule.AUTH, 'Esperando creación automática del perfil...');
 
-          // 4. Verificar si el perfil fue creado por el trigger
-          logger.info(LogModule.AUTH, 'Verificando creación de perfil...');
-          const { data: existingProfile, error: profileCheckError } =
-            await supabase
-              .from('users')
-              .select('*')
-              .eq('id', authData.user.id)
-              .single();
+          // Pequeña espera para que el trigger procese
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-          if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-            logger.warn(
-              LogModule.AUTH,
-              'Error verificando perfil',
-              profileCheckError
-            );
-          }
+          // Verificar que el perfil fue creado
+          const profile = await this.getUserProfile(authData.user.id);
 
-          // 5. Si no existe el perfil, crearlo manualmente
-          if (!existingProfile) {
-            logger.warn(
-              LogModule.AUTH,
-              'Perfil no creado por trigger, creando manualmente...'
-            );
-
-            const { data: newProfile, error: createError } = await supabase
-              .from('users')
-              .insert({
-                id: authData.user.id,
-                email: authData.user.email!,
-                country: metadata?.country || 'UY',
-                currency: metadata?.currency || 'UYU',
-                premium: false,
-                total_xp: 0,
-                current_level: 1,
-                current_streak: 0,
-                longest_streak: 0,
-                last_activity_date: new Date().toISOString().split('T')[0],
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              // Si el error es de duplicado, está bien (el trigger lo creó mientras esperábamos)
-              if (createError.code !== '23505') {
-                logger.error(
-                  LogModule.DB,
-                  'Error creando perfil manualmente',
-                  createError
-                );
-                // No lanzamos error aquí, el usuario ya está creado en auth
-              }
-            } else {
-              logger.success(LogModule.DB, 'Perfil creado manualmente', {
-                profileId: newProfile?.id,
-              });
-            }
+          if (profile) {
+            logger.success(LogModule.AUTH, 'Perfil creado automáticamente', {
+              profileId: profile.id,
+              createdAt: profile.created_at,
+            });
           } else {
-            logger.success(
+            logger.warn(
               LogModule.AUTH,
-              'Perfil ya existe (creado por trigger)'
+              'El perfil se creará automáticamente en el próximo login'
             );
           }
 
@@ -279,6 +235,7 @@ export class AuthService {
 
   /**
    * Obtener perfil del usuario desde la tabla users
+   * Versión simplificada sin validación compleja
    */
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
@@ -305,7 +262,10 @@ export class AuthService {
         throw error;
       }
 
-      logger.success(LogModule.DB, 'Perfil obtenido exitosamente', data);
+      logger.success(LogModule.DB, 'Perfil obtenido exitosamente', {
+        userId: data.id,
+        email: data.email,
+      });
       return data;
     } catch (error) {
       // Solo loguear como error si no es un error de "no encontrado"

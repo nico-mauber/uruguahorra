@@ -77,30 +77,27 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       let profile = await AuthService.getUserProfile(authUser.id);
 
       if (!profile) {
-        logger.warn(LogModule.STORE, 'Perfil no encontrado, creando uno nuevo');
-        // Si no existe perfil, crearlo
-        const { data: newProfile, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: authUser.id,
-            email: authUser.email!,
-            country: 'UY',
-            currency: 'UYU',
-          })
-          .select()
-          .single();
+        // Para usuarios existentes haciendo login, el perfil debe existir
+        // Si no existe, es un error grave
+        logger.error(
+          LogModule.STORE,
+          'Perfil no encontrado para usuario existente',
+          { userId: authUser.id, email: authUser.email }
+        );
 
-        if (insertError) {
-          logger.error(
-            LogModule.DB,
-            'Error creando perfil en login',
-            insertError
+        // Intentar una vez más con un timeout más largo
+        logger.info(
+          LogModule.STORE,
+          'Reintentando obtener perfil con mayor timeout'
+        );
+        profile = await AuthService.getUserProfile(authUser.id);
+
+        if (!profile) {
+          // Si aún no existe, es un problema de datos
+          throw new Error(
+            'No se pudo encontrar el perfil del usuario. Por favor, contacte soporte.'
           );
-          throw insertError;
         }
-        logger.success(LogModule.DB, 'Perfil creado durante login');
-
-        profile = newProfile;
       }
 
       // 3. Verificar estado premium
@@ -327,46 +324,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       // 3. Obtener perfil
       let profile = await AuthService.getUserProfile(authUser.id);
 
-      // 4. Si no existe perfil, crearlo
+      // 4. Si no existe perfil para un usuario con sesión activa, hay un problema
       if (!profile) {
-        logger.warn(
+        logger.error(
           LogModule.STORE,
-          'Perfil no encontrado para usuario existente, creando...',
-          { userId: authUser.id }
+          'Perfil no encontrado para usuario con sesión activa',
+          { userId: authUser.id, email: authUser.email }
         );
 
-        // Intentar crear el perfil
-        const { data: newProfile, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authUser.id,
-            email: authUser.email!,
-            country: 'UY',
-            currency: 'UYU',
-            premium: false,
-            total_xp: 0,
-            current_level: 1,
-            current_streak: 0,
-            longest_streak: 0,
-            last_activity_date: new Date().toISOString().split('T')[0],
-          })
-          .select()
-          .single();
+        // Intentar una vez más con mayor timeout
+        logger.info(
+          LogModule.STORE,
+          'Reintentando obtener perfil con mayor timeout'
+        );
+        profile = await AuthService.getUserProfile(authUser.id);
 
-        if (createError) {
+        if (!profile) {
           logger.error(
             LogModule.DB,
-            'Error creando perfil para usuario existente',
-            createError
+            'No se pudo obtener el perfil después de reintentos',
+            { userId: authUser.id }
           );
           set({ isLoading: false });
+          // No lanzar error para no romper la sesión, pero el perfil no estará disponible
           return;
         }
-
-        profile = newProfile;
-        logger.success(LogModule.DB, 'Perfil creado exitosamente', {
-          profileId: profile?.id,
-        });
       }
 
       // 4. Verificar premium

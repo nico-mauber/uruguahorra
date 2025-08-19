@@ -508,7 +508,7 @@ export class QuestsService {
     const { data: challenges, error } = await supabase
       .from('challenges')
       .select('id, type')
-      .eq('active', true)
+      .eq('is_active', true)
       .in('type', ['daily', 'weekly']); // Solo challenges diarios y semanales
 
     if (error) {

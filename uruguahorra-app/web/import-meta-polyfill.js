@@ -2,11 +2,14 @@
 (function() {
   'use strict';
   
-  // Guardar referencias originales
-  const originalEval = window.eval;
-  const originalFunction = window.Function;
+  console.log('[Import Meta Polyfill] Inicializando...');
   
-  // Objeto import.meta global
+  // Crear import.meta global inmediatamente
+  if (typeof globalThis === 'undefined') {
+    window.globalThis = window;
+  }
+  
+  // Objeto import.meta global más robusto
   const importMetaPolyfill = {
     url: window.location.href,
     env: {
@@ -14,9 +17,26 @@
       DEV: true,
       PROD: false,
       BASE_URL: '/',
-      SSR: false
+      SSR: false,
+      NODE_ENV: 'development'
+    },
+    resolve: function(specifier) {
+      return new URL(specifier, this.url).href;
     }
   };
+
+  // Establecer en globalThis para acceso universal
+  globalThis.__importMeta = importMetaPolyfill;
+  
+  // También establecer como propiedad no enumerable en window
+  Object.defineProperty(window, '__importMeta', {
+    value: importMetaPolyfill,
+    writable: false,
+    enumerable: false,
+    configurable: false
+  });
+
+  console.log('[Import Meta Polyfill] Establecido en globalThis:', globalThis.__importMeta);
   
   // Función para reemplazar import.meta en código
   function replaceImportMeta(code) {

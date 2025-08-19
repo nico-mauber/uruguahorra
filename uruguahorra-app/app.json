@@ -27,7 +27,29 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
-      "buildDir": "web-build"
+      "buildDir": "web-build",
+      "name": "Uruguahorra - App de Ahorro",
+      "shortName": "Uruguahorra",
+      "description": "App móvil de ahorro gamificada para desarrollar hábitos de ahorro mediante gamificación, metas y retos.",
+      "lang": "es",
+      "scope": "/",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "themeColor": "#6366F1",
+      "backgroundColor": "#ffffff",
+      "preferRelatedApplications": false,
+      "crossorigin": "use-credentials",
+      "config": {
+        "firebase": {
+          "authDomain": "uruguahorra.firebaseapp.com",
+          "databaseURL": "https://uruguahorra.firebaseio.com",
+          "projectId": "uruguahorra",
+          "storageBucket": "uruguahorra.appspot.com",
+          "messagingSenderId": "123456789",
+          "appId": "1:123456789:web:abc123"
+        }
+      }
     },
     "plugins": [
       "expo-router"

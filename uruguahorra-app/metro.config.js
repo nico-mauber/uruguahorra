@@ -3,15 +3,17 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// Detectar si estamos en modo web mirando los argumentos del proceso
-const isWeb = process.argv.includes('--web') || process.env.EXPO_PUBLIC_PLATFORM === 'web';
+// Detectar si estamos en modo web mirando los argumentos del proceso y variables de entorno
+const isWeb = process.argv.includes('--web') || 
+              process.env.EXPO_PUBLIC_PLATFORM === 'web' ||
+              process.env.EXPO_WEB_BUILD === 'true';
+
+console.log('[Metro Config] Web mode detected:', isWeb);
 
 config.transformer = {
   ...config.transformer,
-  // Solo usar custom transformer para web, usar default para iOS/Android
-  ...(isWeb ? {
-    babelTransformerPath: require.resolve('./metro.transform.js'),
-  } : {}),
+  // Transformer personalizado completamente deshabilitado
+  // babelTransformerPath: require.resolve('./metro.transform.js'),
   minifierPath: 'metro-minify-terser',
   minifierConfig: {
     keep_fnames: true,

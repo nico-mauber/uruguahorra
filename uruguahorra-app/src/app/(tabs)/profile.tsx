@@ -231,23 +231,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cuenta</Text>
           <Card padding="none">
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/transactions')}
-            >
-              <Ionicons
-                name="document-text"
-                size={24}
-                color={theme.primary}
-                style={styles.menuIcon}
-              />
-              <Text style={styles.menuText}>Transacciones</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={theme.textSecondary}
-              />
-            </TouchableOpacity>
+          
 
             <TouchableOpacity
               style={styles.menuItem}

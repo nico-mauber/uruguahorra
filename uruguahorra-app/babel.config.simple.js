@@ -2,8 +2,6 @@ module.exports = {
   presets: ['babel-preset-expo'],
   plugins: [
     'react-native-reanimated/plugin',
-    // Plugin personalizado para transformar import.meta
-    './babel-import-meta-transform.js',
     [
       'module-resolver',
       {
@@ -19,4 +17,4 @@ module.exports = {
       },
     ],
   ],
-}; 
+};

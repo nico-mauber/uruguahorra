@@ -3,11 +3,95 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
     
-    <!-- Cargar polyfills ANTES que cualquier otro script -->
-    <script src="/babel-helpers-polyfill.js"></script>
-    <script src="/import-meta-polyfill.js"></script>
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="Uruguahorra" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Uruguahorra" />
+    <meta name="description" content="App de ahorro gamificada para desarrollar hábitos financieros saludables" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#6366F1" />
+    <meta name="msapplication-TileColor" content="#6366F1" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- PWA Links -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/assets/icon.png" />
+    <link rel="apple-touch-startup-image" href="/assets/splash.png" />
+    
+    <script type="text/javascript">
+      // Polyfill AGRESIVO para import.meta - SE EJECUTA INMEDIATAMENTE
+      (function() {
+        console.log('[HTML Polyfill] Configurando import.meta polyfill...');
+        
+        // Establecer el polyfill global inmediatamente
+        if (typeof globalThis === 'undefined') {
+          window.globalThis = window;
+        }
+        
+        // Crear polyfill robusto
+        const importMetaPolyfill = {
+          url: window.location.href,
+          env: {
+            MODE: 'development',
+            DEV: true,
+            PROD: false,
+            BASE_URL: '/',
+            SSR: false,
+            NODE_ENV: 'development'
+          }
+        };
+        
+        // Establecer en todos los contextos posibles
+        globalThis.__importMeta = importMetaPolyfill;
+        window.__importMeta = importMetaPolyfill;
+        
+        // Override eval para interceptar import.meta
+        const originalEval = window.eval;
+        window.eval = function(code) {
+          if (typeof code === 'string' && code.includes('import.meta')) {
+            console.log('[HTML Polyfill] Transformando import.meta en eval:', code.substring(0, 100) + '...');
+            code = code
+              .replace(/import\.meta\.url/g, JSON.stringify(importMetaPolyfill.url))
+              .replace(/import\.meta\.env/g, JSON.stringify(importMetaPolyfill.env))
+              .replace(/import\.meta/g, JSON.stringify(importMetaPolyfill));
+          }
+          return originalEval.call(this, code);
+        };
+        
+        // Override Function constructor
+        const originalFunction = window.Function;
+        window.Function = function(...args) {
+          if (args.length > 0) {
+            const lastArg = args[args.length - 1];
+            if (typeof lastArg === 'string' && lastArg.includes('import.meta')) {
+              console.log('[HTML Polyfill] Transformando import.meta en Function constructor');
+              args[args.length - 1] = lastArg
+                .replace(/import\.meta\.url/g, JSON.stringify(importMetaPolyfill.url))
+                .replace(/import\.meta\.env/g, JSON.stringify(importMetaPolyfill.env))
+                .replace(/import\.meta/g, JSON.stringify(importMetaPolyfill));
+            }
+          }
+          return originalFunction.apply(this, args);
+        };
+        
+        // Interceptar errores de import.meta
+        window.addEventListener('error', function(event) {
+          if (event.error && event.error.message && 
+              (event.error.message.includes("Cannot use 'import.meta'") ||
+               event.error.message.includes('import.meta'))) {
+            console.warn('[HTML Polyfill] Interceptando error de import.meta:', event.error.message);
+            event.preventDefault();
+            return false;
+          }
+        }, true);
+        
+        console.log('[HTML Polyfill] import.meta polyfill configurado exitosamente');
+      })();
+    </script>
     
     <!-- Content Security Policy más permisiva para desarrollo -->
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * ws: wss:; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
@@ -43,11 +127,70 @@
   <body>
     <!-- Mensaje para usuarios sin JavaScript -->
     <noscript>
-      Necesitas habilitar JavaScript para ejecutar esta aplicación.
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        text-align: center;
+        padding: 20px;
+        background-color: #f8fafc;
+        color: #1e293b;
+      ">
+        <h1>🏦 Uruguahorra</h1>
+        <p>Necesitas habilitar JavaScript para ejecutar esta aplicación.</p>
+        <p>Por favor, habilita JavaScript en tu navegador y recarga la página.</p>
+      </div>
     </noscript>
     
     <!-- Root element for Expo app -->
     <div id="root"></div>
+    
+    <!-- PWA Installation Prompt -->
+    <div id="pwa-install-prompt" style="display: none;">
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: #6366F1;
+        color: white;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      ">
+        <div>
+          <strong>¡Instala Uruguahorra!</strong>
+          <p style="margin: 4px 0 0 0; font-size: 14px;">Accede más rápido a tu app de ahorro</p>
+        </div>
+        <div>
+          <button id="pwa-install-btn" style="
+            background: white;
+            color: #6366F1;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 8px;
+            cursor: pointer;
+          ">Instalar</button>
+          <button id="pwa-dismiss-btn" style="
+            background: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+          ">Ahora no</button>
+        </div>
+      </div>
+    </div>
     
     <!-- Polyfill completo para import.meta y configuración del entorno -->
     <script>
@@ -111,6 +254,155 @@
       })();
     </script>
     
+    <!-- PWA Service Worker Registration -->
+    <script>
+      // Registro del Service Worker y lógica PWA
+      (function() {
+        // Variables para PWA
+        let deferredPrompt;
+        let swRegistration;
+        
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then((registration) => {
+                console.log('✅ Service Worker registrado:', registration);
+                swRegistration = registration;
+                
+                // Escuchar actualizaciones
+                registration.addEventListener('updatefound', () => {
+                  const newWorker = registration.installing;
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        // Nueva versión disponible
+                        showUpdateNotification();
+                      }
+                    }
+                  });
+                });
+              })
+              .catch((error) => {
+                console.error('❌ Error registrando Service Worker:', error);
+              });
+          });
+        }
+        
+        // Manejar prompt de instalación PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+          console.log('📱 PWA Install prompt disponible');
+          e.preventDefault();
+          deferredPrompt = e;
+          
+          // Mostrar botón de instalación personalizado
+          const installPrompt = document.getElementById('pwa-install-prompt');
+          const installBtn = document.getElementById('pwa-install-btn');
+          const dismissBtn = document.getElementById('pwa-dismiss-btn');
+          
+          // Solo mostrar si no está instalado
+          if (!window.matchMedia('(display-mode: standalone)').matches) {
+            installPrompt.style.display = 'block';
+            
+            installBtn.addEventListener('click', async () => {
+              if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('👤 Usuario eligió:', outcome);
+                deferredPrompt = null;
+                installPrompt.style.display = 'none';
+              }
+            });
+            
+            dismissBtn.addEventListener('click', () => {
+              installPrompt.style.display = 'none';
+              deferredPrompt = null;
+            });
+          }
+        });
+        
+        // Detectar cuando la app fue instalada
+        window.addEventListener('appinstalled', () => {
+          console.log('🎉 PWA instalada exitosamente');
+          const installPrompt = document.getElementById('pwa-install-prompt');
+          installPrompt.style.display = 'none';
+          deferredPrompt = null;
+        });
+        
+        // Manejar cambios de conectividad
+        function updateOnlineStatus() {
+          const isOnline = navigator.onLine;
+          console.log(isOnline ? '🌐 Conectado' : '📴 Sin conexión');
+          
+          // Notificar a la app React sobre el estado
+          window.dispatchEvent(new CustomEvent('connectionchange', {
+            detail: { online: isOnline }
+          }));
+        }
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Función para mostrar notificación de actualización
+        function showUpdateNotification() {
+          // Crear notificación de actualización disponible
+          const updateBanner = document.createElement('div');
+          updateBanner.id = 'update-banner';
+          updateBanner.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: #059669;
+              color: white;
+              padding: 12px;
+              text-align: center;
+              z-index: 10000;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            ">
+              <span>📱 Nueva versión disponible</span>
+              <div>
+                <button id="update-btn" style="
+                  background: white;
+                  color: #059669;
+                  border: none;
+                  padding: 6px 12px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  margin-right: 8px;
+                  cursor: pointer;
+                ">Actualizar</button>
+                <button id="update-dismiss" style="
+                  background: transparent;
+                  color: white;
+                  border: 1px solid white;
+                  padding: 6px 12px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                ">×</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(updateBanner);
+          
+          document.getElementById('update-btn').addEventListener('click', () => {
+            if (swRegistration && swRegistration.waiting) {
+              swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              window.location.reload();
+            }
+          });
+          
+          document.getElementById('update-dismiss').addEventListener('click', () => {
+            updateBanner.remove();
+          });
+        }
+      })();
+    </script>
+    
     <!-- Script adicional para manejar módulos ES -->
     <script type="module">
       // Este script se ejecuta como módulo ES6
@@ -123,6 +415,169 @@
     <!-- Fallback para navegadores sin soporte de módulos -->
     <script nomodule>
       console.log('Browser does not support ES modules, using fallback');
+    </script>
+    
+    <!-- MONITOR DE ERRORES EN TIEMPO REAL -->
+    <div style="position: fixed; top: 10px; left: 10px; z-index: 10000;">
+      <button onclick="toggleErrorMonitor()" id="error-monitor-btn" 
+              style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+        🔍 Errores (0)
+      </button>
+    </div>
+    
+    <div id="error-monitor-panel" 
+         style="position: fixed; top: 50px; left: 10px; width: 400px; max-height: 300px; background: rgba(255, 255, 255, 0.95); border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; overflow-y: auto; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;">
+      <div style="font-weight: bold; margin-bottom: 5px; color: #d32f2f;">Monitor de Errores en Tiempo Real</div>
+      <div id="error-list"></div>
+      <button onclick="clearErrorMonitor()" 
+              style="margin-top: 10px; padding: 5px; background: #666; color: white; border: none; border-radius: 3px; cursor: pointer;">
+        Limpiar
+      </button>
+    </div>
+
+    <script>
+      // SISTEMA DE MONITOREO DE ERRORES AVANZADO
+      window.errorMonitorData = {
+        errors: [],
+        isVisible: false
+      };
+
+      function addErrorToMonitor(error) {
+        const errorEntry = {
+          timestamp: new Date().toISOString(),
+          message: error.message || 'Error desconocido',
+          type: error.type || 'JavaScript Error',
+          stack: error.stack,
+          filename: error.filename,
+          lineno: error.lineno,
+          colno: error.colno
+        };
+
+        window.errorMonitorData.errors.push(errorEntry);
+        
+        // Mantener solo los últimos 50 errores
+        if (window.errorMonitorData.errors.length > 50) {
+          window.errorMonitorData.errors = window.errorMonitorData.errors.slice(-50);
+        }
+
+        updateErrorMonitorUI();
+        
+        // Log detallado en consola
+        console.group(`🚨 ERROR CAPTURADO [${errorEntry.timestamp}]`);
+        console.error('Tipo:', errorEntry.type);
+        console.error('Mensaje:', errorEntry.message);
+        if (errorEntry.filename) console.error('Archivo:', `${errorEntry.filename}:${errorEntry.lineno}:${errorEntry.colno}`);
+        if (errorEntry.stack) console.error('Stack:', errorEntry.stack);
+        console.groupEnd();
+      }
+
+      function updateErrorMonitorUI() {
+        const btn = document.getElementById('error-monitor-btn');
+        const errorList = document.getElementById('error-list');
+
+        if (btn) btn.textContent = `🔍 Errores (${window.errorMonitorData.errors.length})`;
+        
+        if (errorList) {
+          errorList.innerHTML = window.errorMonitorData.errors.map(error => `
+            <div style="margin-bottom: 8px; padding: 4px; border-left: 3px solid #f44336; background: #fff3f3;">
+              <div style="color: #666; font-size: 10px;">${error.timestamp}</div>
+              <div style="color: #d32f2f; margin: 2px 0;"><strong>${error.type}:</strong> ${error.message}</div>
+              ${error.filename ? `<div style="font-size: 10px; color: #888;">${error.filename}:${error.lineno}:${error.colno}</div>` : ''}
+            </div>
+          `).join('');
+        }
+      }
+
+      function toggleErrorMonitor() {
+        const panel = document.getElementById('error-monitor-panel');
+        window.errorMonitorData.isVisible = !window.errorMonitorData.isVisible;
+        panel.style.display = window.errorMonitorData.isVisible ? 'block' : 'none';
+      }
+
+      function clearErrorMonitor() {
+        window.errorMonitorData.errors = [];
+        updateErrorMonitorUI();
+        console.log('🗑️ Monitor de errores limpiado');
+      }
+
+      // Interceptar console.error
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        
+        const message = args.map(arg => {
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg);
+            } catch {
+              return arg.toString();
+            }
+          }
+          return String(arg);
+        }).join(' ');
+
+        // Filtrar errores de import.meta específicamente
+        if (message.includes('import.meta') || message.includes('Cannot use') || message.includes('outside a module')) {
+          addErrorToMonitor({
+            type: 'Console Error (import.meta)',
+            message: message,
+            stack: new Error().stack
+          });
+        } else {
+          addErrorToMonitor({
+            type: 'Console Error',
+            message: message,
+            stack: new Error().stack
+          });
+        }
+      };
+
+      // Interceptar console.warn para warnings de import.meta
+      const originalConsoleWarn = console.warn;
+      console.warn = function(...args) {
+        originalConsoleWarn.apply(console, args);
+        
+        const message = args.map(arg => String(arg)).join(' ');
+        if (message.includes('import.meta') || message.includes('Cannot use') || message.includes('outside a module')) {
+          addErrorToMonitor({
+            type: 'Console Warning (import.meta)',
+            message: message,
+            stack: new Error().stack
+          });
+        }
+      };
+
+      // Mejorar el capturador de errores existente
+      const originalErrorHandler = window.onerror;
+      window.addEventListener('error', function(event) {
+        addErrorToMonitor({
+          type: 'JavaScript Error',
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          stack: event.error ? event.error.stack : null
+        });
+        
+        // Si es un error de import.meta, intentar prevenirlo
+        if (event.message && event.message.includes('import.meta')) {
+          console.log('🚨 Error de import.meta interceptado y manejado');
+          event.preventDefault();
+          return false;
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(event) {
+        addErrorToMonitor({
+          type: 'Unhandled Promise Rejection',
+          message: event.reason ? (event.reason.message || event.reason.toString()) : 'Promise rejected',
+          stack: event.reason ? event.reason.stack : null
+        });
+      });
+
+      console.log('🚀 Sistema de monitoreo de errores activado - UruguAhorra PWA');
+      console.log('💡 Haz clic en el botón "🔍 Errores" para ver errores en tiempo real');
+      console.log('🛠️ Funciones disponibles: toggleErrorMonitor(), clearErrorMonitor()');
     </script>
   </body>
 </html>

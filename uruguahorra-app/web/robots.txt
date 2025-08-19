@@ -1,0 +1,19 @@
+# Robots.txt para Uruguahorra PWA
+
+User-agent: *
+Allow: /
+
+# URLs importantes para SEO
+Sitemap: /sitemap.xml
+
+# Bloquear archivos sensibles
+Disallow: /api/
+Disallow: /.env
+Disallow: /admin/
+Disallow: /private/
+
+# Permitir crawling de PWA assets
+Allow: /manifest.json
+Allow: /sw.js
+Allow: /assets/
+Allow: /icons/

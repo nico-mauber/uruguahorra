@@ -4,11 +4,11 @@ import { ThemeProvider } from '@theme';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@store/useAuthStore';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { logger, LogModule } from '@/utils/logger';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '@/utils/toast';
-import { ErrorBoundary } from '@components';
+import { ErrorBoundary, PWAStatus } from '@components';
+import { usePWA } from '@/hooks/usePWA';
 
 function LoadingScreen() {
   return (
@@ -93,20 +93,27 @@ function RootLayoutNav() {
           title: 'Premium',
         }}
       />
-      <Stack.Screen
+      {/* <Stack.Screen
         name="transactions"
         options={{
           presentation: 'modal',
           headerShown: true,
           title: 'Transacciones',
         }}
-      />
+      /> */}
     </Stack>
   );
 }
 
 function AppContent() {
-  return <RootLayoutNav />;
+  const { isOnline } = usePWA();
+
+  return (
+    <>
+      <RootLayoutNav />
+      {Platform.OS === 'web' && <PWAStatus />}
+    </>
+  );
 }
 
 export default function RootLayout() {
@@ -116,7 +123,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <StatusBar style="auto" />
           <AppContent />
-          <Toast config={toastConfig} />
+          <Toast />
         </SafeAreaProvider>
       </ErrorBoundary>
     </ThemeProvider>

@@ -26,7 +26,10 @@
       "Bash(npx prettier:*)",
       "Bash(npx eslint . --ext .ts,.tsx --fix)",
       "Bash(find:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Bash(cd:*)"
     ],
     "defaultMode": "acceptEdits"
   }

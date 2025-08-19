@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -43,6 +45,8 @@ export default function DashboardScreen() {
     React.useState<UserGamificationStats | null>(null);
   const [showGoalSelection, setShowGoalSelection] = React.useState(false);
   const [pendingSaveAmount, setPendingSaveAmount] = React.useState(0);
+  const [manualAmount, setManualAmount] = React.useState('');
+  const [showManualInput, setShowManualInput] = React.useState(false);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
@@ -183,8 +187,39 @@ export default function DashboardScreen() {
       return;
     }
 
-    // Si solo hay una meta, aplicar el ahorro directamente
+    // Si solo hay una meta, validar que no exceda el límite
+    const goal = goals[0];
+    const maxAllowed = goal.targetAmount - goal.savedAmount;
+
+    if (amount > maxAllowed) {
+      ToastService.warning(
+        'Monto excede el objetivo',
+        `El máximo permitido es $${maxAllowed.toFixed(0)}`
+      );
+      setPendingSaveAmount(amount);
+      setShowGoalSelection(true);
+      return;
+    }
+
+    // Si solo hay una meta y el monto es válido, aplicar el ahorro directamente
     await applySavingToGoal(goals[0].id, amount);
+  };
+
+  const handleManualSave = () => {
+    const amount = parseFloat(manualAmount);
+
+    if (isNaN(amount) || amount <= 0) {
+      ToastService.warning(
+        'Monto inválido',
+        'Ingresa un monto válido mayor a 0'
+      );
+      return;
+    }
+
+    setManualAmount('');
+    setShowManualInput(false);
+    Keyboard.dismiss();
+    handleQuickSave(amount);
   };
 
   const applySavingToGoal = async (goalId: string, amount: number) => {
@@ -194,6 +229,16 @@ export default function DashboardScreen() {
       const selectedGoal = goals.find((g) => g.id === goalId);
       if (!selectedGoal) {
         ToastService.error('Meta no encontrada');
+        return;
+      }
+
+      // Validar que el monto no exceda el objetivo
+      const maxAllowed = selectedGoal.targetAmount - selectedGoal.savedAmount;
+      if (amount > maxAllowed) {
+        ToastService.error(
+          'Monto excede el objetivo',
+          `El máximo permitido para esta meta es $${maxAllowed.toFixed(0)}`
+        );
         return;
       }
 
@@ -269,8 +314,9 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleGoalSelection = (goalId: string) => {
-    applySavingToGoal(goalId, pendingSaveAmount);
+  const handleGoalSelection = (goalId: string, adjustedAmount?: number) => {
+    const amountToSave = adjustedAmount ?? pendingSaveAmount;
+    applySavingToGoal(goalId, amountToSave);
     setPendingSaveAmount(0);
   };
 
@@ -380,6 +426,45 @@ export default function DashboardScreen() {
     },
     viewAllButton: {
       marginTop: 8,
+    },
+    manualInputContainer: {
+      marginTop: 12,
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    manualInputHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    manualInputTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    manualInputClose: {
+      padding: 4,
+    },
+    manualInput: {
+      height: 56,
+      borderWidth: 2,
+      borderColor: theme.primary,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.text,
+      backgroundColor: theme.background,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    manualInputButtons: {
+      flexDirection: 'row',
+      gap: 12,
     },
     addButton: {
       position: 'absolute',
@@ -536,6 +621,88 @@ export default function DashboardScreen() {
                 style={{ flex: 1, marginLeft: 8 }}
               />
             </View>
+
+            {!showManualInput ? (
+              <Button
+                title="💵 Otro monto"
+                variant="outline"
+                onPress={() => setShowManualInput(true)}
+                style={{ marginTop: 12 }}
+              />
+            ) : (
+              <View style={styles.manualInputContainer}>
+                <View style={styles.manualInputHeader}>
+                  <Text style={styles.manualInputTitle}>
+                    Monto personalizado
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.manualInputClose}
+                    onPress={() => {
+                      setShowManualInput(false);
+                      setManualAmount('');
+                      Keyboard.dismiss();
+                    }}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={theme.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ position: 'relative' }}>
+                  <Text
+                    style={{
+                      position: 'absolute',
+                      left: 16,
+                      top: 16,
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: manualAmount ? theme.text : theme.textSecondary,
+                      zIndex: 1,
+                    }}
+                  >
+                    $
+                  </Text>
+                  <TextInput
+                    style={[styles.manualInput, { paddingLeft: 36 }]}
+                    placeholder="0"
+                    placeholderTextColor={theme.textSecondary}
+                    value={manualAmount}
+                    onChangeText={(text) => {
+                      // Solo permitir números
+                      const cleaned = text.replace(/[^0-9]/g, '');
+                      setManualAmount(cleaned);
+                    }}
+                    keyboardType="numeric"
+                    returnKeyType="done"
+                    onSubmitEditing={handleManualSave}
+                    autoFocus
+                  />
+                </View>
+
+                <View style={styles.manualInputButtons}>
+                  <Button
+                    title="Cancelar"
+                    variant="outline"
+                    onPress={() => {
+                      setShowManualInput(false);
+                      setManualAmount('');
+                      Keyboard.dismiss();
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="Ahorrar"
+                    variant="primary"
+                    onPress={handleManualSave}
+                    style={{ flex: 1 }}
+                    disabled={!manualAmount || manualAmount === '0'}
+                  />
+                </View>
+              </View>
+            )}
           </View>
         )}
 

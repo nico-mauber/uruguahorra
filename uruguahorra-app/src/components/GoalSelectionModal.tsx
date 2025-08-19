@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -7,11 +7,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
 import { Card } from './Card';
 import { ProgressBar } from './ProgressBar';
+import { Button } from './Button';
+import { ToastService } from '@/utils/toast';
+import { GoalsService } from '@/services/goals.service';
+import { useAuthStore } from '@store/useAuthStore';
 
 interface Goal {
   id: string;
@@ -25,7 +31,7 @@ interface GoalSelectionModalProps {
   visible: boolean;
   goals: Goal[];
   onClose: () => void;
-  onSelectGoal: (goalId: string) => void;
+  onSelectGoal: (goalId: string, adjustedAmount?: number) => void;
   pendingAmount: number;
 }
 
@@ -37,11 +43,87 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
   pendingAmount,
 }) => {
   const { theme } = useTheme();
+  const { user } = useAuthStore();
   const screenHeight = Dimensions.get('window').height;
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [newTargetAmount, setNewTargetAmount] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleGoalSelection = (goalId: string) => {
-    onSelectGoal(goalId);
-    onClose();
+    const goal = goals.find((g) => g.id === goalId);
+    if (!goal) return;
+
+    const maxAllowed = goal.targetAmount - goal.savedAmount;
+
+    if (pendingAmount > maxAllowed) {
+      Alert.alert(
+        'Monto excede el objetivo',
+        `Esta meta solo necesita $${maxAllowed.toFixed(0)} más para completarse. ¿Qué deseas hacer?`,
+        [
+          {
+            text: 'Ajustar monto',
+            onPress: () => {
+              // Ajustar al máximo permitido
+              onSelectGoal(goalId, maxAllowed);
+              onClose();
+            },
+          },
+          {
+            text: 'Editar objetivo',
+            onPress: () => {
+              setEditingGoalId(goalId);
+              setNewTargetAmount(goal.targetAmount.toString());
+            },
+          },
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      onSelectGoal(goalId);
+      onClose();
+    }
+  };
+
+  const handleUpdateTarget = async (goalId: string) => {
+    const newTarget = parseFloat(newTargetAmount);
+    const goal = goals.find((g) => g.id === goalId);
+
+    if (!goal || !user) return;
+
+    if (isNaN(newTarget) || newTarget <= 0) {
+      ToastService.warning('Monto inválido', 'Ingresa un monto válido');
+      return;
+    }
+
+    if (newTarget < goal.savedAmount) {
+      ToastService.warning(
+        'Objetivo muy bajo',
+        `El objetivo debe ser mayor a lo ya ahorrado ($${goal.savedAmount.toFixed(0)})`
+      );
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await GoalsService.updateGoal(goalId, user.id, {
+        target_amount: newTarget,
+      });
+
+      ToastService.success('Objetivo actualizado');
+      setEditingGoalId(null);
+      setNewTargetAmount('');
+
+      // Ahora aplicar el ahorro con el nuevo objetivo
+      onSelectGoal(goalId);
+      onClose();
+    } catch (error) {
+      ToastService.handleError(error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -149,6 +231,45 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
       color: theme.textSecondary,
       textAlign: 'center',
     },
+    editContainer: {
+      backgroundColor: theme.warning + '20',
+      padding: 16,
+      borderRadius: 8,
+      marginTop: 8,
+    },
+    editTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 8,
+    },
+    editInput: {
+      height: 48,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      color: theme.text,
+      backgroundColor: theme.surface,
+      marginBottom: 12,
+    },
+    editButtons: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    warningBadge: {
+      backgroundColor: theme.warning + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      alignSelf: 'flex-start',
+    },
+    warningText: {
+      fontSize: 12,
+      color: theme.warning,
+      fontWeight: '600',
+    },
   });
 
   const calculateDaysLeft = (targetDate: string) => {
@@ -196,50 +317,99 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
                 </Text>
               </View>
             ) : (
-              goals.map((goal) => (
-                <TouchableOpacity
-                  key={goal.id}
-                  onPress={() => handleGoalSelection(goal.id)}
-                  activeOpacity={0.7}
-                >
-                  <Card style={styles.goalCard}>
-                    <View style={styles.goalCardContent}>
-                      <View style={styles.goalHeader}>
-                        <View style={styles.goalInfo}>
-                          <Text style={styles.goalName}>{goal.name}</Text>
-                          <Text style={styles.goalAmount}>
-                            ${goal.savedAmount.toFixed(0)} / $
-                            {goal.targetAmount.toFixed(0)}
-                          </Text>
+              goals.map((goal) => {
+                const maxAllowed = goal.targetAmount - goal.savedAmount;
+                const exceedsLimit = pendingAmount > maxAllowed;
+
+                return (
+                  <TouchableOpacity
+                    key={goal.id}
+                    onPress={() => handleGoalSelection(goal.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Card style={styles.goalCard}>
+                      <View style={styles.goalCardContent}>
+                        <View style={styles.goalHeader}>
+                          <View style={styles.goalInfo}>
+                            <Text style={styles.goalName}>{goal.name}</Text>
+                            <Text style={styles.goalAmount}>
+                              ${goal.savedAmount.toFixed(0)} / $
+                              {goal.targetAmount.toFixed(0)}
+                            </Text>
+                            {exceedsLimit && (
+                              <View style={styles.warningBadge}>
+                                <Text style={styles.warningText}>
+                                  Máx: ${maxAllowed.toFixed(0)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            style={styles.selectButton}
+                            onPress={() => handleGoalSelection(goal.id)}
+                          >
+                            <Text style={styles.selectButtonText}>
+                              Seleccionar
+                            </Text>
+                          </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                          style={styles.selectButton}
-                          onPress={() => handleGoalSelection(goal.id)}
-                        >
-                          <Text style={styles.selectButtonText}>
-                            Seleccionar
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
 
-                      <View style={styles.progressContainer}>
-                        <ProgressBar
-                          progress={calculateProgress(
-                            goal.savedAmount,
-                            goal.targetAmount
-                          )}
-                          showLabel
-                          color={theme.primary}
-                        />
-                      </View>
+                        <View style={styles.progressContainer}>
+                          <ProgressBar
+                            progress={calculateProgress(
+                              goal.savedAmount,
+                              goal.targetAmount
+                            )}
+                            showLabel
+                            color={theme.primary}
+                          />
+                        </View>
 
-                      <Text style={styles.daysLeft}>
-                        {calculateDaysLeft(goal.targetDate)}
-                      </Text>
-                    </View>
-                  </Card>
-                </TouchableOpacity>
-              ))
+                        <Text style={styles.daysLeft}>
+                          {calculateDaysLeft(goal.targetDate)}
+                        </Text>
+
+                        {editingGoalId === goal.id && (
+                          <View style={styles.editContainer}>
+                            <Text style={styles.editTitle}>
+                              Editar objetivo de la meta
+                            </Text>
+                            <TextInput
+                              style={styles.editInput}
+                              placeholder="Nuevo objetivo"
+                              placeholderTextColor={theme.textSecondary}
+                              value={newTargetAmount}
+                              onChangeText={setNewTargetAmount}
+                              keyboardType="numeric"
+                              autoFocus
+                            />
+                            <View style={styles.editButtons}>
+                              <Button
+                                title="Cancelar"
+                                variant="outline"
+                                onPress={() => {
+                                  setEditingGoalId(null);
+                                  setNewTargetAmount('');
+                                }}
+                                style={{ flex: 1 }}
+                              />
+                              <Button
+                                title={
+                                  isUpdating ? 'Actualizando...' : 'Actualizar'
+                                }
+                                variant="primary"
+                                onPress={() => handleUpdateTarget(goal.id)}
+                                disabled={isUpdating}
+                                style={{ flex: 1 }}
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    </Card>
+                  </TouchableOpacity>
+                );
+              })
             )}
           </ScrollView>
         </TouchableOpacity>

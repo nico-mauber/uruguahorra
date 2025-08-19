@@ -11,20 +11,15 @@ INSTALACIÓN (primera vez):
 
 INICIAR LA APLICACIÓN:
 
-📱 PARA MÓVIL (iOS/Android):
-   npm start
-   
-   - Escanea el código QR con Expo Go (Android)
-   - Escanea el código QR con la cámara (iOS)
-
-🌐 PARA WEB:
+🚀 COMANDO UNIVERSAL (Web + Móvil):
    npm run web
    
-   - Se abrirá automáticamente en http://localhost:8081
+   - Para WEB: Se abre automáticamente en http://localhost:8081
+   - Para MÓVIL: Escanea el código QR con Expo Go o la cámara
+   
+   ¡Este comando funciona perfectamente para ambas plataformas!
 
 ==================================================
-IMPORTANTE: 
-- Cada plataforma usa configuraciones diferentes
-- Web aplica transformaciones especiales para import.meta
-- Móvil usa la configuración estándar de React Native
+NOTA: El comando detecta automáticamente la plataforma
+y aplica las configuraciones necesarias para cada una.
 ==================================================

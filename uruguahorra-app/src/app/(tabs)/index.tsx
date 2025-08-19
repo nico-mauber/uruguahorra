@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card, ProgressBar } from '@components';
+import { GoalSelectionModal } from '@/components/GoalSelectionModal';
 import { useTheme } from '@theme';
 import { useAuthStore } from '@store/useAuthStore';
 import { useGoalsStore } from '@store/useGoalsStore';
@@ -32,20 +33,16 @@ export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { user, checkSession, isLoading: authLoading } = useAuthStore();
-  const {
-    goals,
-    isLoading,
-    error,
-    fetchGoals,
-    getGoalProgress,
-    getTotalSaved,
-  } = useGoalsStore();
+  const { goals, isLoading, error, fetchGoals, getTotalSaved } =
+    useGoalsStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [initializing, setInitializing] = React.useState(true);
   const [hasShownWelcome, setHasShownWelcome] = React.useState(false);
   const [gamificationStats, setGamificationStats] =
     React.useState<UserGamificationStats | null>(null);
+  const [showGoalSelection, setShowGoalSelection] = React.useState(false);
+  const [pendingSaveAmount, setPendingSaveAmount] = React.useState(0);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
@@ -179,15 +176,33 @@ export default function DashboardScreen() {
       return;
     }
 
+    // Si hay más de una meta, mostrar modal de selección
+    if (goals.length > 1) {
+      setPendingSaveAmount(amount);
+      setShowGoalSelection(true);
+      return;
+    }
+
+    // Si solo hay una meta, aplicar el ahorro directamente
+    await applySavingToGoal(goals[0].id, amount);
+  };
+
+  const applySavingToGoal = async (goalId: string, amount: number) => {
+    if (!user) return;
+
     try {
-      const firstGoal = goals[0];
+      const selectedGoal = goals.find((g) => g.id === goalId);
+      if (!selectedGoal) {
+        ToastService.error('Meta no encontrada');
+        return;
+      }
 
       ToastService.loading(`Ahorrando $${amount}...`);
 
       // 1. Crear contribución y actualizar saved_amount en la DB
       await GoalsService.addContribution({
         user_id: user.id,
-        goal_id: firstGoal.id,
+        goal_id: goalId,
         amount,
         source: 'manual',
         description: 'Ahorro rápido desde dashboard',
@@ -228,7 +243,7 @@ export default function DashboardScreen() {
       await ChallengesService.checkSavingsChallenges(user.id, amount);
 
       // 6. Mostrar toast de éxito con XP
-      ToastService.savingSuccess(amount, firstGoal.name);
+      ToastService.savingSuccess(amount, selectedGoal.name);
 
       if (gamificationResult.xpEarned > 0) {
         setTimeout(() => {
@@ -246,12 +261,17 @@ export default function DashboardScreen() {
 
       logger.success(LogModule.UI, 'Ahorro rápido completado', {
         amount,
-        goalName: firstGoal.name,
+        goalName: selectedGoal.name,
       });
     } catch (error: unknown) {
       logger.error(LogModule.UI, 'Error en ahorro rápido', error);
       ToastService.handleError(error);
     }
+  };
+
+  const handleGoalSelection = (goalId: string) => {
+    applySavingToGoal(goalId, pendingSaveAmount);
+    setPendingSaveAmount(0);
   };
 
   const styles = StyleSheet.create({
@@ -323,8 +343,21 @@ export default function DashboardScreen() {
       color: theme.text,
       marginBottom: 16,
     },
+    quickSaveSection: {
+      marginBottom: 24,
+    },
+    quickSaveButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    goalsSection: {
+      marginBottom: 24,
+    },
     goalCard: {
-      marginBottom: 16,
+      marginBottom: 12,
+    },
+    goalCardContent: {
+      padding: 16,
     },
     goalHeader: {
       flexDirection: 'row',
@@ -336,22 +369,17 @@ export default function DashboardScreen() {
       fontSize: 16,
       fontWeight: '600',
       color: theme.text,
+      flex: 1,
     },
     goalAmount: {
       fontSize: 14,
       color: theme.textSecondary,
     },
-    goalDate: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginTop: 4,
+    goalProgress: {
+      marginTop: 8,
     },
-    quickSaveSection: {
-      marginBottom: 24,
-    },
-    quickSaveButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    viewAllButton: {
+      marginTop: 8,
     },
     addButton: {
       position: 'absolute',
@@ -389,19 +417,6 @@ export default function DashboardScreen() {
     errorText: {
       color: theme.error,
       textAlign: 'center',
-    },
-    emptyCard: {
-      padding: 24,
-      alignItems: 'center',
-    },
-    emptyText: {
-      color: theme.textSecondary,
-      textAlign: 'center',
-      fontSize: 16,
-      marginBottom: 16,
-    },
-    createGoalButton: {
-      marginTop: 8,
     },
   });
 
@@ -524,72 +539,57 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {goals.length > 0 && (
+          <View style={styles.goalsSection}>
+            <View style={styles.goalHeader}>
+              <Text style={styles.sectionTitle}>Mis metas activas</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
+                <Text style={{ color: theme.primary, fontSize: 14 }}>
+                  Ver todas →
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {goals.slice(0, 3).map((goal) => {
+              const progress = (goal.savedAmount / goal.targetAmount) * 100;
+              return (
+                <Card key={goal.id} style={styles.goalCard}>
+                  <View style={styles.goalCardContent}>
+                    <View style={styles.goalHeader}>
+                      <Text style={styles.goalName} numberOfLines={1}>
+                        {goal.name}
+                      </Text>
+                      <Text style={styles.goalAmount}>
+                        ${goal.savedAmount.toFixed(0)} / $
+                        {goal.targetAmount.toFixed(0)}
+                      </Text>
+                    </View>
+                    <View style={styles.goalProgress}>
+                      <ProgressBar
+                        progress={progress}
+                        showLabel
+                        color={progress >= 100 ? theme.success : theme.primary}
+                      />
+                    </View>
+                  </View>
+                </Card>
+              );
+            })}
+            {goals.length > 3 && (
+              <Button
+                title={`Ver ${goals.length - 3} metas más`}
+                variant="outline"
+                onPress={() => router.push('/(tabs)/goals')}
+                style={styles.viewAllButton}
+              />
+            )}
+          </View>
+        )}
+
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-
-        <View>
-          <Text style={styles.sectionTitle}>Mis metas activas</Text>
-          {goals.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Ionicons name="flag" size={48} color={theme.textSecondary} />
-              <Text style={styles.emptyText}>
-                No tienes metas activas. ¡Crea una para empezar a ahorrar!
-              </Text>
-              <Button
-                title="Crear nueva meta"
-                onPress={() => {
-                  try {
-                    logger.info(LogModule.NAV, 'Navegando a crear meta');
-                    router.push('/create-goal');
-                  } catch (error: unknown) {
-                    logger.error(
-                      LogModule.NAV,
-                      'Error navegando a crear meta',
-                      error
-                    );
-                    ToastService.handleError(error);
-                  }
-                }}
-                style={styles.createGoalButton}
-              />
-            </Card>
-          ) : (
-            goals.map((goal) => {
-              const progress = getGoalProgress(goal.id);
-              const daysLeft = Math.ceil(
-                (new Date(goal.targetDate).getTime() - new Date().getTime()) /
-                  (1000 * 60 * 60 * 24)
-              );
-
-              return (
-                <Card key={goal.id} style={styles.goalCard}>
-                  <View style={styles.goalHeader}>
-                    <View>
-                      <Text style={styles.goalName}>{goal.name}</Text>
-                      <Text style={styles.goalDate}>
-                        {daysLeft > 0
-                          ? `${daysLeft} días restantes`
-                          : 'Meta vencida'}
-                      </Text>
-                    </View>
-                    <Text style={styles.goalAmount}>
-                      ${goal.savedAmount.toFixed(0)} / $
-                      {goal.targetAmount.toFixed(0)}
-                    </Text>
-                  </View>
-                  <ProgressBar
-                    progress={progress}
-                    showLabel
-                    color={theme.primary}
-                  />
-                </Card>
-              );
-            })
-          )}
-        </View>
       </ScrollView>
 
       <TouchableOpacity
@@ -610,6 +610,14 @@ export default function DashboardScreen() {
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <GoalSelectionModal
+        visible={showGoalSelection}
+        goals={goals}
+        onClose={() => setShowGoalSelection(false)}
+        onSelectGoal={handleGoalSelection}
+        pendingAmount={pendingSaveAmount}
+      />
     </SafeAreaView>
   );
 }

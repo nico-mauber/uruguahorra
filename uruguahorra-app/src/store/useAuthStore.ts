@@ -8,6 +8,7 @@ import {
   XPService,
   LevelsService,
   StreaksService,
+  calculateLevel,
 } from '@/features/gamification';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];

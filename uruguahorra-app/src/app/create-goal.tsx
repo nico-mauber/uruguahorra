@@ -234,8 +234,10 @@ export default function CreateGoalScreen() {
       backgroundColor: theme.background,
     },
     content: {
-      flex: 1,
-      padding: 20,
+      flexGrow: 1,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 40,
     },
     header: {
       marginBottom: 32,
@@ -402,7 +404,12 @@ export default function CreateGoalScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={true}
+        >
           <View style={styles.stepIndicator}>
             {[1, 2].map((s) => (
               <View

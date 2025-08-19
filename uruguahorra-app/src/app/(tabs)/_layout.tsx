@@ -31,6 +31,15 @@ function TabLayoutContent() {
         }}
       />
       <Tabs.Screen
+        name="goals"
+        options={{
+          title: 'Metas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="challenges"
         options={{
           title: 'Retos',

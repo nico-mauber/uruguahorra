@@ -93,7 +93,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
               <Button
                 title="Reportar problema"
-                variant="outlined"
+                variant="outline"
                 onPress={() => {
                   // Aquí podrías integrar con un servicio de reporte de errores
                   // como Sentry, Bugsnag, etc.

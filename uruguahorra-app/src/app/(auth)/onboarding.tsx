@@ -624,7 +624,7 @@ export default function OnboardingScreen() {
               {goalOptions.map((option) => (
                 <Card
                   key={option.id}
-                  variant="outlined"
+                  variant="outline"
                   style={[
                     styles.goalOption,
                     goalType === option.value && styles.selectedGoal,
@@ -723,7 +723,7 @@ export default function OnboardingScreen() {
                 <Button
                   title="Omitir por ahora"
                   onPress={handleSkip}
-                  variant="outlined"
+                  variant="outline"
                   size="large"
                   style={styles.skipButton}
                 />

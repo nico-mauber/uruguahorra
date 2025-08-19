@@ -47,7 +47,7 @@ export default function GoalsScreen() {
     if (user?.id) {
       fetchGoals(user.id);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchGoals]);
 
   useEffect(() => {
     // Animar la entrada de las cards
@@ -59,7 +59,7 @@ export default function GoalsScreen() {
         useNativeDriver: true,
       }).start();
     });
-  }, [goals]);
+  }, [goals, fadeAnims]);
 
   const onRefresh = React.useCallback(async () => {
     if (!user?.id) return;

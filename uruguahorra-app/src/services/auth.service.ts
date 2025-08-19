@@ -246,10 +246,14 @@ export class AuthService {
       if (error) {
         // Si el error es que no se encontró el perfil, no es un error crítico
         if (error.code === 'PGRST116') {
-          logger.info(LogModule.DB, 'Perfil no encontrado (esperado para usuarios nuevos)', { userId });
+          logger.info(
+            LogModule.DB,
+            'Perfil no encontrado (esperado para usuarios nuevos)',
+            { userId }
+          );
           return null;
         }
-        
+
         logger.error(LogModule.DB, 'Error obteniendo perfil de usuario', error);
         throw error;
       }

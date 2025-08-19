@@ -7,6 +7,9 @@
       "@/*": [
         "src/*"
       ],
+      "@components": [
+        "src/components"
+      ],
       "@components/*": [
         "src/components/*"
       ],
@@ -16,8 +19,14 @@
       "@lib/*": [
         "src/lib/*"
       ],
+      "@store": [
+        "src/store"
+      ],
       "@store/*": [
         "src/store/*"
+      ],
+      "@theme": [
+        "src/theme"
       ],
       "@theme/*": [
         "src/theme/*"

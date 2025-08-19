@@ -59,13 +59,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
-  useEffect(() => {
-    if (visible && goal?.id) {
-      loadContributions();
-    }
-  }, [visible, goal?.id]);
-
-  const loadContributions = async () => {
+  const loadContributions = React.useCallback(async () => {
     if (!goal?.id) return;
 
     setIsLoadingContributions(true);
@@ -77,7 +71,13 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     } finally {
       setIsLoadingContributions(false);
     }
-  };
+  }, [goal?.id]);
+
+  useEffect(() => {
+    if (visible && goal?.id) {
+      loadContributions();
+    }
+  }, [visible, goal?.id, loadContributions]);
 
   const handleDeleteGoal = () => {
     Alert.alert(

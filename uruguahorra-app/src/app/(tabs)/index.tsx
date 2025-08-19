@@ -59,7 +59,7 @@ export default function DashboardScreen() {
   // Funciones para animar el FAB
   const toggleFab = () => {
     const toValue = fabExpanded ? 0 : 1;
-    
+
     Animated.parallel([
       Animated.spring(fadeAnim, {
         toValue,
@@ -74,7 +74,7 @@ export default function DashboardScreen() {
         friction: 11,
       }),
     ]).start();
-    
+
     setFabExpanded(!fabExpanded);
   };
 
@@ -790,7 +790,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-
         {goals.length > 0 && (
           <View style={styles.goalsSection}>
             <View style={styles.goalHeader}>
@@ -846,13 +845,13 @@ export default function DashboardScreen() {
 
       {/* FAB Expandible con Opciones */}
       {fabExpanded && (
-        <TouchableOpacity 
-          style={styles.fabOverlay} 
+        <TouchableOpacity
+          style={styles.fabOverlay}
           onPress={toggleFab}
           activeOpacity={1}
         />
       )}
-      
+
       {/* Opciones del FAB */}
       <Animated.View
         style={[

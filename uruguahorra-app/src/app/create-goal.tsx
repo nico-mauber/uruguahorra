@@ -132,14 +132,14 @@ export default function CreateGoalScreen() {
       // No incluir user_id, el servicio lo obtendrá de la sesión
       // Personalizar el nombre de la meta según el tipo y los detalles adicionales
       let finalGoalName = goalName.trim();
-      
+
       // Agregar información adicional al nombre de la meta
       if (goalType === 'travel' && travelDestination) {
         finalGoalName = `${finalGoalName} - ${travelDestination}`;
       } else if (goalType === 'purchase' && purchaseDescription) {
         finalGoalName = `${finalGoalName} - ${purchaseDescription}`;
       }
-      
+
       const goalData = {
         name: finalGoalName,
         target_amount: parsedAmount,
@@ -148,12 +148,22 @@ export default function CreateGoalScreen() {
         is_active: true,
         category: goalType,
         // Establecer color e ícono según el tipo
-        color: goalType === 'travel' ? '#10B981' : 
-               goalType === 'debt' ? '#EF4444' : 
-               goalType === 'purchase' ? '#8B5CF6' : '#3B82F6',
-        icon: goalType === 'travel' ? 'airplane' : 
-              goalType === 'debt' ? 'card' : 
-              goalType === 'purchase' ? 'cart' : 'shield',
+        color:
+          goalType === 'travel'
+            ? '#10B981'
+            : goalType === 'debt'
+              ? '#EF4444'
+              : goalType === 'purchase'
+                ? '#8B5CF6'
+                : '#3B82F6',
+        icon:
+          goalType === 'travel'
+            ? 'airplane'
+            : goalType === 'debt'
+              ? 'card'
+              : goalType === 'purchase'
+                ? 'cart'
+                : 'shield',
       };
 
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
@@ -182,13 +192,16 @@ export default function CreateGoalScreen() {
 
       let errorMessage = 'No se pudo crear la meta';
 
-      if (error.code === '23505') {
-        errorMessage = 'Ya existe una meta con ese nombre';
-      } else if (error.code === '42501') {
-        errorMessage =
-          'No tienes permisos para crear metas. Verifica tu sesión.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error && typeof error === 'object' && 'code' in error) {
+        const err = error as { code?: string; message?: string };
+        if (err.code === '23505') {
+          errorMessage = 'Ya existe una meta con ese nombre';
+        } else if (err.code === '42501') {
+          errorMessage =
+            'No tienes permisos para crear metas. Verifica tu sesión.';
+        } else if ('message' in error && typeof err.message === 'string') {
+          errorMessage = err.message;
+        }
       }
 
       Alert.alert('Error', errorMessage);
@@ -627,7 +640,7 @@ export default function CreateGoalScreen() {
               <Button
                 title="Cancelar"
                 onPress={handleCancel}
-                variant="outlined"
+                variant="outline"
                 size="large"
                 style={styles.cancelButton}
               />

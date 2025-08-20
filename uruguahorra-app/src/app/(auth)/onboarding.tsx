@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
 import { AuthService } from '@/services/auth.service';
@@ -28,7 +28,7 @@ import { logger, LogModule } from '@/utils/logger';
 export default function OnboardingScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { signup, login } = useAuthStore();
+  const { signup, login } = useAuth();
 
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);

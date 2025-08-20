@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
 import { logger, LogModule } from '@/utils/logger';
@@ -23,7 +23,7 @@ import { logger, LogModule } from '@/utils/logger';
 export default function CreateGoalScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const { fetchGoals } = useGoalsStore();
 
   const [step, setStep] = useState(1);

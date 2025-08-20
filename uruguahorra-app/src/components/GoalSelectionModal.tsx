@@ -17,7 +17,7 @@ import { ProgressBar } from './ProgressBar';
 import { Button } from './Button';
 import { ToastService } from '@/utils/toast';
 import { GoalsService } from '@/services/goals.service';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuth } from '@/contexts';
 
 interface Goal {
   id: string;
@@ -43,7 +43,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
   pendingAmount,
 }) => {
   const { theme } = useTheme();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const screenHeight = Dimensions.get('window').height;
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [newTargetAmount, setNewTargetAmount] = useState('');

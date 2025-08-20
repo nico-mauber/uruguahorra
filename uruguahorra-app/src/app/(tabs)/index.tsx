@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { Button, Card, ProgressBar } from '@components';
 import { GoalSelectionModal } from '@/components/GoalSelectionModal';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { UserGamificationStats } from '@features/gamification/types/gamification.types';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,7 +35,7 @@ import { GamificationService } from '@/features/gamification';
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { user, checkSession, isLoading: authLoading } = useAuthStore();
+  const { user, isLoading: authLoading } = useAuth();
   const { goals, isLoading, error, fetchGoals, getTotalSaved } =
     useGoalsStore();
 
@@ -83,12 +83,13 @@ export default function DashboardScreen() {
     router.push('/create-goal');
   };
 
-  // Función para cargar estadísticas de gamificación
-  const loadGamificationStats = async (userId: string) => {
+  // Función optimizada para cargar estadísticas de gamificación (SOLO cuando sea necesario)
+  const loadGamificationStats = async (userId: string, skipQuests: boolean = false) => {
     try {
-      const stats = await GamificationService.getUserStats(userId);
+      // OPTIMIZACIÓN: Cargar solo stats básicas, no quests fallidos
+      const stats = await GamificationService.getUserBasicStats(userId, { skipQuests });
       setGamificationStats(stats);
-      logger.success(LogModule.UI, 'Estadísticas de gamificación cargadas');
+      logger.success(LogModule.UI, 'Estadísticas de gamificación cargadas (optimizada)');
     } catch (error) {
       logger.error(
         LogModule.UI,
@@ -125,19 +126,12 @@ export default function DashboardScreen() {
 
     const initializeUser = async () => {
       try {
-        const currentUser = useAuthStore.getState().user;
-
-        if (!currentUser) {
-          await checkSession();
-        }
-
-        const updatedUser = useAuthStore.getState().user;
-
-        if (updatedUser?.id && !goalsLoadedRef.current) {
+        // AuthProvider se encarga automáticamente de la sesión
+        if (user?.id && !goalsLoadedRef.current) {
           goalsLoadedRef.current = true;
           await Promise.all([
-            fetchGoals(updatedUser.id),
-            loadGamificationStats(updatedUser.id),
+            fetchGoals(user.id),
+            loadGamificationStats(user.id),
           ]);
           logger.success(
             LogModule.UI,
@@ -147,7 +141,7 @@ export default function DashboardScreen() {
           // Mostrar bienvenida para nuevos usuarios o usuarios que regresan
           if (!hasShownWelcome) {
             setTimeout(() => {
-              const firstName = updatedUser.email?.split('@')[0] || '';
+              const firstName = user.email?.split('@')[0] || '';
               ToastService.welcome(firstName);
               setHasShownWelcome(true);
             }, 1500);
@@ -162,7 +156,7 @@ export default function DashboardScreen() {
     };
 
     initializeUser();
-  }, [checkSession, fetchGoals, hasShownWelcome]);
+  }, [fetchGoals, hasShownWelcome, user]);
 
   // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
   // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
@@ -289,21 +283,18 @@ export default function DashboardScreen() {
         description: 'Ahorro rápido desde dashboard',
       });
 
-      // 2. Procesar evento de gamificación
-      const gamificationResult =
-        await GamificationService.processGamificationEvent(
-          user.id,
-          'contribution',
-          { amount }
-        );
+      // 2. OPTIMIZACIÓN CRÍTICA: Usar el servicio ultra-optimizado
+      // Solo otorga XP y calcula nivel, sin toda la cascada de gamificación
+      const { OptimizedGamificationService } = await import('@/features/gamification/optimized.service');
+      const gamificationResult = await OptimizedGamificationService.processContributionOptimized(
+        user.id, 
+        amount
+      );
 
-      // 3. Actualizar datos del dashboard DESPUÉS de crear la contribución
-      await Promise.all([
-        fetchGoals(user.id, true), // Esto actualizará el monto ahorrado
-        loadGamificationStats(user.id), // Esto actualizará el XP
-      ]);
+      // 3. OPTIMIZACIÓN: Solo recargar goals, las stats se actualizan localmente
+      await fetchGoals(user.id, true);
 
-      // 4. Actualizar el estado local de gamificationStats inmediatamente
+      // 4. Actualizar el estado local de gamificationStats inmediatamente SIN recargar
       if (gamificationResult.xpEarned > 0) {
         setGamificationStats((prevStats) => {
           if (!prevStats) return prevStats;

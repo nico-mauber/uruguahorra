@@ -1,15 +1,10 @@
 import { create } from 'zustand';
 import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
-import {
-  XPService,
-  LevelsService,
-  StreaksService,
-  calculateLevel,
-} from '@/features/gamification';
+import { LevelsService } from '@/features/gamification';
 import { RateLimitError } from '@/lib/auth-interceptor';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
@@ -72,61 +67,34 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         userId: authUser.id,
       });
 
-      // 2. Obtener perfil del usuario
-      logger.loading(LogModule.STORE, 'Obteniendo perfil del usuario');
-      let profile = await AuthService.getUserProfile(authUser.id);
+      // 2. OPTIMIZACIÓN: Obtener todos los datos en una sola llamada
+      const userData = await AuthService.getUserCompleteData(authUser.id);
 
-      if (!profile) {
+      if (!userData.profile) {
         // Para usuarios existentes haciendo login, el perfil debe existir
-        // Si no existe, es un error grave
         logger.error(
           LogModule.STORE,
           'Perfil no encontrado para usuario existente',
           { userId: authUser.id, email: authUser.email }
         );
-
-        // Intentar una vez más con un timeout más largo
-        logger.info(
-          LogModule.STORE,
-          'Reintentando obtener perfil con mayor timeout'
+        throw new Error(
+          'No se pudo encontrar el perfil del usuario. Por favor, contacte soporte.'
         );
-        profile = await AuthService.getUserProfile(authUser.id);
-
-        if (!profile) {
-          // Si aún no existe, es un problema de datos
-          throw new Error(
-            'No se pudo encontrar el perfil del usuario. Por favor, contacte soporte.'
-          );
-        }
       }
 
-      // 3. Verificar estado premium
-      const isPremium = await AuthService.checkPremiumStatus(authUser.id);
-
-      // 4. Obtener estadísticas del usuario (XP, nivel, racha)
-      // Por ahora usamos valores por defecto, pero se pueden obtener de user_challenges
-      const { count: challengesCompleted } = await supabase
-        .from('user_challenges')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id)
-        .eq('status', 'done');
-
-      const totalXP = (challengesCompleted || 0) * 50; // 50 XP por desafío
-      const level = calculateLevel(totalXP);
-
-      // 5. Actualizar el store
+      // 3. Actualizar el store con todos los datos obtenidos
       const finalUser = {
-        ...profile!,
-        level,
-        totalXP,
-        streak: 0, // TODO: Calcular racha real
+        ...userData.profile,
+        level: userData.level,
+        totalXP: userData.totalXP,
+        streak: userData.streak,
       };
 
       set({
         user: finalUser,
         supabaseUser: authUser,
         isAuthenticated: true,
-        isPremium,
+        isPremium: userData.isPremium,
         isLoading: false,
         rateLimitError: null,
       });
@@ -134,7 +102,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       logger.success(LogModule.STORE, 'Login completado, estado actualizado', {
         userId: finalUser.id,
         level: finalUser.level,
-        isPremium,
+        isPremium: userData.isPremium,
       });
     } catch (error) {
       logger.error(LogModule.STORE, 'Error en login store', error);
@@ -321,69 +289,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return;
       }
 
-      // 3. Obtener perfil
-      let profile = await AuthService.getUserProfile(authUser.id);
+      // 3. OPTIMIZACIÓN: Obtener todos los datos en una sola llamada
+      const userData = await AuthService.getUserCompleteData(authUser.id);
 
-      // 4. Si no existe perfil para un usuario con sesión activa, hay un problema
-      if (!profile) {
+      if (!userData.profile) {
         logger.error(
           LogModule.STORE,
           'Perfil no encontrado para usuario con sesión activa',
           { userId: authUser.id, email: authUser.email }
         );
-
-        // Intentar una vez más con mayor timeout
-        logger.info(
-          LogModule.STORE,
-          'Reintentando obtener perfil con mayor timeout'
-        );
-        profile = await AuthService.getUserProfile(authUser.id);
-
-        if (!profile) {
-          logger.error(
-            LogModule.DB,
-            'No se pudo obtener el perfil después de reintentos',
-            { userId: authUser.id }
-          );
-          set({ isLoading: false });
-          // No lanzar error para no romper la sesión, pero el perfil no estará disponible
-          return;
-        }
+        set({ isLoading: false });
+        return;
       }
 
-      // 4. Verificar premium
-      const isPremium = await AuthService.checkPremiumStatus(authUser.id);
-
-      // 5. Obtener estadísticas de gamificación
-      let gamificationStats;
-      try {
-        const totalXP = await XPService.getUserTotalXP(authUser.id);
-        const level = LevelsService.getLevel(totalXP);
-        const streak = await StreaksService.getUserStreak(authUser.id);
-
-        gamificationStats = {
-          level,
-          totalXP,
-          streak: streak?.current_streak || 0,
-        };
-      } catch (error) {
-        logger.warn(
-          LogModule.STORE,
-          'Error obteniendo estadísticas de gamificación, usando valores por defecto',
-          error
-        );
-        gamificationStats = {
-          level: 1,
-          totalXP: 0,
-          streak: 0,
-        };
-      }
-
-      // 6. Actualizar store
+      // 4. Actualizar store
       const userWithStats = {
-        ...profile,
+        ...userData.profile,
         id: authUser.id, // Asegurar que el ID esté presente
-        ...gamificationStats,
+        level: userData.level,
+        totalXP: userData.totalXP,
+        streak: userData.streak,
       };
 
       logger.success(LogModule.STORE, 'Sesión verificada exitosamente', {
@@ -396,7 +321,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: userWithStats,
         supabaseUser: authUser,
         isAuthenticated: true,
-        isPremium,
+        isPremium: userData.isPremium,
         isLoading: false,
       });
     } catch (error) {
@@ -435,7 +360,7 @@ AuthService.onAuthStateChange((event, session) => {
   logger.debug(LogModule.AUTH, 'Auth state changed', {
     event,
     hasSession: !!session,
-    userId: session?.user?.id || 'none',
+    userId: (session as any)?.user?.id || 'none',
   });
 
   const currentState = useAuthStore.getState();
@@ -444,13 +369,13 @@ AuthService.onAuthStateChange((event, session) => {
     logger.info(LogModule.AUTH, 'Usuario autenticado, verificando sesión');
 
     // Verificar si es un usuario diferente al actual
-    if (currentState.user && currentState.user.id !== session.user.id) {
+    if (currentState.user && currentState.user.id !== (session as any).user.id) {
       logger.warn(
         LogModule.AUTH,
         'Cambio de usuario detectado, limpiando store primero',
         {
           previousUserId: currentState.user.id,
-          newUserId: session.user.id,
+          newUserId: (session as any).user.id,
         }
       );
 
@@ -486,7 +411,7 @@ AuthService.onAuthStateChange((event, session) => {
       'Token refrescado, actualizando store si es necesario'
     );
 
-    if (currentState.user && currentState.user.id !== session.user.id) {
+    if (currentState.user && currentState.user.id !== (session as any).user.id) {
       logger.warn(
         LogModule.AUTH,
         'Usuario cambió durante refresh, re-verificando sesión'

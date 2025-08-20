@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuthStore } from '@/contexts';
 import { AuthService } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';

@@ -13,7 +13,7 @@ import {
   Alert as RNAlert,
   Platform,
 } from 'react-native';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuth } from '@/contexts';
 
 interface RateLimitAlertProps {
   visible?: boolean;
@@ -101,7 +101,7 @@ export const RateLimitAlert: React.FC<RateLimitAlertProps> = ({
  * Hook para usar alertas de rate limiting con el store
  */
 export const useRateLimitAlert = () => {
-  const { rateLimitError, clearRateLimitError } = useAuthStore();
+  const { rateLimitError, clearRateLimitError } = useAuth();
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -169,7 +169,7 @@ export const useRateLimitAlert = () => {
  * Componente integrado que lee automáticamente del store
  */
 export const RateLimitAlertContainer: React.FC = () => {
-  const { rateLimitError, clearRateLimitError } = useAuthStore();
+  const { rateLimitError, clearRateLimitError } = useAuth();
 
   if (!rateLimitError) {
     return null;

@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { Card, ProgressBar, Button } from '@components';
 import { GoalDetailModal } from '@/components/GoalDetailModal';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuthStore } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';

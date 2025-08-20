@@ -17,7 +17,7 @@ import { Card } from './Card';
 import { ProgressBar } from './ProgressBar';
 import { Button } from './Button';
 import { GoalsService } from '@/services/goals.service';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuthStore } from '@/contexts';
 import { ToastService } from '@/utils/toast';
 import { logger, LogModule } from '@/utils/logger';
 

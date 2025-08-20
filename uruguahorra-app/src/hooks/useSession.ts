@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useAuthStore } from '@store/useAuthStore';
+import { useAuthStore } from '@/contexts';
 import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';

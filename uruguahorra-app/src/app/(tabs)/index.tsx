@@ -49,6 +49,7 @@ export default function DashboardScreen() {
   const [manualAmount, setManualAmount] = React.useState('');
   const [showManualInput, setShowManualInput] = React.useState(false);
   const [fabExpanded, setFabExpanded] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -202,6 +203,12 @@ export default function DashboardScreen() {
   }, [user?.id, fetchGoals]);
 
   const handleQuickSave = async (amount: number) => {
+    // Prevenir múltiples clics mientras se procesa el ahorro
+    if (isSaving) {
+      logger.warn(LogModule.UI, 'Intento de ahorro duplicado bloqueado');
+      return;
+    }
+
     if (!user || goals.length === 0) {
       ToastService.warning(
         'Sin metas',
@@ -255,7 +262,15 @@ export default function DashboardScreen() {
   const applySavingToGoal = async (goalId: string, amount: number) => {
     if (!user) return;
 
+    // Prevenir múltiples ejecuciones concurrentes
+    if (isSaving) {
+      logger.warn(LogModule.UI, 'Operación de ahorro ya en progreso');
+      return;
+    }
+
     try {
+      setIsSaving(true); // Marcar como en progreso
+
       const selectedGoal = goals.find((g) => g.id === goalId);
       if (!selectedGoal) {
         ToastService.error('Meta no encontrada');
@@ -274,7 +289,7 @@ export default function DashboardScreen() {
 
       ToastService.loading(`Ahorrando $${amount}...`);
 
-      // 1. Crear contribución y actualizar saved_amount en la DB
+      // 1. Crear contribución (el trigger de la BD actualizará saved_amount automáticamente)
       await GoalsService.addContribution({
         user_id: user.id,
         goal_id: goalId,
@@ -338,10 +353,18 @@ export default function DashboardScreen() {
     } catch (error: unknown) {
       logger.error(LogModule.UI, 'Error en ahorro rápido', error);
       ToastService.handleError(error);
+    } finally {
+      setIsSaving(false); // Liberar el bloqueo al finalizar
     }
   };
 
   const handleGoalSelection = (goalId: string, adjustedAmount?: number) => {
+    // Prevenir múltiples selecciones mientras se procesa
+    if (isSaving) {
+      logger.warn(LogModule.UI, 'Selección de meta bloqueada - ahorro en progreso');
+      return;
+    }
+    
     const amountToSave = adjustedAmount ?? pendingSaveAmount;
     applySavingToGoal(goalId, amountToSave);
     setPendingSaveAmount(0);
@@ -683,18 +706,24 @@ export default function DashboardScreen() {
                 variant="outline"
                 onPress={() => handleQuickSave(50)}
                 style={{ flex: 1, marginRight: 8 }}
+                disabled={isSaving}
+                loading={isSaving}
               />
               <Button
                 title="$100"
                 variant="outline"
                 onPress={() => handleQuickSave(100)}
                 style={{ flex: 1, marginHorizontal: 8 }}
+                disabled={isSaving}
+                loading={isSaving}
               />
               <Button
                 title="$200"
                 variant="outline"
                 onPress={() => handleQuickSave(200)}
                 style={{ flex: 1, marginLeft: 8 }}
+                disabled={isSaving}
+                loading={isSaving}
               />
             </View>
 
@@ -704,6 +733,7 @@ export default function DashboardScreen() {
                 variant="outline"
                 onPress={() => setShowManualInput(true)}
                 style={{ marginTop: 12 }}
+                disabled={isSaving}
               />
             ) : (
               <View style={styles.manualInputContainer}>
@@ -774,7 +804,8 @@ export default function DashboardScreen() {
                     variant="primary"
                     onPress={handleManualSave}
                     style={{ flex: 1 }}
-                    disabled={!manualAmount || manualAmount === '0'}
+                    disabled={!manualAmount || manualAmount === '0' || isSaving}
+                    loading={isSaving}
                   />
                 </View>
               </View>

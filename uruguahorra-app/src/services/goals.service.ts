@@ -243,6 +243,7 @@ export class GoalsService {
 
   /**
    * Agregar contribución a una meta
+   * NOTA: El saved_amount se actualiza automáticamente mediante un trigger en la BD (update_goal_progress_trigger)
    */
   static async addContribution(
     contribution: ContributionInsert
@@ -254,7 +255,7 @@ export class GoalsService {
         source: contribution.source,
       });
 
-      // 1. Insertar la contribución
+      // Insertar la contribución - el trigger en la BD actualizará automáticamente saved_amount
       const { data: newContribution, error: contributionError } = await supabase
         .from('micro_contributions')
         .insert(contribution)
@@ -270,39 +271,9 @@ export class GoalsService {
         throw contributionError;
       }
 
-      // 2. Actualizar el monto ahorrado en la meta
-      const { data: goal, error: goalError } = await supabase
-        .from('goals')
-        .select('saved_amount')
-        .eq('id', contribution.goal_id)
-        .single();
-
-      if (goalError) throw goalError;
-
-      const newSavedAmount = (goal.saved_amount || 0) + contribution.amount;
-
-      logger.sync(LogModule.GOALS, 'Actualizando monto ahorrado', {
-        oldAmount: goal.saved_amount,
-        newAmount: newSavedAmount,
-      });
-
-      const { error: updateError } = await supabase
-        .from('goals')
-        .update({ saved_amount: newSavedAmount })
-        .eq('id', contribution.goal_id);
-
-      if (updateError) {
-        logger.error(
-          LogModule.DB,
-          'Error actualizando monto de meta',
-          updateError
-        );
-        throw updateError;
-      }
-
-      logger.success(LogModule.GOALS, 'Contribución agregada exitosamente', {
+      logger.success(LogModule.GOALS, 'Contribución agregada exitosamente (trigger actualizará saved_amount)', {
         contributionId: newContribution.id,
-        newTotal: newSavedAmount,
+        amount: newContribution.amount,
       });
 
       return newContribution;

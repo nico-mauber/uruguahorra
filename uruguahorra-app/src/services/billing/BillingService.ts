@@ -11,7 +11,7 @@ export class BillingService {
     premium_monthly: {
       id: 'premium_monthly',
       name: 'Premium Mensual',
-      price: 4.99,
+      price: 15,
       currency: 'USD',
       interval: 'month',
       features: [

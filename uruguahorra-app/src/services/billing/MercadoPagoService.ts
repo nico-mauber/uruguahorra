@@ -3,8 +3,8 @@ import type { MercadoPagoPreapprovalOptions, CheckoutResult } from '@/types/bill
 
 export class MercadoPagoService {
   private static readonly API_URL = process.env.NODE_ENV === 'production'
-    ? 'https://your-domain.com/api/mercadopago'
-    : 'http://localhost:3000/api/mercadopago';
+    ? 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1'
+    : 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1';
 
   /**
    * Crear preapproval de MercadoPago para suscripciones
@@ -18,12 +18,24 @@ export class MercadoPagoService {
         frequency: options.autoRecurring.frequency,
       });
 
-      const response = await fetch(`${this.API_URL}/create-preapproval`, {
+      // Obtener el token de autenticación del usuario
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Determinar el tipo de plan basado en la frecuencia
+      const planType = options.autoRecurring.frequency === 12 ? 'annual' : 'monthly';
+
+      const response = await fetch(`${this.API_URL}/create-subscription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(options),
+        body: JSON.stringify({ planType }),
       });
 
       if (!response.ok) {
@@ -34,13 +46,13 @@ export class MercadoPagoService {
       const data = await response.json();
 
       logger.success(LogModule.DB, 'Preapproval creado', {
-        preapprovalId: data.id,
-        initPoint: data.init_point,
+        subscriptionId: data.subscription_id,
+        checkoutUrl: data.checkout_url,
       });
 
       return {
-        url: data.init_point,
-        preapprovalId: data.id,
+        url: data.checkout_url,
+        preapprovalId: data.subscription_id,
       };
     } catch (error) {
       logger.error(LogModule.DB, 'Error creando preapproval MercadoPago', error);

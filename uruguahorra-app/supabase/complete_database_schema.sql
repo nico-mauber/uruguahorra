@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 2.8 - Agregadas columnas faltantes user_streaks (protection_reset_date, streak_protections_used)
--- Fecha: 19 de Agosto, 2025
+-- Versión: 2.9 - Actualizada tabla subscriptions para integración con Mercado Pago
+-- Fecha: 20 de Enero, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -221,15 +221,23 @@ CREATE TABLE public.transactions_raw (
     is_processed BOOLEAN DEFAULT false
 );
 
--- TABLA SUBSCRIPTIONS
+-- TABLA SUBSCRIPTIONS (Actualizada para Mercado Pago)
 CREATE TABLE public.subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired')),
-    plan_type TEXT DEFAULT 'premium',
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired', 'pending', 'paused', 'past_due', 'trial')),
+    plan TEXT DEFAULT 'premium',
+    provider TEXT DEFAULT 'mercadopago',
+    provider_subscription_id TEXT UNIQUE,
     start_date TIMESTAMPTZ DEFAULT NOW(),
     end_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    current_period_end TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    paused_at TIMESTAMPTZ,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- TABLA USER_STREAKS
@@ -359,6 +367,8 @@ CREATE INDEX idx_transactions_raw_processed ON public.transactions_raw(is_proces
 CREATE INDEX idx_subscriptions_user_id ON public.subscriptions(user_id);
 CREATE INDEX idx_subscriptions_status ON public.subscriptions(status);
 CREATE INDEX idx_subscriptions_end_date ON public.subscriptions(end_date);
+CREATE INDEX idx_subscriptions_provider ON public.subscriptions(provider);
+CREATE INDEX idx_subscriptions_provider_id ON public.subscriptions(provider_subscription_id);
 
 -- Índices para user_streaks
 CREATE INDEX idx_user_streaks_user_id ON public.user_streaks(user_id);
@@ -469,8 +479,11 @@ CREATE POLICY "transactions_raw_all_own" ON public.transactions_raw
     FOR ALL USING (auth.uid() = user_id);
 
 -- Políticas para SUBSCRIPTIONS
-CREATE POLICY "subscriptions_all_own" ON public.subscriptions
-    FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "subscriptions_select_own" ON public.subscriptions
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "subscriptions_service_role" ON public.subscriptions
+    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
 
 -- Políticas para USER_STREAKS
 CREATE POLICY "user_streaks_all_own" ON public.user_streaks
@@ -611,6 +624,10 @@ CREATE TRIGGER update_user_streaks_updated_at
 
 CREATE TRIGGER update_user_quest_progress_updated_at
     BEFORE UPDATE ON public.user_quest_progress
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER update_subscriptions_updated_at
+    BEFORE UPDATE ON public.subscriptions
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- Trigger para actualizar progreso de metas

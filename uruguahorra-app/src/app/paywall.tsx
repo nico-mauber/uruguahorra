@@ -7,6 +7,7 @@ import {
   Alert,
   TouchableOpacity,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -80,7 +81,43 @@ export default function PaywallScreen() {
 
       // Abrir URL de checkout de MercadoPago
       if (checkout.url) {
-        await Linking.openURL(checkout.url);
+        console.log('Redirigiendo a MercadoPago:', checkout.url);
+        console.log('Platform:', Platform.OS);
+        
+        try {
+          if (Platform.OS === 'web') {
+            // Para web, abrir en nueva pestaña
+            window.open(checkout.url, '_blank');
+          } else if (Platform.OS === 'ios' || Platform.OS === 'android') {
+            // Para móvil, verificar si se puede abrir la URL
+            const canOpen = await Linking.canOpenURL(checkout.url);
+            console.log('Can open URL:', canOpen);
+            
+            if (canOpen) {
+              await Linking.openURL(checkout.url);
+            } else {
+              // Si no se puede abrir directamente, mostrar error
+              console.error('No se puede abrir la URL directamente');
+              Alert.alert(
+                'Error',
+                'No se pudo abrir el link de pago. Por favor, intenta desde un navegador web.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error abriendo URL:', error);
+          Alert.alert(
+            'Error',
+            'Hubo un problema al abrir el link de pago. Intenta nuevamente.'
+          );
+        }
+      } else {
+        console.error('No se recibió URL de checkout');
+        Alert.alert(
+          'Error',
+          'No se pudo obtener la URL de pago. Inténtalo nuevamente.'
+        );
       }
     } catch (error) {
       console.error('Error al crear checkout:', error);
@@ -338,7 +375,7 @@ export default function PaywallScreen() {
                 <View style={styles.planInfo}>
                   <Text style={styles.planName}>Plan Mensual</Text>
                   <Text style={styles.planPrice}>
-                    ${monthlyPlan?.price || 4.99}<Text style={styles.planPeriod}>/mes</Text>
+                    ${monthlyPlan?.price || 15}<Text style={styles.planPeriod}>/mes</Text>
                   </Text>
                   <Text style={styles.planDescription}>
                     Cancela cuando quieras
@@ -374,7 +411,7 @@ export default function PaywallScreen() {
           title={
             selectedPlan === 'premium_yearly'
               ? `Suscribirse por $${yearlyPlan?.price || 39.99}/año`
-              : `Suscribirse por $${monthlyPlan?.price || 4.99}/mes`
+              : `Suscribirse por $${monthlyPlan?.price || 1}/mes`
           }
           size="large"
           loading={isLoading}

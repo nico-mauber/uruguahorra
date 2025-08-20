@@ -2,7 +2,14 @@
  * Componente para mostrar prompt de instalación PWA personalizado
  */
 import React from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity, Platform } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { usePWA } from '../hooks/usePWA';
 import { useTheme } from '../theme/ThemeContext';
 import { Button } from './Button';
@@ -50,22 +57,31 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({
                 ¡Instala Uruguahorra!
               </Text>
             </View>
-            
+
             <Text style={[styles.description, { color: colors.textSecondary }]}>
-              Instala la app en tu dispositivo para acceder más rápido y recibir notificaciones de tus metas de ahorro.
+              Instala la app en tu dispositivo para acceder más rápido y recibir
+              notificaciones de tus metas de ahorro.
             </Text>
 
             <View style={styles.benefits}>
-              <Text style={[styles.benefitItem, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.benefitItem, { color: colors.textSecondary }]}
+              >
                 ✨ Acceso rápido desde tu pantalla de inicio
               </Text>
-              <Text style={[styles.benefitItem, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.benefitItem, { color: colors.textSecondary }]}
+              >
                 🔔 Notificaciones de progreso
               </Text>
-              <Text style={[styles.benefitItem, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.benefitItem, { color: colors.textSecondary }]}
+              >
                 📴 Funciona sin conexión a internet
               </Text>
-              <Text style={[styles.benefitItem, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.benefitItem, { color: colors.textSecondary }]}
+              >
                 🚀 Carga más rápida
               </Text>
             </View>
@@ -80,7 +96,9 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({
                 onPress={onDismiss}
                 style={styles.dismissButton}
               >
-                <Text style={[styles.dismissText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.dismissText, { color: colors.textSecondary }]}
+                >
                   Ahora no
                 </Text>
               </TouchableOpacity>

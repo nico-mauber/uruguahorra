@@ -15,7 +15,7 @@ import { useTheme } from '../theme/ThemeContext';
 export const PWAStatus: React.FC = () => {
   const { theme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
-  
+
   // Esperar a que el componente esté montado para evitar problemas de hidratación
   useEffect(() => {
     setIsMounted(true);
@@ -23,12 +23,14 @@ export const PWAStatus: React.FC = () => {
 
   // Solo obtener el estado PWA después de que el componente esté montado
   const pwaHookResult = usePWA();
-  const { isOnline, hasUpdate, updateApp, isStandalone } = isMounted ? pwaHookResult : {
-    isOnline: true,
-    hasUpdate: false,
-    updateApp: () => {},
-    isStandalone: false
-  };
+  const { isOnline, hasUpdate, updateApp, isStandalone } = isMounted
+    ? pwaHookResult
+    : {
+        isOnline: true,
+        hasUpdate: false,
+        updateApp: () => {},
+        isStandalone: false,
+      };
 
   // Solo mostrar en web y después del montaje
   if (Platform.OS !== 'web' || !isMounted) {
@@ -53,7 +55,9 @@ export const PWAStatus: React.FC = () => {
       {/* Indicador de instalación */}
       {isStandalone && (
         <View style={styles.statusItem}>
-          <View style={[styles.indicator, { backgroundColor: theme.primary }]} />
+          <View
+            style={[styles.indicator, { backgroundColor: theme.primary }]}
+          />
           <Text style={[styles.statusText, { color: theme.textSecondary }]}>
             📱 App instalada
           </Text>
@@ -77,7 +81,7 @@ export const PWAStatus: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute' as any,
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,

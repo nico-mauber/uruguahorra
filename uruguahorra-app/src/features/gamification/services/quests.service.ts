@@ -8,7 +8,7 @@ import {
 } from '../utils/formulas';
 import { QUEST_SETTINGS } from '../utils/constants';
 import { XPService } from './xp.service';
-import { callThrottler } from '@/lib/throttle';
+// import { callThrottler } from '@/lib/throttle'; // TODO: Use when throttling is needed
 
 export class QuestsService {
   /**

@@ -247,7 +247,9 @@ export class StreaksService {
             streaks.length
           : 0;
       const maxStreak =
-        streaks.length > 0 ? Math.max(...streaks.map((s) => s.longest_streak)) : 0;
+        streaks.length > 0
+          ? Math.max(...streaks.map((s) => s.longest_streak))
+          : 0;
       const protectionsUsed = streaks.reduce(
         (sum, s) => sum + s.streak_protections_used,
         0

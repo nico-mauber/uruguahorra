@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { Card, ProgressBar, Button } from '@components';
 import { GoalDetailModal } from '@/components/GoalDetailModal';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
@@ -23,7 +23,7 @@ import { ToastService } from '@/utils/toast';
 export default function GoalsScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const { goals, isLoading, fetchGoals, getGoalProgress, getTotalSaved } =
     useGoalsStore();
 

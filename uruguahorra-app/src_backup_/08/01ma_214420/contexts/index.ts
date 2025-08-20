@@ -3,7 +3,7 @@ export { AuthProvider, useAuth } from './AuthContext';
 // Hook de compatibilidad para facilitar la migración
 export const useAuthStore = () => {
   const auth = useAuth();
-  
+
   return {
     // Estados
     user: auth.user,
@@ -12,7 +12,7 @@ export const useAuthStore = () => {
     isLoading: auth.isLoading,
     isPremium: auth.isPremium,
     rateLimitError: auth.rateLimitError,
-    
+
     // Métodos
     login: auth.login,
     signup: auth.signup,
@@ -22,10 +22,12 @@ export const useAuthStore = () => {
     updateProfile: auth.updateProfile,
     clearRateLimitError: auth.clearRateLimitError,
     refreshUser: auth.refreshUser,
-    
+
     // Método de compatibilidad (deprecado)
     checkSession: async () => {
-      console.warn('checkSession is deprecated. Use AuthProvider initialization instead.');
+      console.warn(
+        'checkSession is deprecated. Use AuthProvider initialization instead.'
+      );
       await auth.refreshUser();
     },
   };

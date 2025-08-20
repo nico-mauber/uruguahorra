@@ -17,7 +17,7 @@ import { Card } from './Card';
 import { ProgressBar } from './ProgressBar';
 import { Button } from './Button';
 import { GoalsService } from '@/services/goals.service';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { ToastService } from '@/utils/toast';
 import { logger, LogModule } from '@/utils/logger';
 
@@ -52,7 +52,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   onGoalUpdate,
 }) => {
   const { theme } = useTheme();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const screenHeight = Dimensions.get('window').height;
 
   const [contributions, setContributions] = useState<Contribution[]>([]);

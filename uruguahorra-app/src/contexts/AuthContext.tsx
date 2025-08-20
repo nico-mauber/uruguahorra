@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
 import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -85,10 +91,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         streak: userData.streak,
       };
 
-      logger.success(LogModule.AUTH, 'Datos del usuario cargados exitosamente', {
-        userId: userWithStats.id,
-        level: userWithStats.level,
-      });
+      logger.success(
+        LogModule.AUTH,
+        'Datos del usuario cargados exitosamente',
+        {
+          userId: userWithStats.id,
+          level: userWithStats.level,
+        }
+      );
 
       return {
         user: userWithStats,
@@ -101,45 +111,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Función para actualizar el estado de autenticación
-  const updateAuthState = useCallback(async (session: Session | null) => {
-    if (!session) {
-      logger.info(LogModule.AUTH, 'No hay sesión activa, limpiando estado');
-      setUser(null);
-      setSupabaseUser(null);
-      setIsAuthenticated(false);
-      setIsPremium(false);
-      setIsLoading(false);
-      return;
-    }
+  const updateAuthState = useCallback(
+    async (session: Session | null) => {
+      if (!session) {
+        logger.info(LogModule.AUTH, 'No hay sesión activa, limpiando estado');
+        setUser(null);
+        setSupabaseUser(null);
+        setIsAuthenticated(false);
+        setIsPremium(false);
+        setIsLoading(false);
+        return;
+      }
 
-    const authUser = session.user;
-    
-    // Si ya tenemos el mismo usuario, no recargar datos
-    if (user && user.id === authUser.id) {
-      logger.debug(LogModule.AUTH, 'Usuario ya cargado, actualizando solo session');
-      setSupabaseUser(authUser);
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
+      const authUser = session.user;
 
-    // Cargar datos del nuevo usuario
-    const userData = await loadUserData(authUser);
-    
-    if (userData) {
-      setUser(userData.user);
-      setSupabaseUser(authUser);
-      setIsAuthenticated(true);
-      setIsPremium(userData.isPremium);
-    } else {
-      setUser(null);
-      setSupabaseUser(null);
-      setIsAuthenticated(false);
-      setIsPremium(false);
-    }
-    
-    setIsLoading(false);
-  }, [user, loadUserData]);
+      // Si ya tenemos el mismo usuario, no recargar datos
+      if (user && user.id === authUser.id) {
+        logger.debug(
+          LogModule.AUTH,
+          'Usuario ya cargado, actualizando solo session'
+        );
+        setSupabaseUser(authUser);
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Cargar datos del nuevo usuario
+      const userData = await loadUserData(authUser);
+
+      if (userData) {
+        setUser(userData.user);
+        setSupabaseUser(authUser);
+        setIsAuthenticated(true);
+        setIsPremium(userData.isPremium);
+      } else {
+        setUser(null);
+        setSupabaseUser(null);
+        setIsAuthenticated(false);
+        setIsPremium(false);
+      }
+
+      setIsLoading(false);
+    },
+    [user, loadUserData]
+  );
 
   // Inicialización del AuthProvider
   useEffect(() => {
@@ -154,7 +170,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const session = await AuthService.getSession();
         await updateAuthState(session);
 
-        logger.success(LogModule.AUTH, 'AuthProvider inicializado exitosamente');
+        logger.success(
+          LogModule.AUTH,
+          'AuthProvider inicializado exitosamente'
+        );
       } catch (error) {
         logger.error(LogModule.AUTH, 'Error inicializando AuthProvider', error);
         setIsLoading(false);
@@ -172,44 +191,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     logger.info(LogModule.AUTH, 'Configurando listener de auth state changes');
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        logger.debug(LogModule.AUTH, 'Auth state changed', {
-          event,
-          hasSession: !!session,
-          userId: session?.user?.id || 'none',
-        });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logger.debug(LogModule.AUTH, 'Auth state changed', {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id || 'none',
+      });
 
-        switch (event) {
-          case 'SIGNED_IN':
-            if (session) {
-              logger.info(LogModule.AUTH, 'Usuario autenticado');
+      switch (event) {
+        case 'SIGNED_IN':
+          if (session) {
+            logger.info(LogModule.AUTH, 'Usuario autenticado');
+            await updateAuthState(session);
+          }
+          break;
+
+        case 'SIGNED_OUT':
+          logger.info(LogModule.AUTH, 'Usuario desautenticado');
+          await updateAuthState(null);
+          break;
+
+        case 'TOKEN_REFRESHED':
+          if (session) {
+            logger.debug(LogModule.AUTH, 'Token refrescado');
+            // Solo actualizar si cambió el usuario
+            if (!user || user.id !== session.user.id) {
               await updateAuthState(session);
+            } else {
+              setSupabaseUser(session.user);
             }
-            break;
+          }
+          break;
 
-          case 'SIGNED_OUT':
-            logger.info(LogModule.AUTH, 'Usuario desautenticado');
-            await updateAuthState(null);
-            break;
-
-          case 'TOKEN_REFRESHED':
-            if (session) {
-              logger.debug(LogModule.AUTH, 'Token refrescado');
-              // Solo actualizar si cambió el usuario
-              if (!user || user.id !== session.user.id) {
-                await updateAuthState(session);
-              } else {
-                setSupabaseUser(session.user);
-              }
-            }
-            break;
-
-          default:
-            break;
-        }
+        default:
+          break;
       }
-    );
+    });
 
     return () => {
       logger.info(LogModule.AUTH, 'Limpiando listener de auth state changes');
@@ -218,105 +237,111 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isInitialized, updateAuthState, user]);
 
   // Métodos de autenticación
-  const login = useCallback(async (email: string, password: string) => {
-    logger.start(LogModule.AUTH, 'Iniciando proceso de login', { email });
-    setIsLoading(true);
-    setRateLimitError(null);
-    
-    try {
-      const { user: authUser } = await AuthService.signIn(email, password);
-      
-      if (!authUser) throw new Error('No se pudo autenticar');
-
-      const userData = await loadUserData(authUser);
-      
-      if (!userData) {
-        throw new Error('No se pudo cargar los datos del usuario');
-      }
-
-      setUser(userData.user);
-      setSupabaseUser(authUser);
-      setIsAuthenticated(true);
-      setIsPremium(userData.isPremium);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      logger.start(LogModule.AUTH, 'Iniciando proceso de login', { email });
+      setIsLoading(true);
       setRateLimitError(null);
 
-      logger.success(LogModule.AUTH, 'Login completado exitosamente', {
-        userId: userData.user.id,
-      });
-    } catch (error) {
-      logger.error(LogModule.AUTH, 'Error en login', error);
-      
-      const rateLimitError =
-        error instanceof RateLimitError ? error.message : null;
-      setRateLimitError(rateLimitError);
-      
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadUserData]);
+      try {
+        const { user: authUser } = await AuthService.signIn(email, password);
 
-  const signup = useCallback(async (
-    email: string,
-    password: string,
-    metadata?: { country?: string; currency?: string }
-  ) => {
-    logger.start(LogModule.AUTH, 'Iniciando proceso de registro', {
-      email,
-      metadata,
-    });
-    setIsLoading(true);
-    setRateLimitError(null);
-    
-    try {
-      const { user: authUser, session } = await AuthService.signUp(
-        email,
-        password,
-        metadata
-      );
+        if (!authUser) throw new Error('No se pudo autenticar');
 
-      if (!authUser) throw new Error('No se pudo crear la cuenta');
+        const userData = await loadUserData(authUser);
 
-      // Para signup, el usuario se creará automáticamente por el trigger de la DB
-      // Esperamos un poco y luego cargamos los datos
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userData = await loadUserData(authUser);
-      
-      if (userData) {
+        if (!userData) {
+          throw new Error('No se pudo cargar los datos del usuario');
+        }
+
         setUser(userData.user);
         setSupabaseUser(authUser);
         setIsAuthenticated(true);
         setIsPremium(userData.isPremium);
-      }
+        setRateLimitError(null);
 
-      logger.success(LogModule.AUTH, 'Registro completado exitosamente', {
-        userId: authUser.id,
+        logger.success(LogModule.AUTH, 'Login completado exitosamente', {
+          userId: userData.user.id,
+        });
+      } catch (error) {
+        logger.error(LogModule.AUTH, 'Error en login', error);
+
+        const rateLimitError =
+          error instanceof RateLimitError ? error.message : null;
+        setRateLimitError(rateLimitError);
+
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loadUserData]
+  );
+
+  const signup = useCallback(
+    async (
+      email: string,
+      password: string,
+      metadata?: { country?: string; currency?: string }
+    ) => {
+      logger.start(LogModule.AUTH, 'Iniciando proceso de registro', {
+        email,
+        metadata,
       });
-    } catch (error) {
-      logger.error(LogModule.AUTH, 'Error en registro', error);
-      
-      const rateLimitError =
-        error instanceof RateLimitError ? error.message : null;
-      setRateLimitError(rateLimitError);
-      
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadUserData]);
+      setIsLoading(true);
+      setRateLimitError(null);
+
+      try {
+        const { user: authUser } = await AuthService.signUp(
+          email,
+          password,
+          metadata
+        );
+
+        if (!authUser) throw new Error('No se pudo crear la cuenta');
+
+        // Para signup, el usuario se creará automáticamente por el trigger de la DB
+        // Esperamos un poco y luego cargamos los datos
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const userData = await loadUserData(authUser);
+
+        if (userData) {
+          setUser(userData.user);
+          setSupabaseUser(authUser);
+          setIsAuthenticated(true);
+          setIsPremium(userData.isPremium);
+        }
+
+        logger.success(LogModule.AUTH, 'Registro completado exitosamente', {
+          userId: authUser.id,
+        });
+      } catch (error) {
+        logger.error(LogModule.AUTH, 'Error en registro', error);
+
+        const rateLimitError =
+          error instanceof RateLimitError ? error.message : null;
+        setRateLimitError(rateLimitError);
+
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loadUserData]
+  );
 
   const logout = useCallback(async () => {
     try {
       logger.info(LogModule.AUTH, 'Cerrando sesión');
       await AuthService.signOut();
-      
+
       setUser(null);
       setSupabaseUser(null);
       setIsAuthenticated(false);
       setIsPremium(false);
       setRateLimitError(null);
-      
+
       logger.success(LogModule.AUTH, 'Sesión cerrada exitosamente');
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error en logout', error);
@@ -324,50 +349,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const updateUserXP = useCallback((xp: number) => {
-    if (!user) return;
+  const updateUserXP = useCallback(
+    (xp: number) => {
+      if (!user) return;
 
-    const newTotalXP = user.totalXP + xp;
-    const newLevel = LevelsService.getLevel(newTotalXP);
-
-    setUser({
-      ...user,
-      totalXP: newTotalXP,
-      level: newLevel,
-    });
-  }, [user]);
-
-  const updateStreak = useCallback((streak: number) => {
-    if (!user) return;
-
-    setUser({
-      ...user,
-      streak,
-    });
-  }, [user]);
-
-  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    if (!user) throw new Error('No hay usuario autenticado');
-
-    try {
-      const updatedProfile = await AuthService.updateUserProfile(
-        user.id,
-        updates
-      );
+      const newTotalXP = user.totalXP + xp;
+      const newLevel = LevelsService.getLevel(newTotalXP);
 
       setUser({
         ...user,
-        ...updatedProfile,
+        totalXP: newTotalXP,
+        level: newLevel,
       });
-    } catch (error) {
-      logger.error(LogModule.AUTH, 'Error actualizando perfil', error);
-      throw error;
-    }
-  }, [user]);
+    },
+    [user]
+  );
+
+  const updateStreak = useCallback(
+    (streak: number) => {
+      if (!user) return;
+
+      setUser({
+        ...user,
+        streak,
+      });
+    },
+    [user]
+  );
+
+  const updateProfile = useCallback(
+    async (updates: Partial<UserProfile>) => {
+      if (!user) throw new Error('No hay usuario autenticado');
+
+      try {
+        const updatedProfile = await AuthService.updateUserProfile(
+          user.id,
+          updates
+        );
+
+        setUser({
+          ...user,
+          ...updatedProfile,
+        });
+      } catch (error) {
+        logger.error(LogModule.AUTH, 'Error actualizando perfil', error);
+        throw error;
+      }
+    },
+    [user]
+  );
 
   const refreshUser = useCallback(async () => {
     if (!supabaseUser) return;
-    
+
     const userData = await loadUserData(supabaseUser);
     if (userData) {
       setUser(userData.user);

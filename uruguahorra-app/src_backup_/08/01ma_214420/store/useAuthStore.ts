@@ -369,7 +369,10 @@ AuthService.onAuthStateChange((event, session) => {
     logger.info(LogModule.AUTH, 'Usuario autenticado, verificando sesión');
 
     // Verificar si es un usuario diferente al actual
-    if (currentState.user && currentState.user.id !== (session as any).user.id) {
+    if (
+      currentState.user &&
+      currentState.user.id !== (session as any).user.id
+    ) {
       logger.warn(
         LogModule.AUTH,
         'Cambio de usuario detectado, limpiando store primero',
@@ -411,7 +414,10 @@ AuthService.onAuthStateChange((event, session) => {
       'Token refrescado, actualizando store si es necesario'
     );
 
-    if (currentState.user && currentState.user.id !== (session as any).user.id) {
+    if (
+      currentState.user &&
+      currentState.user.id !== (session as any).user.id
+    ) {
       logger.warn(
         LogModule.AUTH,
         'Usuario cambió durante refresh, re-verificando sesión'

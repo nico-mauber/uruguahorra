@@ -8,7 +8,6 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { logger, LogModule } from '@/utils/logger';
 import Toast from 'react-native-toast-message';
 import { ErrorBoundary, PWAStatus } from '@components';
-import { usePWA } from '@/hooks/usePWA';
 
 function LoadingScreen() {
   return (
@@ -33,7 +32,7 @@ function RootLayoutNav() {
   useEffect(() => {
     // El AuthProvider ya maneja la inicialización automáticamente
     // No necesitamos checkSession aquí
-    
+
     // No navegar mientras se está cargando
     if (isLoading) return;
 
@@ -95,8 +94,6 @@ function RootLayoutNav() {
 }
 
 function AppContent() {
-  const { isOnline } = usePWA();
-
   return (
     <>
       <RootLayoutNav />

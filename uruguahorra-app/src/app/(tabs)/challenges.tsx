@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Challenge {
@@ -18,7 +18,7 @@ interface Challenge {
 
 export default function ChallengesScreen() {
   const { theme } = useTheme();
-  const { updateUserXP } = useAuthStore();
+  const { updateUserXP } = useAuth();
 
   const [challenges, setChallenges] = React.useState<Challenge[]>([
     {

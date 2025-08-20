@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { AuthService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
@@ -21,7 +21,7 @@ interface UseSessionOptions {
 export function useSession(options: UseSessionOptions = {}) {
   const { autoRefreshOnFocus = true, refreshInterval = 30 } = options;
 
-  const { user, isAuthenticated, isLoading, checkSession } = useAuthStore();
+  const { user, isAuthenticated, isLoading, checkSession } = useAuth();
   const [sessionState, setSessionState] = useState<SessionState>({
     isLoading: true,
     isAuthenticated: false,

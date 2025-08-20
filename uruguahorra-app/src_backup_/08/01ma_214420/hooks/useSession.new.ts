@@ -14,13 +14,8 @@ interface SessionState {
  * Ya no necesitamos manejar manualmente las sesiones
  */
 export function useSession() {
-  const { 
-    user, 
-    isAuthenticated, 
-    isLoading, 
-    rateLimitError,
-    refreshUser 
-  } = useAuth();
+  const { user, isAuthenticated, isLoading, rateLimitError, refreshUser } =
+    useAuth();
 
   const sessionState: SessionState = {
     isLoading,
@@ -53,12 +48,12 @@ export function useSession() {
 
 /**
  * Nota: Este hook ahora es mucho más simple porque:
- * 
+ *
  * 1. No necesitamos AppState listeners - el AuthProvider los maneja
- * 2. No necesitamos intervalos de refresh - automático en AuthProvider  
+ * 2. No necesitamos intervalos de refresh - automático en AuthProvider
  * 3. No necesitamos checkSession manual - se hace automáticamente
  * 4. No necesitamos manejar auth state changes - AuthProvider los maneja
  * 5. Menos código = menos bugs = mejor rendimiento
- * 
+ *
  * El 90% de la lógica original era innecesaria con AuthProvider.
  */

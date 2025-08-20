@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { authInterceptor, RateLimitError } from '@/lib/auth-interceptor';
-import { cache } from '@/lib/cache';
+// import { cache } from '@/lib/cache'; // TODO: Use cache when needed
 // import { ProfileSyncService } from './profile-sync.service'; // TODO: Implement profile sync
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -321,7 +321,11 @@ export class AuthService {
         supabase.from('user_xp_log').select('xp_earned').eq('user_id', userId),
 
         // Racha actual (si la tabla existe)
-        supabase.from('user_streaks').select('*').eq('user_id', userId).single(),
+        supabase
+          .from('user_streaks')
+          .select('*')
+          .eq('user_id', userId)
+          .single(),
       ]);
 
       // Procesar resultados
@@ -341,10 +345,7 @@ export class AuthService {
 
       const totalXP =
         xpResult.status === 'fulfilled' && xpResult.value.data
-          ? xpResult.value.data.reduce(
-              (sum, entry) => sum + entry.xp_earned,
-              0
-            )
+          ? xpResult.value.data.reduce((sum, entry) => sum + entry.xp_earned, 0)
           : challengesCompleted * 50; // Fallback: 50 XP por desafío
 
       const streak =

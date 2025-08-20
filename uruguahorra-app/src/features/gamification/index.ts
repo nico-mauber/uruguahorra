@@ -1,5 +1,6 @@
 // Types
 export * from './types/gamification.types';
+import type { StreakData, QuestProgress } from './types/gamification.types';
 
 // Services
 export { XPService } from './services/xp.service';
@@ -36,8 +37,8 @@ export class GamificationService {
     try {
       const promises: [
         Promise<number>,
-        Promise<any>,
-        Promise<any>?
+        Promise<StreakData | null>,
+        Promise<QuestProgress[]>?,
       ] = [
         XPService.getUserTotalXP(userId),
         StreaksService.getUserStreak(userId),
@@ -52,7 +53,8 @@ export class GamificationService {
       const [totalXPResult, streakResult, questsResult] = results;
 
       // Manejar resultados con valores por defecto para errores
-      const finalTotalXP = totalXPResult.status === 'fulfilled' ? totalXPResult.value : 0;
+      const finalTotalXP =
+        totalXPResult.status === 'fulfilled' ? totalXPResult.value : 0;
       const finalStreak =
         streakResult.status === 'fulfilled' && streakResult.value
           ? streakResult.value
@@ -68,7 +70,9 @@ export class GamificationService {
               updated_at: new Date().toISOString(),
             };
       const finalActiveQuests =
-        options.skipQuests || !questsResult || questsResult.status !== 'fulfilled'
+        options.skipQuests ||
+        !questsResult ||
+        questsResult.status !== 'fulfilled'
           ? []
           : questsResult.value;
 

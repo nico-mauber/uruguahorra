@@ -11,13 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Card, Button, ProgressBar } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -231,8 +231,6 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cuenta</Text>
           <Card padding="none">
-          
-
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => router.push('/paywall')}

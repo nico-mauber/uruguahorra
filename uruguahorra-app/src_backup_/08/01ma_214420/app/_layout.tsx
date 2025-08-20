@@ -33,7 +33,7 @@ function RootLayoutNav() {
   useEffect(() => {
     // El AuthProvider ya maneja la inicialización automáticamente
     // No necesitamos checkSession aquí
-    
+
     // No navegar mientras se está cargando
     if (isLoading) return;
 

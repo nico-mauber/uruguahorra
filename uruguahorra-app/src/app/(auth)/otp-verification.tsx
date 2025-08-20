@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+// useAuth import removed - not needed as AuthProvider handles session automatically
 import { AuthService } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { logger, LogModule } from '@/utils/logger';
@@ -87,8 +87,7 @@ export default function OTPVerificationScreen() {
 
       logger.success(LogModule.AUTH, 'OTP verificado, iniciando sesión');
 
-      // Update auth store with the authenticated user
-      await useAuthStore.getState().checkSession();
+      // AuthProvider handles session management automatically
 
       logger.info(LogModule.NAV, 'Redirigiendo al dashboard tras OTP exitoso');
       router.replace('/(tabs)');

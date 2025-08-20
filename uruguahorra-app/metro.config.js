@@ -4,9 +4,10 @@ const path = require('path');
 const config = getDefaultConfig(__dirname);
 
 // Detectar si estamos en modo web mirando los argumentos del proceso y variables de entorno
-const isWeb = process.argv.includes('--web') || 
-              process.env.EXPO_PUBLIC_PLATFORM === 'web' ||
-              process.env.EXPO_WEB_BUILD === 'true';
+const isWeb =
+  process.argv.includes('--web') ||
+  process.env.EXPO_PUBLIC_PLATFORM === 'web' ||
+  process.env.EXPO_WEB_BUILD === 'true';
 
 console.log('[Metro Config] Web mode detected:', isWeb);
 
@@ -42,7 +43,10 @@ config.resolver = {
   ...config.resolver,
   sourceExts: [...config.resolver.sourceExts, 'cjs', 'mjs'],
   // Asegurar que los archivos web se sirvan correctamente
-  assetExts: [...config.resolver.assetExts.filter(ext => ext !== 'svg'), 'svg'],
+  assetExts: [
+    ...config.resolver.assetExts.filter((ext) => ext !== 'svg'),
+    'svg',
+  ],
 };
 
 // Configuración del servidor
@@ -53,7 +57,11 @@ config.server = {
       // Servir archivos polyfill desde la carpeta web
       if (req.url === '/babel-helpers-polyfill.js') {
         const fs = require('fs');
-        const polyfillPath = path.join(__dirname, 'web', 'babel-helpers-polyfill.js');
+        const polyfillPath = path.join(
+          __dirname,
+          'web',
+          'babel-helpers-polyfill.js'
+        );
         if (fs.existsSync(polyfillPath)) {
           res.setHeader('Content-Type', 'application/javascript');
           res.end(fs.readFileSync(polyfillPath, 'utf8'));
@@ -62,19 +70,23 @@ config.server = {
       }
       if (req.url === '/import-meta-polyfill.js') {
         const fs = require('fs');
-        const polyfillPath = path.join(__dirname, 'web', 'import-meta-polyfill.js');
+        const polyfillPath = path.join(
+          __dirname,
+          'web',
+          'import-meta-polyfill.js'
+        );
         if (fs.existsSync(polyfillPath)) {
           res.setHeader('Content-Type', 'application/javascript');
           res.end(fs.readFileSync(polyfillPath, 'utf8'));
           return;
         }
       }
-      
+
       // Headers para módulos JS
       if (req.url && (req.url.includes('.js') || req.url.includes('.bundle'))) {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       }
-      
+
       return middleware(req, res, next);
     };
   },

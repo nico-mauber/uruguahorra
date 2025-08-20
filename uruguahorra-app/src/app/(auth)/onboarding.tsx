@@ -279,7 +279,10 @@ export default function OnboardingScreen() {
 
       // Crear la meta en Supabase
       console.log('Llamando a GoalsService.createGoal...');
-      const createdGoal = await GoalsService.createGoal(goalData);
+      const createdGoal = await GoalsService.createGoal(
+        currentUser.id,
+        goalData
+      );
 
       console.log('¡Meta creada exitosamente!:', createdGoal);
 
@@ -295,21 +298,27 @@ export default function OnboardingScreen() {
       router.replace('/(tabs)');
     } catch (error: unknown) {
       console.error('=== ERROR CREANDO META ===');
-      console.error('Tipo de error:', error.constructor.name);
-      console.error('Mensaje:', error.message);
-      console.error('Código:', error.code);
-      console.error('Detalles:', error.details);
-      console.error('Stack:', error.stack);
+      console.error(
+        'Tipo de error:',
+        error instanceof Error ? error.constructor.name : 'Unknown'
+      );
+      console.error(
+        'Mensaje:',
+        error instanceof Error ? error.message : String(error)
+      );
+      console.error('Código:', (error as any)?.code);
+      console.error('Detalles:', (error as any)?.details);
+      console.error('Stack:', error instanceof Error ? error.stack : undefined);
 
       // Mensajes de error específicos
       let errorMessage = 'No se pudo crear la meta';
 
-      if (error.code === '23505') {
+      if ((error as any)?.code === '23505') {
         errorMessage = 'Ya existe una meta con ese nombre';
-      } else if (error.code === '42501') {
+      } else if ((error as any)?.code === '42501') {
         errorMessage =
           'No tienes permisos para crear metas. Verifica tu sesión.';
-      } else if (error.message) {
+      } else if (error instanceof Error && error.message) {
         errorMessage = error.message;
       }
 
@@ -356,7 +365,10 @@ export default function OnboardingScreen() {
       }
     } catch (error) {
       console.error('Error en handleNext:', error);
-      console.error('Stack trace:', error.stack);
+      console.error(
+        'Stack trace:',
+        error instanceof Error ? error.stack : undefined
+      );
     }
   };
 
@@ -641,13 +653,8 @@ export default function OnboardingScreen() {
           {step === 2 && (
             <>
               {goalOptions.map((option) => (
-                <Card
+                <TouchableOpacity
                   key={option.id}
-                  variant="outline"
-                  style={[
-                    styles.goalOption,
-                    goalType === option.value && styles.selectedGoal,
-                  ]}
                   onPress={() => {
                     if (!isLoading) {
                       console.log('Seleccionando tipo de meta:', option.value);
@@ -661,10 +668,18 @@ export default function OnboardingScreen() {
                     }
                   }}
                 >
-                  <View style={styles.goalOptionContent}>
-                    <Text style={styles.goalOptionText}>{option.label}</Text>
-                  </View>
-                </Card>
+                  <Card
+                    variant="outlined"
+                    style={[
+                      styles.goalOption,
+                      goalType === option.value && styles.selectedGoal,
+                    ]}
+                  >
+                    <View style={styles.goalOptionContent}>
+                      <Text style={styles.goalOptionText}>{option.label}</Text>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
               ))}
             </>
           )}

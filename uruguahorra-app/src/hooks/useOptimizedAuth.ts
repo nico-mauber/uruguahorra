@@ -11,7 +11,10 @@ export function useOptimizedAuth() {
   // Ya no necesitamos useEffect ni lógica de optimización
   // El AuthProvider maneja todo esto automáticamente
 
-  logger.debug(LogModule.AUTH, 'useOptimizedAuth: AuthProvider ya maneja las optimizaciones');
+  logger.debug(
+    LogModule.AUTH,
+    'useOptimizedAuth: AuthProvider ya maneja las optimizaciones'
+  );
 
   // Retornamos directamente los datos del AuthProvider
   return {

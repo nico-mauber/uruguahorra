@@ -85,12 +85,20 @@ export default function DashboardScreen() {
   };
 
   // Función optimizada para cargar estadísticas de gamificación (SOLO cuando sea necesario)
-  const loadGamificationStats = async (userId: string, skipQuests: boolean = false) => {
+  const loadGamificationStats = async (
+    userId: string,
+    skipQuests: boolean = false
+  ) => {
     try {
       // OPTIMIZACIÓN: Cargar solo stats básicas, no quests fallidos
-      const stats = await GamificationService.getUserBasicStats(userId, { skipQuests });
+      const stats = await GamificationService.getUserBasicStats(userId, {
+        skipQuests,
+      });
       setGamificationStats(stats);
-      logger.success(LogModule.UI, 'Estadísticas de gamificación cargadas (optimizada)');
+      logger.success(
+        LogModule.UI,
+        'Estadísticas de gamificación cargadas (optimizada)'
+      );
     } catch (error) {
       logger.error(
         LogModule.UI,
@@ -300,11 +308,14 @@ export default function DashboardScreen() {
 
       // 2. OPTIMIZACIÓN CRÍTICA: Usar el servicio ultra-optimizado
       // Solo otorga XP y calcula nivel, sin toda la cascada de gamificación
-      const { OptimizedGamificationService } = await import('@/features/gamification/optimized.service');
-      const gamificationResult = await OptimizedGamificationService.processContributionOptimized(
-        user.id, 
-        amount
+      const { OptimizedGamificationService } = await import(
+        '@/features/gamification/optimized.service'
       );
+      const gamificationResult =
+        await OptimizedGamificationService.processContributionOptimized(
+          user.id,
+          amount
+        );
 
       // 3. OPTIMIZACIÓN: Solo recargar goals, las stats se actualizan localmente
       await fetchGoals(user.id, true);
@@ -361,10 +372,13 @@ export default function DashboardScreen() {
   const handleGoalSelection = (goalId: string, adjustedAmount?: number) => {
     // Prevenir múltiples selecciones mientras se procesa
     if (isSaving) {
-      logger.warn(LogModule.UI, 'Selección de meta bloqueada - ahorro en progreso');
+      logger.warn(
+        LogModule.UI,
+        'Selección de meta bloqueada - ahorro en progreso'
+      );
       return;
     }
-    
+
     const amountToSave = adjustedAmount ?? pendingSaveAmount;
     applySavingToGoal(goalId, amountToSave);
     setPendingSaveAmount(0);
@@ -889,9 +903,9 @@ export default function DashboardScreen() {
                 }),
               },
             ],
+            pointerEvents: fabExpanded ? 'auto' : 'none',
           },
         ]}
-        pointerEvents={fabExpanded ? 'auto' : 'none'}
       >
         <TouchableOpacity
           style={styles.fabOptionButton}

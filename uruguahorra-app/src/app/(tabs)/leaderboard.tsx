@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { Ionicons } from '@expo/vector-icons';
 
 interface LeaderboardEntry {
@@ -24,7 +24,7 @@ interface LeaderboardEntry {
 
 export default function LeaderboardScreen() {
   const { theme } = useTheme();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = React.useState<'friends' | 'global'>(
     'friends'

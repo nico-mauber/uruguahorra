@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
-import { useAuthStore } from '@/contexts';
+import { useAuth } from '@/contexts';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PaywallScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>(
     'annual'
   );

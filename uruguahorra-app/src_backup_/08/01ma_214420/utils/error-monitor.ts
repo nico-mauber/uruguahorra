@@ -51,11 +51,11 @@ class ErrorMonitor {
     console.error = (...args) => {
       // Llamar al console.error original
       originalConsoleError.apply(console, args);
-      
+
       // Registrar el error
       this.logError({
         type: 'Console Error',
-        message: args.map(arg => String(arg)).join(' '),
+        message: args.map((arg) => String(arg)).join(' '),
         stack: new Error().stack,
       });
     };
@@ -64,8 +64,8 @@ class ErrorMonitor {
     const originalConsoleWarn = console.warn;
     console.warn = (...args) => {
       originalConsoleWarn.apply(console, args);
-      
-      const message = args.map(arg => String(arg)).join(' ');
+
+      const message = args.map((arg) => String(arg)).join(' ');
       if (message.includes('import.meta') || message.includes('module')) {
         this.logError({
           type: 'Console Warning (import.meta)',
@@ -98,7 +98,8 @@ class ErrorMonitor {
     console.group(`🚨 [${log.timestamp}] ${log.type}`);
     console.error('Message:', log.message);
     if (log.stack) console.error('Stack:', log.stack);
-    if (log.filename) console.error('File:', `${log.filename}:${log.lineno}:${log.colno}`);
+    if (log.filename)
+      console.error('File:', `${log.filename}:${log.lineno}:${log.colno}`);
     console.error('URL:', log.url);
     console.groupEnd();
 
@@ -110,7 +111,7 @@ class ErrorMonitor {
 
   private logInfo(message: string) {
     if (!this.isClient) return;
-    
+
     console.log(`ℹ️ [${new Date().toISOString()}] Error Monitor: ${message}`);
   }
 
@@ -132,15 +133,16 @@ class ErrorMonitor {
 
   // Método para filtrar logs por tipo
   getLogsByType(type: string): ErrorLog[] {
-    return this.logs.filter(log => log.type.includes(type));
+    return this.logs.filter((log) => log.type.includes(type));
   }
 
   // Método para verificar si hay errores de import.meta
   hasImportMetaErrors(): boolean {
-    return this.logs.some(log => 
-      log.message.includes('import.meta') || 
-      log.message.includes('Cannot use') ||
-      log.message.includes('outside a module')
+    return this.logs.some(
+      (log) =>
+        log.message.includes('import.meta') ||
+        log.message.includes('Cannot use') ||
+        log.message.includes('outside a module')
     );
   }
 }
@@ -151,12 +153,13 @@ export const errorMonitor = new ErrorMonitor();
 // Función para agregar al contexto global para debugging desde console
 if (typeof window !== 'undefined') {
   (window as any).errorMonitor = errorMonitor;
-  
+
   // Agregar funciones de utilidad al window para debugging
   (window as any).getErrorLogs = () => errorMonitor.getLogs();
   (window as any).clearErrorLogs = () => errorMonitor.clearLogs();
   (window as any).exportErrorLogs = () => errorMonitor.exportLogs();
-  (window as any).checkImportMetaErrors = () => errorMonitor.hasImportMetaErrors();
+  (window as any).checkImportMetaErrors = () =>
+    errorMonitor.hasImportMetaErrors();
 }
 
 export default ErrorMonitor;

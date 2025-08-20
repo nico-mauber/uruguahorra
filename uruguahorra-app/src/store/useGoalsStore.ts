@@ -134,7 +134,8 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
       logger.error(LogModule.STORE, 'Error cargando metas', error);
       set({
         isLoading: false,
-        error: error.message || 'Error al cargar las metas',
+        error:
+          error instanceof Error ? error.message : 'Error al cargar las metas',
       });
     }
   },

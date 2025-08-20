@@ -25,10 +25,11 @@ interface UsePWAReturn extends PWAState, PWAActions {
 
 export function usePWA(): UsePWAReturn {
   // Detectar si estamos en React Native o en el navegador
-  const isReactNative = typeof navigator !== 'undefined' && 
-    (navigator.product === 'ReactNative' || 
-     typeof window === 'undefined' || 
-     typeof window.matchMedia !== 'function');
+  const isReactNative =
+    typeof navigator !== 'undefined' &&
+    (navigator.product === 'ReactNative' ||
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function');
 
   const [pwaState, setPWAState] = useState<PWAState>({
     isInstalled: false,
@@ -43,9 +44,9 @@ export function usePWA(): UsePWAReturn {
   // Inicializar estado de conexión después del montaje
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
-      setPWAState(prev => ({
+      setPWAState((prev) => ({
         ...prev,
-        isOnline: navigator.onLine
+        isOnline: navigator.onLine,
       }));
     }
   }, []);
@@ -53,33 +54,34 @@ export function usePWA(): UsePWAReturn {
   // Detectar si la app está en modo standalone (instalada)
   useEffect(() => {
     if (typeof window === 'undefined' || isReactNative) return;
-    
+
     // Verificar si matchMedia está disponible (solo en navegadores web)
     const hasMatchMedia = typeof window.matchMedia === 'function';
-    
-    const isStandalone = hasMatchMedia 
-      ? (window.matchMedia('(display-mode: standalone)').matches ||
-         (window.navigator as any).standalone ||
-         document.referrer.includes('android-app://'))
+
+    const isStandalone = hasMatchMedia
+      ? window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone ||
+        document.referrer.includes('android-app://')
       : false; // En React Native, no es standalone por defecto
-    
-    setPWAState(prev => ({
+
+    setPWAState((prev) => ({
       ...prev,
       isStandalone,
-      isInstalled: isStandalone
+      isInstalled: isStandalone,
     }));
   }, [isReactNative]);
 
   // Manejar prompt de instalación (solo en navegadores web)
   useEffect(() => {
     if (typeof window === 'undefined' || isReactNative) return;
-    
+
     // Solo configurar eventos de PWA si estamos en un navegador web
-    const isWeb = typeof window.addEventListener === 'function' && 
-                  typeof window.matchMedia === 'function';
-                  
+    const isWeb =
+      typeof window.addEventListener === 'function' &&
+      typeof window.matchMedia === 'function';
+
     if (!isWeb) return;
-    
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -88,11 +90,11 @@ export function usePWA(): UsePWAReturn {
 
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
-      setPWAState((prev) => ({ 
-        ...prev, 
-        isInstalled: true, 
+      setPWAState((prev) => ({
+        ...prev,
+        isInstalled: true,
         isInstallable: false,
-        isStandalone: true
+        isStandalone: true,
       }));
     };
 
@@ -100,28 +102,36 @@ export function usePWA(): UsePWAReturn {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt
+      );
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, [isReactNative]);
 
   // Manejar cambios de conectividad
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined' || isReactNative) return;
-    
+    if (
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      isReactNative
+    )
+      return;
+
     // Verificar si los eventos están disponibles
     const hasOnlineEvents = typeof window.addEventListener === 'function';
-    
+
     if (!hasOnlineEvents) {
       // En React Native, asumir que está online por defecto
       setPWAState((prev) => ({ ...prev, isOnline: true }));
       return;
     }
-    
+
     const handleOnline = () => {
       setPWAState((prev) => ({ ...prev, isOnline: true }));
     };
-    
+
     const handleOffline = () => {
       setPWAState((prev) => ({ ...prev, isOnline: false }));
     };
@@ -134,33 +144,49 @@ export function usePWA(): UsePWAReturn {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    window.addEventListener('connectionchange', handleConnectionChange as EventListener);
+    window.addEventListener(
+      'connectionchange',
+      handleConnectionChange as EventListener
+    );
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('connectionchange', handleConnectionChange as EventListener);
+      window.removeEventListener(
+        'connectionchange',
+        handleConnectionChange as EventListener
+      );
     };
   }, [isReactNative]);
 
   // Detectar actualizaciones del Service Worker
   useEffect(() => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || isReactNative) return;
-    
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              setPWAState((prev) => ({ ...prev, hasUpdate: true }));
-            }
-          });
-        }
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      isReactNative
+    )
+      return;
+
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (
+                newWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                setPWAState((prev) => ({ ...prev, hasUpdate: true }));
+              }
+            });
+          }
+        });
+      })
+      .catch((error) => {
+        console.warn('Service Worker not available:', error);
       });
-    }).catch(error => {
-      console.warn('Service Worker not available:', error);
-    });
 
     // Escuchar mensajes del Service Worker
     navigator.serviceWorker.addEventListener('message', (event) => {
@@ -179,7 +205,7 @@ export function usePWA(): UsePWAReturn {
     try {
       deferredPrompt.prompt();
       const result = await deferredPrompt.userChoice;
-      
+
       if (result && result.outcome === 'accepted') {
         console.log('✅ Usuario aceptó instalación PWA');
       } else {
@@ -195,8 +221,13 @@ export function usePWA(): UsePWAReturn {
 
   // Función para actualizar la app
   const updateApp = useCallback(() => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || isReactNative) return;
-    
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      isReactNative
+    )
+      return;
+
     navigator.serviceWorker.ready.then((registration) => {
       if (registration.waiting) {
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -208,7 +239,7 @@ export function usePWA(): UsePWAReturn {
   // Función para compartir
   const share = useCallback(async (shareData: ShareData): Promise<boolean> => {
     if (typeof navigator === 'undefined') return false;
-    
+
     if ('share' in navigator) {
       try {
         await navigator.share(shareData);
@@ -218,7 +249,7 @@ export function usePWA(): UsePWAReturn {
         return false;
       }
     }
-    
+
     // Fallback: copiar al clipboard
     if ('clipboard' in navigator && shareData.url) {
       try {
@@ -229,35 +260,42 @@ export function usePWA(): UsePWAReturn {
         return false;
       }
     }
-    
+
     return false;
   }, []);
 
   // Función para solicitar permisos de notificaciones
-  const requestNotificationPermission = useCallback(async (): Promise<NotificationPermission> => {
-    if (typeof window === 'undefined' || !('Notification' in window) || isReactNative) {
-      return 'denied';
-    }
+  const requestNotificationPermission =
+    useCallback(async (): Promise<NotificationPermission> => {
+      if (
+        typeof window === 'undefined' ||
+        !('Notification' in window) ||
+        isReactNative
+      ) {
+        return 'denied';
+      }
 
-    if (Notification.permission === 'granted') {
-      return 'granted';
-    }
+      if (Notification.permission === 'granted') {
+        return 'granted';
+      }
 
-    if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      return permission;
-    }
+      if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        return permission;
+      }
 
-    return Notification.permission;
-  }, [isReactNative]);
+      return Notification.permission;
+    }, [isReactNative]);
 
   // Capacidades del navegador
-  const supportsNotifications = !isReactNative &&
-                                typeof window !== 'undefined' && 
-                                'Notification' in window && 
-                                'serviceWorker' in navigator && 
-                                'PushManager' in window;
-  const supportsShare = !isReactNative && typeof navigator !== 'undefined' && 'share' in navigator;
+  const supportsNotifications =
+    !isReactNative &&
+    typeof window !== 'undefined' &&
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window;
+  const supportsShare =
+    !isReactNative && typeof navigator !== 'undefined' && 'share' in navigator;
 
   return {
     ...pwaState,

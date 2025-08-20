@@ -32,23 +32,32 @@ export class OptimizedGamificationService {
       try {
         xpEarned = await XPService.awardContributionXP(userId, amount);
       } catch (error) {
-        logger.warn(LogModule.DB, 'Error otorgando XP, continuando con 0', error);
+        logger.warn(
+          LogModule.DB,
+          'Error otorgando XP, continuando con 0',
+          error
+        );
         return { xpEarned: 0 };
       }
 
       // Cálculo de nivel en memoria (sin llamadas adicionales)
       const cacheKey = `user_xp:${userId}`;
       let previousTotalXP = 0;
-      
+
       const cached = cache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < 30000) { // Cache de 30 seg
+      if (cached && Date.now() - cached.timestamp < 30000) {
+        // Cache de 30 seg
         previousTotalXP = cached.data;
       } else {
         try {
           previousTotalXP = await XPService.getUserTotalXP(userId);
           cache.set(cacheKey, { data: previousTotalXP, timestamp: Date.now() });
         } catch (error) {
-          logger.warn(LogModule.DB, 'Error obteniendo XP total, usando cache', error);
+          logger.warn(
+            LogModule.DB,
+            'Error obteniendo XP total, usando cache',
+            error
+          );
           previousTotalXP = cached?.data || 0;
         }
       }
@@ -56,7 +65,10 @@ export class OptimizedGamificationService {
       // Verificar level up (cálculo local)
       const actualPreviousXP = Math.max(0, previousTotalXP - xpEarned);
       const newTotalXP = actualPreviousXP + xpEarned;
-      const levelCheck = LevelsService.checkLevelUp(actualPreviousXP, newTotalXP);
+      const levelCheck = LevelsService.checkLevelUp(
+        actualPreviousXP,
+        newTotalXP
+      );
 
       // Actualizar cache
       cache.set(cacheKey, { data: newTotalXP, timestamp: Date.now() });
@@ -73,7 +85,11 @@ export class OptimizedGamificationService {
         newLevel: levelCheck.leveledUp ? levelCheck.newLevel : undefined,
       };
     } catch (error) {
-      logger.error(LogModule.DB, 'Error procesando contribución optimizada', error);
+      logger.error(
+        LogModule.DB,
+        'Error procesando contribución optimizada',
+        error
+      );
       return { xpEarned: 0 };
     }
   }
@@ -90,7 +106,8 @@ export class OptimizedGamificationService {
    */
   static getCachedXP(userId: string): number | null {
     const cached = cache.get(`user_xp:${userId}`);
-    if (cached && Date.now() - cached.timestamp < 60000) { // Cache de 1 min
+    if (cached && Date.now() - cached.timestamp < 60000) {
+      // Cache de 1 min
       return cached.data;
     }
     return null;

@@ -126,7 +126,7 @@ export class GoalsService {
             {
               code: error.code,
               message: error.message,
-              userId: user.id,
+              userId: userId,
               goalData: goal,
             }
           );
@@ -193,8 +193,8 @@ export class GoalsService {
       return data;
     } catch (error: unknown) {
       logger.error(LogModule.GOALS, 'Error fatal creando meta', {
-        type: error.constructor.name,
-        message: error.message,
+        type: error instanceof Error ? error.constructor.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -271,10 +271,14 @@ export class GoalsService {
         throw contributionError;
       }
 
-      logger.success(LogModule.GOALS, 'Contribución agregada exitosamente (trigger actualizará saved_amount)', {
-        contributionId: newContribution.id,
-        amount: newContribution.amount,
-      });
+      logger.success(
+        LogModule.GOALS,
+        'Contribución agregada exitosamente (trigger actualizará saved_amount)',
+        {
+          contributionId: newContribution.id,
+          amount: newContribution.amount,
+        }
+      );
 
       return newContribution;
     } catch (error) {

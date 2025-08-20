@@ -415,7 +415,7 @@ export class SubscriptionsService {
    * Procesar webhook de proveedor de pagos
    */
   static async processPaymentWebhook(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     eventType: string,
     data: unknown
   ) {
@@ -460,7 +460,7 @@ export class SubscriptionsService {
    * Manejar actualización de suscripción desde webhook
    */
   private static async handleSubscriptionUpdate(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     data: unknown
   ) {
     try {
@@ -506,7 +506,7 @@ export class SubscriptionsService {
    * Manejar cancelación desde webhook
    */
   private static async handleSubscriptionCancellation(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     data: unknown
   ) {
     try {
@@ -546,7 +546,7 @@ export class SubscriptionsService {
    * Manejar pago exitoso
    */
   private static async handlePaymentSuccess(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     _data: unknown
   ) {
     try {
@@ -566,7 +566,7 @@ export class SubscriptionsService {
    * Manejar pago fallido
    */
   private static async handlePaymentFailure(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     data: unknown
   ) {
     try {
@@ -598,76 +598,53 @@ export class SubscriptionsService {
   }
 
   /**
-   * Extraer datos de suscripción según el proveedor
+   * Extraer datos de suscripción de MercadoPago
    */
   private static extractSubscriptionData(
-    provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google',
+    provider: 'mercadopago',
     data: unknown
   ): {
     userId?: string;
     updates?: SubscriptionUpdate;
     insert?: SubscriptionInsert;
   } {
-    // Esta función debe ser implementada según la estructura
-    // específica de cada proveedor de pagos
-
-    switch (provider) {
-      case 'stripe':
-        return this.extractStripeData(data);
-      case 'paypal':
-        return this.extractPayPalData(data);
-      case 'mercadopago':
-        return this.extractMercadoPagoData(data);
-      case 'apple':
-        return this.extractAppleData(data);
-      case 'google':
-        return this.extractGoogleData(data);
-      default:
-        throw new Error(`Proveedor no soportado: ${provider}`);
-    }
+    return this.extractMercadoPagoData(data);
   }
 
-  // Métodos específicos para cada proveedor (implementación básica)
-  private static extractStripeData(data: unknown) {
+  // MercadoPago data extractor
+  private static extractMercadoPagoData(data: unknown): {
+    userId?: string;
+    updates?: SubscriptionUpdate;
+    insert?: SubscriptionInsert;
+  } {
+    const mpData = data as any;
+    
     return {
-      userId: data.metadata?.userId,
+      userId: mpData.external_reference,
       updates: {
-        status: data.status,
-        current_period_start: data.current_period_start
-          ? new Date(data.current_period_start * 1000).toISOString()
-          : undefined,
-        current_period_end: data.current_period_end
-          ? new Date(data.current_period_end * 1000).toISOString()
-          : undefined,
+        status: this.mapMercadoPagoStatus(mpData.status),
       },
+      insert: mpData.external_reference ? {
+        user_id: mpData.external_reference,
+        plan: 'premium',
+        status: this.mapMercadoPagoStatus(mpData.status),
+        provider: 'mercadopago',
+        provider_subscription_id: mpData.id,
+        start_date: new Date().toISOString(),
+        end_date: mpData.auto_recurring?.end_date || undefined,
+      } : undefined,
     };
   }
 
-  private static extractPayPalData(data: unknown) {
-    return {
-      userId: data.custom_id,
-      // Implementar según estructura de PayPal
+  // MercadoPago status mapper
+  private static mapMercadoPagoStatus(status: string): 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused' {
+    const statusMap: Record<string, 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused'> = {
+      'authorized': 'active',
+      'pending': 'trialing',
+      'cancelled': 'cancelled',
+      'paused': 'paused',
     };
-  }
-
-  private static extractMercadoPagoData(data: unknown) {
-    return {
-      userId: data.external_reference,
-      // Implementar según estructura de MercadoPago
-    };
-  }
-
-  private static extractAppleData(data: unknown) {
-    return {
-      userId: data.applicationUsername,
-      // Implementar según estructura de Apple
-    };
-  }
-
-  private static extractGoogleData(data: unknown) {
-    return {
-      userId: data.developerPayload,
-      // Implementar según estructura de Google
-    };
+    
+    return statusMap[status] || 'cancelled';
   }
 }

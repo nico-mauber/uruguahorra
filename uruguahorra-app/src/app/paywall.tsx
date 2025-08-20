@@ -1,33 +1,101 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
 import { Ionicons } from '@expo/vector-icons';
+import { BillingService } from '@/services/billing/BillingService';
+import type { SubscriptionPlan } from '@/types/billing';
+import { SubscriptionsService } from '@/services/subscriptions.service';
 
 export default function PaywallScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>(
-    'annual'
+  const [selectedPlan, setSelectedPlan] = useState<'premium_monthly' | 'premium_yearly'>(
+    'premium_yearly'
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+
+  useEffect(() => {
+    loadPlans();
+    checkPremiumStatus();
+  }, [user?.id]);
+
+  const loadPlans = async () => {
+    try {
+      const allPlans = BillingService.getAllPlans();
+      setPlans(allPlans);
+    } catch (error) {
+      console.error('Error cargando planes:', error);
+    }
+  };
+
+  const checkPremiumStatus = async () => {
+    if (user?.id) {
+      try {
+        const isPremium = await SubscriptionsService.isPremiumUser(user.id);
+        setIsPremiumUser(isPremium);
+      } catch (error) {
+        console.error('Error verificando estado premium:', error);
+      }
+    }
+  };
 
   const handleSubscribe = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'Debes iniciar sesión para suscribirte');
+      return;
+    }
+
+    if (isPremiumUser) {
+      Alert.alert('Info', 'Ya tienes una suscripción activa');
+      return;
+    }
+
     setIsLoading(true);
-    // Simulación de proceso de pago
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert(
-        '¡Felicidades!',
-        'Tu suscripción Premium ha sido activada exitosamente.',
-        [{ text: 'OK', onPress: () => router.back() }]
+
+    try {
+      const successUrl = `${window.location.origin}/(tabs)?subscription=success`;
+      const cancelUrl = `${window.location.origin}/paywall?subscription=cancelled`;
+
+      const checkout = await BillingService.createCheckout(
+        selectedPlan,
+        user.id,
+        successUrl,
+        cancelUrl
       );
-    }, 2000);
+
+      // Abrir URL de checkout de MercadoPago
+      if (checkout.url) {
+        await Linking.openURL(checkout.url);
+      }
+    } catch (error) {
+      console.error('Error al crear checkout:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo procesar el pago. Inténtalo nuevamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const currentPlan = plans.find(p => p.id === selectedPlan);
+  const monthlyPlan = plans.find(p => p.id === 'premium_monthly');
+  const yearlyPlan = plans.find(p => p.id === 'premium_yearly');
 
   const features = [
     {
@@ -224,53 +292,61 @@ export default function PaywallScreen() {
           </Text>
         </View>
 
-        {user?.premium && (
+        {isPremiumUser && (
           <View style={styles.currentPlanBadge}>
             <Text style={styles.currentPlanText}>Ya eres Premium</Text>
           </View>
         )}
 
         <View style={styles.plansContainer}>
-          <Card
-            style={[
-              styles.planCard,
-              selectedPlan === 'annual' && styles.selectedPlan,
-            ]}
-            onTouchEnd={() => setSelectedPlan('annual')}
+          <TouchableOpacity
+            onPress={() => setSelectedPlan('premium_yearly')}
+            disabled={isLoading}
           >
-            <View style={styles.planHeader}>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Plan Anual</Text>
-                <Text style={styles.planPrice}>
-                  $39.99<Text style={styles.planPeriod}>/año</Text>
-                </Text>
-                <Text style={styles.planDescription}>Equivale a $3.33/mes</Text>
+            <Card
+              style={[
+                styles.planCard,
+                selectedPlan === 'premium_yearly' && styles.selectedPlan,
+              ]}
+            >
+              <View style={styles.planHeader}>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>Plan Anual</Text>
+                  <Text style={styles.planPrice}>
+                    ${yearlyPlan?.price || 39.99}<Text style={styles.planPeriod}>/año</Text>
+                  </Text>
+                  <Text style={styles.planDescription}>Equivale a $3.33/mes</Text>
+                </View>
+                <View style={styles.savingBadge}>
+                  <Text style={styles.savingText}>Ahorra 33%</Text>
+                </View>
               </View>
-              <View style={styles.savingBadge}>
-                <Text style={styles.savingText}>Ahorra 33%</Text>
-              </View>
-            </View>
-          </Card>
+            </Card>
+          </TouchableOpacity>
 
-          <Card
-            style={[
-              styles.planCard,
-              selectedPlan === 'monthly' && styles.selectedPlan,
-            ]}
-            onTouchEnd={() => setSelectedPlan('monthly')}
+          <TouchableOpacity
+            onPress={() => setSelectedPlan('premium_monthly')}
+            disabled={isLoading}
           >
-            <View style={styles.planHeader}>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Plan Mensual</Text>
-                <Text style={styles.planPrice}>
-                  $4.99<Text style={styles.planPeriod}>/mes</Text>
-                </Text>
-                <Text style={styles.planDescription}>
-                  Cancela cuando quieras
-                </Text>
+            <Card
+              style={[
+                styles.planCard,
+                selectedPlan === 'premium_monthly' && styles.selectedPlan,
+              ]}
+            >
+              <View style={styles.planHeader}>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>Plan Mensual</Text>
+                  <Text style={styles.planPrice}>
+                    ${monthlyPlan?.price || 4.99}<Text style={styles.planPeriod}>/mes</Text>
+                  </Text>
+                  <Text style={styles.planDescription}>
+                    Cancela cuando quieras
+                  </Text>
+                </View>
               </View>
-            </View>
-          </Card>
+            </Card>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.featuresSection}>
@@ -296,20 +372,20 @@ export default function PaywallScreen() {
 
         <Button
           title={
-            selectedPlan === 'annual'
-              ? 'Suscribirse por $39.99/año'
-              : 'Suscribirse por $4.99/mes'
+            selectedPlan === 'premium_yearly'
+              ? `Suscribirse por $${yearlyPlan?.price || 39.99}/año`
+              : `Suscribirse por $${monthlyPlan?.price || 4.99}/mes`
           }
           size="large"
           loading={isLoading}
           onPress={handleSubscribe}
-          disabled={user?.premium}
+          disabled={isPremiumUser}
         />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Puedes cancelar en cualquier momento desde tu perfil.{'\n'}
-            Los pagos se procesan de forma segura a través de Stripe.
+            Los pagos se procesan de forma segura a través de MercadoPago.
           </Text>
         </View>
       </ScrollView>

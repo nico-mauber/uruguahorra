@@ -6,3 +6,4 @@ export { GoalSelectionModal } from './GoalSelectionModal';
 export { GoalDetailModal } from './GoalDetailModal';
 export { PWAInstallPrompt } from './PWAInstallPrompt';
 export { PWAStatus } from './PWAStatus';
+export { SubscriptionManager } from './SubscriptionManager';

@@ -352,7 +352,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google';
+          provider: 'mercadopago';
           status: 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused';
           plan: 'free' | 'premium_monthly' | 'premium_yearly';
           current_period_start: string | null;
@@ -365,7 +365,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
-          provider: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google';
+          provider: 'mercadopago';
           status: 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused';
           plan: 'free' | 'premium_monthly' | 'premium_yearly';
           current_period_start?: string | null;
@@ -378,7 +378,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string;
-          provider?: 'stripe' | 'paypal' | 'mercadopago' | 'apple' | 'google';
+          provider?: 'mercadopago';
           status?: 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused';
           plan?: 'free' | 'premium_monthly' | 'premium_yearly';
           current_period_start?: string | null;

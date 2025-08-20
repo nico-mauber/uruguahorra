@@ -167,6 +167,13 @@ export default function DashboardScreen() {
     initializeUser();
   }, [fetchGoals, hasShownWelcome, user]);
 
+  // Redirigir si no hay usuario (debe estar ANTES de cualquier return condicional)
+  useEffect(() => {
+    if (!initializing && !user) {
+      router.replace('/(auth)/onboarding');
+    }
+  }, [initializing, user, router]);
+
   // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
   // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
   /*
@@ -634,7 +641,6 @@ export default function DashboardScreen() {
 
   // Redirigir si no hay usuario
   if (!initializing && !user) {
-    router.replace('/(auth)/onboarding');
     return null;
   }
 

@@ -301,9 +301,6 @@ export const SubscriptionStatusSchema = z.enum([
   'trial',
 ]);
 export const SubscriptionProviderSchema = z.enum([
-  'apple',
-  'google',
-  'stripe',
   'mercadopago',
 ]);
 

@@ -5,9 +5,12 @@
       "Bash(npx prettier:*)",
       "Bash(git config:*)",
       "Bash(npx tsc:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "acceptEdits"
   }
 }

@@ -6,6 +6,15 @@ import {
   StreaksService,
   QuestsService,
 } from '@/features/gamification';
+import {
+  AnalyticsService,
+  AnalyticsEvents,
+} from '@/services/analytics.service';
+
+// Helper function for challenge tracking
+const trackChallengeEvent = (event: string, props?: Record<string, unknown>) => {
+  AnalyticsService.track(event, props);
+};
 
 type Challenge = Database['public']['Tables']['challenges']['Row'];
 type UserChallenge = Database['public']['Tables']['user_challenges']['Row'];
@@ -191,6 +200,12 @@ export class ChallengesService {
         userChallengeId: data.id,
       });
 
+      // Analytics: Track challenge started
+      trackChallengeEvent(AnalyticsEvents.CHALLENGE_STARTED, {
+        challenge_id: challengeId,
+        challenge_type: 'user_challenge',
+      });
+
       return data;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal iniciando desafío', error);
@@ -272,6 +287,12 @@ export class ChallengesService {
       }
 
       logger.success(LogModule.DB, 'Desafío completado y recompensa reclamada');
+
+      // Analytics: Track challenge completed
+      trackChallengeEvent(AnalyticsEvents.CHALLENGE_COMPLETED, {
+        challenge_id: data.challenge_id,
+        challenge_type: 'user_challenge',
+      });
 
       // Procesar gamificación en paralelo
       this.processChallengeGamificationAsync(

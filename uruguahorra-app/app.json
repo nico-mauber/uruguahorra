@@ -51,6 +51,13 @@
         }
       }
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      "expo-localization"
+    ],
+    "extra": {
+      "appVersion": "1.0.0",
+      "posthogKey": "phc_Bpl5uyxSSfEXZelS6NlzphDCTwrhI1mhbGoItaoriTx"
+    }
   }
 }

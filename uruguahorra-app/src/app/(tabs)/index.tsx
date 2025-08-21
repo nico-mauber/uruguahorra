@@ -31,6 +31,7 @@ import {
   LevelsService,
 } from '@/features/gamification';
 import { GamificationService } from '@/features/gamification';
+import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -38,6 +39,10 @@ export default function DashboardScreen() {
   const { user, isLoading: authLoading } = useAuth();
   const { goals, isLoading, error, fetchGoals, getTotalSaved } =
     useGoalsStore();
+  const analytics = useAnalytics();
+
+  // Feature flags - Pods always enabled
+  const isPodsAhorroEnabled = true;
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [initializing, setInitializing] = React.useState(true);
@@ -623,6 +628,62 @@ export default function DashboardScreen() {
       color: theme.error,
       textAlign: 'center',
     },
+    // Pods Section Styles
+    podsSection: {
+      marginTop: 24,
+      marginBottom: 16,
+    },
+    sectionHeader: {
+      marginBottom: 12,
+    },
+    sectionSubtitle: {
+      fontSize: 14,
+      marginTop: 4,
+    },
+    podCard: {
+      marginBottom: 8,
+    },
+    podContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    podInfo: {
+      flex: 1,
+      marginRight: 16,
+    },
+    podTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    podDescription: {
+      fontSize: 14,
+      marginBottom: 8,
+    },
+    podProgress: {
+      marginTop: 4,
+    },
+    podProgressText: {
+      fontSize: 12,
+      marginTop: 4,
+    },
+    joinPodButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    joinPodButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    featureFlagNote: {
+      fontSize: 12,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      marginTop: 8,
+    },
   });
 
   // Mostrar loading mientras se inicializa el usuario o se cargan las metas
@@ -882,6 +943,75 @@ export default function DashboardScreen() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Pods de Ahorro Section - Controlled by Feature Flag */}
+        {isPodsAhorroEnabled && (
+          <View style={styles.podsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                🏛️ Pods de Ahorro
+              </Text>
+              <Text
+                style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
+              >
+                Ahorra junto a otros usuarios
+              </Text>
+            </View>
+            <Card style={styles.podCard}>
+              <View style={styles.podContent}>
+                <View style={styles.podInfo}>
+                  <Text style={[styles.podTitle, { color: theme.text }]}>
+                    Pod Vacaciones 2025
+                  </Text>
+                  <Text
+                    style={[
+                      styles.podDescription,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    12 miembros • Meta: $50,000 UYU
+                  </Text>
+                  <View style={styles.podProgress}>
+                    <ProgressBar
+                      progress={0.65}
+                      height={8}
+                      color={theme.primary}
+                      backgroundColor={theme.border}
+                    />
+                    <Text
+                      style={[
+                        styles.podProgressText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      $32,500 / $50,000 (65%)
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.joinPodButton,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={() => {
+                    // Track pod interaction
+                    analytics.track(AnalyticsEvents.CHALLENGE_STARTED, {
+                      challenge_type: 'pod',
+                      challenge_id: 'pod_vacaciones_2025',
+                    });
+                  }}
+                >
+                  <Text style={styles.joinPodButtonText}>Unirse</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+            <Text
+              style={[styles.featureFlagNote, { color: theme.textSecondary }]}
+            >
+              ✨ Esta función está habilitada por feature flag
+            </Text>
           </View>
         )}
       </ScrollView>

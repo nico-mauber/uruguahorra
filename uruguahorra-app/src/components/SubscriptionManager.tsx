@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
@@ -31,9 +25,8 @@ export function SubscriptionManager() {
   const loadSubscription = async () => {
     try {
       setIsLoading(true);
-      const activeSubscription = await SubscriptionsService.getActiveSubscription(
-        user!.id
-      );
+      const activeSubscription =
+        await SubscriptionsService.getActiveSubscription(user!.id);
       setSubscription(activeSubscription);
     } catch (error) {
       console.error('Error cargando suscripción:', error);
@@ -48,7 +41,11 @@ export function SubscriptionManager() {
       '¿Estás seguro que deseas cancelar tu suscripción Premium? Mantendrás el acceso hasta el final del período actual.',
       [
         { text: 'No, mantener', style: 'cancel' },
-        { text: 'Sí, cancelar', onPress: cancelSubscription, style: 'destructive' },
+        {
+          text: 'Sí, cancelar',
+          onPress: cancelSubscription,
+          style: 'destructive',
+        },
       ]
     );
   };
@@ -60,10 +57,16 @@ export function SubscriptionManager() {
       setIsUpdating(true);
       await SubscriptionsService.cancelSubscription(subscription.id, true);
       await loadSubscription();
-      Alert.alert('Cancelación programada', 'Tu suscripción se cancelará al final del período actual.');
+      Alert.alert(
+        'Cancelación programada',
+        'Tu suscripción se cancelará al final del período actual.'
+      );
     } catch (error) {
       console.error('Error cancelando suscripción:', error);
-      Alert.alert('Error', 'No se pudo cancelar la suscripción. Inténtalo nuevamente.');
+      Alert.alert(
+        'Error',
+        'No se pudo cancelar la suscripción. Inténtalo nuevamente.'
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -76,10 +79,16 @@ export function SubscriptionManager() {
       setIsUpdating(true);
       await SubscriptionsService.reactivateSubscription(subscription.id);
       await loadSubscription();
-      Alert.alert('Suscripción reactivada', 'Tu suscripción Premium ha sido reactivada exitosamente.');
+      Alert.alert(
+        'Suscripción reactivada',
+        'Tu suscripción Premium ha sido reactivada exitosamente.'
+      );
     } catch (error) {
       console.error('Error reactivando suscripción:', error);
-      Alert.alert('Error', 'No se pudo reactivar la suscripción. Inténtalo nuevamente.');
+      Alert.alert(
+        'Error',
+        'No se pudo reactivar la suscripción. Inténtalo nuevamente.'
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -234,7 +243,8 @@ export function SubscriptionManager() {
           </Text>
         </View>
         <Text style={styles.noSubscription}>
-          Suscríbete a Premium para desbloquear todas las funciones de Uruguahorra
+          Suscríbete a Premium para desbloquear todas las funciones de
+          Uruguahorra
         </Text>
       </View>
     );
@@ -244,9 +254,7 @@ export function SubscriptionManager() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Mi suscripción</Text>
-        <Text style={styles.subtitle}>
-          Gestiona tu suscripción Premium
-        </Text>
+        <Text style={styles.subtitle}>Gestiona tu suscripción Premium</Text>
       </View>
 
       <Card style={styles.subscriptionCard}>
@@ -311,24 +319,25 @@ export function SubscriptionManager() {
         )}
 
         <View style={styles.actionsContainer}>
-          {subscription.status === 'active' && !subscription.cancel_at_period_end && (
-            <>
-              <Button
-                title="Gestionar suscripción"
-                variant="outline"
-                onPress={handleManageSubscription}
-                style={styles.actionButton}
-                disabled={isUpdating}
-              />
-              <Button
-                title="Cancelar suscripción"
-                variant="outline"
-                onPress={handleCancelSubscription}
-                style={styles.actionButton}
-                disabled={isUpdating}
-              />
-            </>
-          )}
+          {subscription.status === 'active' &&
+            !subscription.cancel_at_period_end && (
+              <>
+                <Button
+                  title="Gestionar suscripción"
+                  variant="outline"
+                  onPress={handleManageSubscription}
+                  style={styles.actionButton}
+                  disabled={isUpdating}
+                />
+                <Button
+                  title="Cancelar suscripción"
+                  variant="outline"
+                  onPress={handleCancelSubscription}
+                  style={styles.actionButton}
+                  disabled={isUpdating}
+                />
+              </>
+            )}
 
           {subscription.cancel_at_period_end && (
             <Button

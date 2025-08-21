@@ -1,10 +1,14 @@
 import { logger, LogModule } from '@/utils/logger';
-import type { MercadoPagoPreapprovalOptions, CheckoutResult } from '@/types/billing';
+import type {
+  MercadoPagoPreapprovalOptions,
+  CheckoutResult,
+} from '@/types/billing';
 
 export class MercadoPagoService {
-  private static readonly API_URL = process.env.NODE_ENV === 'production'
-    ? 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1'
-    : 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1';
+  private static readonly API_URL =
+    process.env.NODE_ENV === 'production'
+      ? 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1'
+      : 'https://ebkzqfmppdntmynfjehh.supabase.co/functions/v1';
 
   /**
    * Crear preapproval de MercadoPago para suscripciones
@@ -20,20 +24,23 @@ export class MercadoPagoService {
 
       // Obtener el token de autenticación del usuario
       const { supabase } = await import('@/lib/supabase');
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         throw new Error('Usuario no autenticado');
       }
 
       // Determinar el tipo de plan basado en la frecuencia
-      const planType = options.autoRecurring.frequency === 12 ? 'annual' : 'monthly';
+      const planType =
+        options.autoRecurring.frequency === 12 ? 'annual' : 'monthly';
 
       const response = await fetch(`${this.API_URL}/create-subscription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ planType }),
       });
@@ -55,7 +62,11 @@ export class MercadoPagoService {
         preapprovalId: data.subscription_id,
       };
     } catch (error) {
-      logger.error(LogModule.DB, 'Error creando preapproval MercadoPago', error);
+      logger.error(
+        LogModule.DB,
+        'Error creando preapproval MercadoPago',
+        error
+      );
       throw error;
     }
   }
@@ -93,12 +104,15 @@ export class MercadoPagoService {
    */
   static async getPreapprovalStatus(preapprovalId: string): Promise<any> {
     try {
-      const response = await fetch(`${this.API_URL}/preapproval/${preapprovalId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(
+        `${this.API_URL}/preapproval/${preapprovalId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Error al obtener estado del preapproval');

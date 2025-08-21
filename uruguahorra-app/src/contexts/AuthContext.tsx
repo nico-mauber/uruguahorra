@@ -12,6 +12,7 @@ import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { LevelsService } from '@/features/gamification';
 import { RateLimitError } from '@/lib/auth-interceptor';
+import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -64,6 +65,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isPremium, setIsPremium] = useState(false);
   const [rateLimitError, setRateLimitError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Analytics hook
+  const analytics = useAnalytics();
 
   // Función para cargar datos completos del usuario
   const loadUserData = useCallback(async (authUser: SupabaseUser) => {
@@ -260,6 +264,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsPremium(userData.isPremium);
         setRateLimitError(null);
 
+        // Analytics: Track user sign in
+        analytics.identify(userData.user.id, {
+          email: authUser.email,
+          country: userData.user.country,
+          currency: userData.user.currency,
+          is_premium: userData.isPremium,
+          level: userData.user.level,
+          total_xp: userData.user.totalXP,
+          streak: userData.user.streak,
+        });
+
+        analytics.setContext({
+          country: userData.user.country || 'UY',
+          currency: userData.user.currency || 'UYU',
+          plan: userData.isPremium ? 'premium' : 'free',
+        });
+
+        analytics.track(AnalyticsEvents.USER_SIGNED_IN, {
+          method: 'email',
+          user_id: userData.user.id,
+        });
+
         logger.success(LogModule.AUTH, 'Login completado exitosamente', {
           userId: userData.user.id,
         });
@@ -311,6 +337,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSupabaseUser(authUser);
           setIsAuthenticated(true);
           setIsPremium(userData.isPremium);
+
+          // Analytics: Track user sign up
+          analytics.identify(userData.user.id, {
+            email: authUser.email,
+            country: userData.user.country || metadata?.country,
+            currency: userData.user.currency || metadata?.currency,
+            is_premium: userData.isPremium,
+            level: userData.user.level,
+            total_xp: userData.user.totalXP,
+            streak: userData.user.streak,
+          });
+
+          analytics.setContext({
+            country: userData.user.country || metadata?.country || 'UY',
+            currency: userData.user.currency || metadata?.currency || 'UYU',
+            plan: userData.isPremium ? 'premium' : 'free',
+          });
+
+          analytics.track(AnalyticsEvents.USER_SIGNED_UP, {
+            method: 'email',
+            user_id: userData.user.id,
+            country: metadata?.country,
+            currency: metadata?.currency,
+          });
         }
 
         logger.success(LogModule.AUTH, 'Registro completado exitosamente', {
@@ -334,6 +384,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       logger.info(LogModule.AUTH, 'Cerrando sesión');
+
+      // Analytics: Track user sign out
+      if (user) {
+        analytics.track(AnalyticsEvents.USER_SIGNED_OUT, {
+          user_id: user.id,
+        });
+      }
+
       await AuthService.signOut();
 
       setUser(null);
@@ -342,17 +400,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsPremium(false);
       setRateLimitError(null);
 
+      // Reset analytics
+      analytics.reset();
+
       logger.success(LogModule.AUTH, 'Sesión cerrada exitosamente');
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error en logout', error);
       throw error;
     }
-  }, []);
+  }, [user]);
 
   const updateUserXP = useCallback(
     (xp: number) => {
       if (!user) return;
 
+      const oldLevel = user.level;
       const newTotalXP = user.totalXP + xp;
       const newLevel = LevelsService.getLevel(newTotalXP);
 
@@ -361,6 +423,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         totalXP: newTotalXP,
         level: newLevel,
       });
+
+      // Analytics: Track XP earned
+      analytics.track(AnalyticsEvents.XP_EARNED, {
+        user_id: user.id,
+        xp_earned: xp,
+        total_xp: newTotalXP,
+        old_level: oldLevel,
+        new_level: newLevel,
+      });
+
+      // Analytics: Track level up if applicable
+      if (newLevel > oldLevel) {
+        analytics.track(AnalyticsEvents.LEVEL_UP, {
+          user_id: user.id,
+          old_level: oldLevel,
+          new_level: newLevel,
+          total_xp: newTotalXP,
+        });
+      }
     },
     [user]
   );
@@ -369,12 +450,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     (streak: number) => {
       if (!user) return;
 
+      const oldStreak = user.streak;
+
       setUser({
         ...user,
         streak,
       });
+
+      // Analytics: Track streak update
+      analytics.track(AnalyticsEvents.STREAK_UPDATED, {
+        user_id: user.id,
+        old_streak: oldStreak,
+        new_streak: streak,
+        streak_change: streak - oldStreak,
+      });
     },
-    [user]
+    [user, analytics]
   );
 
   const updateProfile = useCallback(
@@ -432,5 +523,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export { AuthProvider };

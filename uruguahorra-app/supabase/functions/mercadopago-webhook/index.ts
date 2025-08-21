@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-signature, x-request-id',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-signature, x-request-id',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -30,9 +31,9 @@ Deno.serve(async (req) => {
 
   // Only accept POST requests
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { 
-      status: 405, 
-      headers: corsHeaders 
+    return new Response('Method not allowed', {
+      status: 405,
+      headers: corsHeaders,
     });
   }
 
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing environment variables');
       return new Response(
@@ -62,18 +63,15 @@ Deno.serve(async (req) => {
     // Parse webhook payload
     const body = await req.text();
     let event: MercadoPagoWebhookEvent;
-    
+
     try {
       event = JSON.parse(body);
     } catch (e) {
       console.error('Invalid JSON payload:', e);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON payload' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Processing MercadoPago event:', event.type, event.action);
@@ -87,13 +85,13 @@ Deno.serve(async (req) => {
           await handlePreapprovalCancelled(event, supabase);
         }
         break;
-      
+
       case 'payment':
         if (event.action === 'created') {
           await handlePayment(event, supabase);
         }
         break;
-      
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -106,11 +104,13 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-
   } catch (error) {
     console.error('Webhook processing error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -120,23 +120,29 @@ Deno.serve(async (req) => {
 });
 
 // Handler functions
-async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase: any) {
+async function handlePreapprovalUpdate(
+  event: MercadoPagoWebhookEvent,
+  supabase: any
+) {
   const preapprovalId = event.data.id;
-  
+
   // Get MercadoPago access token
   const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-  
+
   if (!accessToken) {
     console.error('Missing MERCADOPAGO_ACCESS_TOKEN');
     return;
   }
-  
+
   // Fetch preapproval details from MercadoPago
-  const response = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  const response = await fetch(
+    `https://api.mercadopago.com/preapproval/${preapprovalId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     console.error('Failed to fetch preapproval details:', response.status);
@@ -151,11 +157,13 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
     return;
   }
 
-  console.log(`Processing preapproval for user ${userId}, status: ${preapproval.status}, action: ${event.action}`);
+  console.log(
+    `Processing preapproval for user ${userId}, status: ${preapproval.status}, action: ${event.action}`
+  );
 
   // Map MercadoPago status to app status
   let appStatus = 'pending';
-  switch(preapproval.status) {
+  switch (preapproval.status) {
     case 'authorized':
       appStatus = 'active';
       break;
@@ -177,7 +185,8 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
     .eq('provider_subscription_id', preapprovalId)
     .single();
 
-  if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+  if (checkError && checkError.code !== 'PGRST116') {
+    // PGRST116 means no rows found
     console.error('Error checking existing subscription:', checkError);
     return;
   }
@@ -185,11 +194,13 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
   // If subscription doesn't exist and preapproval is authorized, create it
   if (!existingSub && preapproval.status === 'authorized') {
     console.log('Creating new subscription for authorized preapproval');
-    
+
     // Extract metadata if available, or use defaults
     const metadata = preapproval.metadata || {};
-    const planType = metadata.plan_type || (preapproval.auto_recurring?.frequency === 12 ? 'annual' : 'monthly');
-    
+    const planType =
+      metadata.plan_type ||
+      (preapproval.auto_recurring?.frequency === 12 ? 'annual' : 'monthly');
+
     const { error } = await supabase.from('subscriptions').insert({
       user_id: userId,
       plan: metadata.plan_name || 'premium',
@@ -197,7 +208,7 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
       provider: 'mercadopago',
       provider_subscription_id: preapprovalId,
       start_date: new Date().toISOString(),
-      current_period_end: preapproval.auto_recurring?.end_date 
+      current_period_end: preapproval.auto_recurring?.end_date
         ? new Date(preapproval.auto_recurring.end_date).toISOString()
         : null,
       metadata: {
@@ -208,20 +219,20 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
         currency_id: preapproval.auto_recurring?.currency_id,
         payer_email: preapproval.payer_email,
         init_point: preapproval.init_point,
-        sandbox_init_point: preapproval.sandbox_init_point
-      }
+        sandbox_init_point: preapproval.sandbox_init_point,
+      },
     });
 
     if (error) {
       console.error('Error creating subscription:', error);
       throw error;
     }
-    
+
     console.log('Subscription created successfully');
   } else if (existingSub) {
     // Update existing subscription
     console.log('Updating existing subscription');
-    
+
     const updateData: any = {
       status: appStatus,
       updated_at: new Date().toISOString(),
@@ -246,15 +257,20 @@ async function handlePreapprovalUpdate(event: MercadoPagoWebhookEvent, supabase:
       console.error('Error updating subscription:', error);
       throw error;
     }
-    
+
     console.log('Subscription updated successfully');
   } else {
     // Preapproval not authorized yet and no existing subscription
-    console.log(`Preapproval status is ${preapproval.status}, not creating subscription yet`);
+    console.log(
+      `Preapproval status is ${preapproval.status}, not creating subscription yet`
+    );
   }
 }
 
-async function handlePreapprovalCancelled(event: MercadoPagoWebhookEvent, supabase: any) {
+async function handlePreapprovalCancelled(
+  event: MercadoPagoWebhookEvent,
+  supabase: any
+) {
   const preapprovalId = event.data.id;
 
   const { error } = await supabase
@@ -276,7 +292,7 @@ async function handlePreapprovalCancelled(event: MercadoPagoWebhookEvent, supaba
 
 async function handlePayment(event: MercadoPagoWebhookEvent, supabase: any) {
   console.log('Payment received:', event.data.id);
-  
+
   // You can add payment tracking logic here
   // For example, create a payments table entry:
   /*

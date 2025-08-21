@@ -8,6 +8,8 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { logger, LogModule } from '@/utils/logger';
 import Toast from 'react-native-toast-message';
 import { ErrorBoundary, PWAStatus } from '@components';
+import { PostHogProvider } from 'posthog-react-native';
+import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 function LoadingScreen() {
   return (
@@ -94,6 +96,13 @@ function RootLayoutNav() {
 }
 
 function AppContent() {
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    // Track app opened
+    track(AnalyticsEvents.APP_OPENED);
+  }, [track]);
+
   return (
     <>
       <RootLayoutNav />
@@ -101,19 +110,25 @@ function AppContent() {
     </>
   );
 }
-
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <ErrorBoundary>
-        <SafeAreaProvider>
-          <AuthProvider>
-            <StatusBar style="auto" />
-            <AppContent />
-            <Toast />
-          </AuthProvider>
-        </SafeAreaProvider>
-      </ErrorBoundary>
-    </ThemeProvider>
+    <PostHogProvider
+      apiKey="phc_Bpl5uyxSSfEXZelS6NlzphDCTwrhI1mhbGoItaoriTx"
+      options={{
+        host: 'https://us.i.posthog.com',
+      }}
+    >
+      <ThemeProvider>
+        <ErrorBoundary>
+          <SafeAreaProvider>
+            <AuthProvider>
+              <StatusBar style="auto" />
+              <AppContent />
+              <Toast />
+            </AuthProvider>
+          </SafeAreaProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
+    </PostHogProvider>
   );
 }

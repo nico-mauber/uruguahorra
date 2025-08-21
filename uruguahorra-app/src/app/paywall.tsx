@@ -18,14 +18,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { BillingService } from '@/services/billing/BillingService';
 import type { SubscriptionPlan } from '@/types/billing';
 import { SubscriptionsService } from '@/services/subscriptions.service';
+import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 export default function PaywallScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [selectedPlan, setSelectedPlan] = useState<'premium_monthly' | 'premium_yearly'>(
-    'premium_yearly'
-  );
+  const analytics = useAnalytics();
+  const [selectedPlan, setSelectedPlan] = useState<
+    'premium_monthly' | 'premium_yearly'
+  >('premium_yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -33,7 +35,13 @@ export default function PaywallScreen() {
   useEffect(() => {
     loadPlans();
     checkPremiumStatus();
-  }, [user?.id]);
+
+    // Track paywall viewed
+    analytics.track(AnalyticsEvents.PAYWALL_VIEWED, {
+      user_id: user?.id,
+      source: 'paywall_screen',
+    });
+  }, [user?.id, analytics]);
 
   const loadPlans = async () => {
     try {
@@ -69,6 +77,19 @@ export default function PaywallScreen() {
     setIsLoading(true);
 
     try {
+      const plan = plans.find((p) => p.id === selectedPlan);
+
+      // Track checkout started
+      if (plan) {
+        analytics.track(AnalyticsEvents.CHECKOUT_STARTED, {
+          plan_id: plan.id,
+          plan_type: selectedPlan,
+          amount: plan.price,
+          currency: plan.currency,
+          period: selectedPlan.includes('yearly') ? 'yearly' : 'monthly',
+        });
+      }
+
       const successUrl = `${window.location.origin}/(tabs)?subscription=success`;
       const cancelUrl = `${window.location.origin}/paywall?subscription=cancelled`;
 
@@ -83,7 +104,7 @@ export default function PaywallScreen() {
       if (checkout.url) {
         console.log('Redirigiendo a MercadoPago:', checkout.url);
         console.log('Platform:', Platform.OS);
-        
+
         try {
           if (Platform.OS === 'web') {
             // Para web, abrir en nueva pestaña
@@ -92,7 +113,7 @@ export default function PaywallScreen() {
             // Para móvil, verificar si se puede abrir la URL
             const canOpen = await Linking.canOpenURL(checkout.url);
             console.log('Can open URL:', canOpen);
-            
+
             if (canOpen) {
               await Linking.openURL(checkout.url);
             } else {
@@ -130,9 +151,9 @@ export default function PaywallScreen() {
     }
   };
 
-  const currentPlan = plans.find(p => p.id === selectedPlan);
-  const monthlyPlan = plans.find(p => p.id === 'premium_monthly');
-  const yearlyPlan = plans.find(p => p.id === 'premium_yearly');
+  const currentPlan = plans.find((p) => p.id === selectedPlan);
+  const monthlyPlan = plans.find((p) => p.id === 'premium_monthly');
+  const yearlyPlan = plans.find((p) => p.id === 'premium_yearly');
 
   const features = [
     {
@@ -350,9 +371,12 @@ export default function PaywallScreen() {
                 <View style={styles.planInfo}>
                   <Text style={styles.planName}>Plan Anual</Text>
                   <Text style={styles.planPrice}>
-                    ${yearlyPlan?.price || 39.99}<Text style={styles.planPeriod}>/año</Text>
+                    ${yearlyPlan?.price || 39.99}
+                    <Text style={styles.planPeriod}>/año</Text>
                   </Text>
-                  <Text style={styles.planDescription}>Equivale a $3.33/mes</Text>
+                  <Text style={styles.planDescription}>
+                    Equivale a $3.33/mes
+                  </Text>
                 </View>
                 <View style={styles.savingBadge}>
                   <Text style={styles.savingText}>Ahorra 33%</Text>
@@ -375,7 +399,8 @@ export default function PaywallScreen() {
                 <View style={styles.planInfo}>
                   <Text style={styles.planName}>Plan Mensual</Text>
                   <Text style={styles.planPrice}>
-                    ${monthlyPlan?.price || 15}<Text style={styles.planPeriod}>/mes</Text>
+                    ${monthlyPlan?.price || 15}
+                    <Text style={styles.planPeriod}>/mes</Text>
                   </Text>
                   <Text style={styles.planDescription}>
                     Cancela cuando quieras

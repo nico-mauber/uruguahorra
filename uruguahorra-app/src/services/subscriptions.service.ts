@@ -618,33 +618,40 @@ export class SubscriptionsService {
     insert?: SubscriptionInsert;
   } {
     const mpData = data as any;
-    
+
     return {
       userId: mpData.external_reference,
       updates: {
         status: this.mapMercadoPagoStatus(mpData.status),
       },
-      insert: mpData.external_reference ? {
-        user_id: mpData.external_reference,
-        plan: 'premium',
-        status: this.mapMercadoPagoStatus(mpData.status),
-        provider: 'mercadopago',
-        provider_subscription_id: mpData.id,
-        start_date: new Date().toISOString(),
-        end_date: mpData.auto_recurring?.end_date || undefined,
-      } : undefined,
+      insert: mpData.external_reference
+        ? {
+            user_id: mpData.external_reference,
+            plan: 'premium',
+            status: this.mapMercadoPagoStatus(mpData.status),
+            provider: 'mercadopago',
+            provider_subscription_id: mpData.id,
+            start_date: new Date().toISOString(),
+            end_date: mpData.auto_recurring?.end_date || undefined,
+          }
+        : undefined,
     };
   }
 
   // MercadoPago status mapper
-  private static mapMercadoPagoStatus(status: string): 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused' {
-    const statusMap: Record<string, 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused'> = {
-      'authorized': 'active',
-      'pending': 'trialing',
-      'cancelled': 'cancelled',
-      'paused': 'paused',
+  private static mapMercadoPagoStatus(
+    status: string
+  ): 'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused' {
+    const statusMap: Record<
+      string,
+      'active' | 'cancelled' | 'past_due' | 'trialing' | 'paused'
+    > = {
+      authorized: 'active',
+      pending: 'trialing',
+      cancelled: 'cancelled',
+      paused: 'paused',
     };
-    
+
     return statusMap[status] || 'cancelled';
   }
 }

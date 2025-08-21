@@ -1,6 +1,12 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
+import {
+  AnalyticsService,
+  AnalyticsEvents,
+  trackGoalEvent,
+  trackContributionEvent,
+} from '@/services/analytics.service';
 
 type Goal = Database['public']['Tables']['goals']['Row'];
 type GoalInsert = Database['public']['Tables']['goals']['Insert'];
@@ -190,6 +196,16 @@ export class GoalsService {
         goalId: data.id,
         goalName: data.name,
       });
+
+      // Analytics: Track goal created
+      trackGoalEvent(AnalyticsEvents.GOAL_CREATED, {
+        goal_id: data.id,
+        goal_type: data.category,
+        target_amount: data.target_amount || 0,
+        current_amount: data.current_amount || 0,
+        category: data.category,
+      });
+
       return data;
     } catch (error: unknown) {
       logger.error(LogModule.GOALS, 'Error fatal creando meta', {
@@ -279,6 +295,14 @@ export class GoalsService {
           amount: newContribution.amount,
         }
       );
+
+      // Analytics: Track micro contribution
+      trackContributionEvent(AnalyticsEvents.MICRO_CONTRIBUTION, {
+        contribution_id: newContribution.id,
+        goal_id: newContribution.goal_id,
+        amount: newContribution.amount,
+        method: newContribution.source || 'manual',
+      });
 
       return newContribution;
     } catch (error) {

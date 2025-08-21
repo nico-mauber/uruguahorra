@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -25,7 +26,10 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
@@ -45,16 +49,19 @@ Deno.serve(async (req) => {
     });
 
     // Get user from token
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAuth.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Parse request body
-    const { planType } = await req.json() as CreateSubscriptionRequest;
+    const { planType } = (await req.json()) as CreateSubscriptionRequest;
 
     // Check for existing active subscriptions only (no pending since we don't create them anymore)
     const { data: existingSubscriptions, error: subError } = await supabaseAdmin
@@ -72,14 +79,17 @@ Deno.serve(async (req) => {
     // If user has an active subscription, return error
     if (existingSubscriptions && existingSubscriptions.length > 0) {
       const subscription = existingSubscriptions[0];
-      
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'User already has an active subscription',
           subscription_id: subscription.id,
-          status: subscription.status
+          status: subscription.status,
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
@@ -89,7 +99,10 @@ Deno.serve(async (req) => {
       console.error('Missing MERCADOPAGO_ACCESS_TOKEN');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
@@ -100,15 +113,15 @@ Deno.serve(async (req) => {
         transaction_amount: 99, // $99 UYU por mes
         frequency: 1,
         frequency_type: 'months',
-        free_trial: 7 // 7 días de prueba gratis
+        free_trial: 7, // 7 días de prueba gratis
       },
       annual: {
         reason: 'Uruguahorra Premium - Plan Anual (33% descuento)',
         transaction_amount: 799, // $799 UYU por año (ahorro de ~$400)
         frequency: 12,
         frequency_type: 'months',
-        free_trial: 7 // 7 días de prueba gratis
-      }
+        free_trial: 7, // 7 días de prueba gratis
+      },
     };
 
     const selectedPlan = plans[planType];
@@ -116,7 +129,7 @@ Deno.serve(async (req) => {
     // Calculate dates
     const startDate = new Date();
     startDate.setDate(startDate.getDate() + selectedPlan.free_trial); // Start after trial
-    
+
     const endDate = new Date(startDate);
     if (planType === 'annual') {
       endDate.setFullYear(endDate.getFullYear() + 1);
@@ -126,19 +139,23 @@ Deno.serve(async (req) => {
 
     // Get the origin URL and validate it
     const origin = req.headers.get('origin') || '';
-    
+
     // For local development, use a placeholder URL that MercadoPago will accept
     // In production, use the actual origin
     let backUrl = 'https://uruguahorra.com/subscription-success';
-    
-    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+
+    if (
+      origin &&
+      !origin.includes('localhost') &&
+      !origin.includes('127.0.0.1')
+    ) {
       // Use the actual origin if it's not localhost
       backUrl = `${origin}/subscription-success`;
     } else {
       // For local development, you can use your Supabase URL or any valid HTTPS URL
       backUrl = `${supabaseUrl}/subscription-success`;
     }
-    
+
     console.log('Using back_url:', backUrl);
 
     // Create preapproval in Mercado Pago with metadata for webhook
@@ -152,7 +169,7 @@ Deno.serve(async (req) => {
         transaction_amount: selectedPlan.transaction_amount,
         currency_id: 'UYU', // Pesos uruguayos
         start_date: startDate.toISOString(),
-        end_date: endDate.toISOString()
+        end_date: endDate.toISOString(),
       },
       back_url: backUrl,
       status: 'pending',
@@ -161,8 +178,8 @@ Deno.serve(async (req) => {
         plan_type: planType,
         user_email: user.email,
         user_id: user.id,
-        plan_name: 'premium'
-      }
+        plan_name: 'premium',
+      },
     };
 
     console.log('Creating preapproval for user:', user.id, 'plan:', planType);
@@ -171,26 +188,34 @@ Deno.serve(async (req) => {
     const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `${user.id}-${Date.now()}` // Prevent duplicates
+        'X-Idempotency-Key': `${user.id}-${Date.now()}`, // Prevent duplicates
       },
-      body: JSON.stringify(preapprovalData)
+      body: JSON.stringify(preapprovalData),
     });
 
     if (!mpResponse.ok) {
       const errorData = await mpResponse.text();
       console.error('Mercado Pago API error:', errorData);
       return new Response(
-        JSON.stringify({ error: 'Failed to create subscription', details: errorData }),
-        { status: mpResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Failed to create subscription',
+          details: errorData,
+        }),
+        {
+          status: mpResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
     const result = await mpResponse.json();
 
     console.log('Preapproval created successfully:', result.id);
-    console.log('Subscription will be created after payment confirmation via webhook');
+    console.log(
+      'Subscription will be created after payment confirmation via webhook'
+    );
 
     // Return checkout URL without creating subscription in DB
     // The webhook will create the subscription when payment is confirmed
@@ -200,21 +225,24 @@ Deno.serve(async (req) => {
         checkout_url: result.init_point, // Production URL
         sandbox_url: result.sandbox_init_point, // Test URL
         subscription_id: result.id,
-        message: 'Preapproval created. Subscription will be activated after payment confirmation.'
+        message:
+          'Preapproval created. Subscription will be activated after payment confirmation.',
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-
   } catch (error) {
     console.error('Error creating subscription:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }

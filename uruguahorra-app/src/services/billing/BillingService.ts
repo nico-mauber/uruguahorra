@@ -1,8 +1,5 @@
 import { logger, LogModule } from '@/utils/logger';
-import type {
-  SubscriptionPlan,
-  CheckoutResult,
-} from '@/types/billing';
+import type { SubscriptionPlan, CheckoutResult } from '@/types/billing';
 import { MercadoPagoService } from './MercadoPagoService';
 
 export class BillingService {
@@ -59,10 +56,14 @@ export class BillingService {
     cancelUrl: string
   ): Promise<CheckoutResult> {
     try {
-      logger.start(LogModule.DB, 'Creando checkout de suscripción MercadoPago', {
-        planId,
-        userId,
-      });
+      logger.start(
+        LogModule.DB,
+        'Creando checkout de suscripción MercadoPago',
+        {
+          planId,
+          userId,
+        }
+      );
 
       const plan = this.SUBSCRIPTION_PLANS[planId];
       if (!plan) {

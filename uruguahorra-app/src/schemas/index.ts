@@ -300,9 +300,7 @@ export const SubscriptionStatusSchema = z.enum([
   'expired',
   'trial',
 ]);
-export const SubscriptionProviderSchema = z.enum([
-  'mercadopago',
-]);
+export const SubscriptionProviderSchema = z.enum(['mercadopago']);
 
 // Schema base sin refinamientos
 const SubscriptionBaseSchema = z.object({

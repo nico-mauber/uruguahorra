@@ -69,19 +69,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Analytics hook
   const analytics = useAnalytics();
 
-  // Función para cargar datos completos del usuario
-  const loadUserData = useCallback(async (authUser: SupabaseUser) => {
+  // Función para cargar datos completos del usuario con reintentos
+  const loadUserData = useCallback(async (authUser: SupabaseUser, retryCount = 0) => {
+    const MAX_RETRIES = 5;
+    const RETRY_DELAYS = [1000, 2000, 3000, 5000, 8000]; // Esperas exponenciales
+    
     try {
       logger.start(LogModule.AUTH, 'Cargando datos completos del usuario', {
         userId: authUser.id,
+        attempt: retryCount + 1,
       });
 
       const userData = await AuthService.getUserCompleteData(authUser.id);
 
       if (!userData.profile) {
+        // Para usuarios nuevos, es normal que el perfil no exista inmediatamente
+        if (retryCount < MAX_RETRIES) {
+          logger.info(
+            LogModule.AUTH,
+            `Perfil aún no creado, reintentando (${retryCount + 1}/${MAX_RETRIES})`,
+            { userId: authUser.id, email: authUser.email }
+          );
+          
+          // Esperar antes de reintentar
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+          
+          // Reintentar recursivamente
+          return loadUserData(authUser, retryCount + 1);
+        }
+        
+        // Después de todos los reintentos, intentar crear el perfil manualmente
+        logger.warn(
+          LogModule.AUTH,
+          'Perfil no encontrado después de reintentos, intentando crear manualmente',
+          { userId: authUser.id, email: authUser.email }
+        );
+        
+        // Intentar crear el perfil manualmente
+        const createdProfile = await AuthService.createUserProfile(authUser.id, authUser.email || '');
+        
+        if (createdProfile) {
+          // Volver a cargar los datos con el perfil creado
+          const newUserData = await AuthService.getUserCompleteData(authUser.id);
+          if (newUserData.profile) {
+            logger.success(LogModule.AUTH, 'Perfil creado manualmente con éxito');
+            return {
+              user: {
+                ...newUserData.profile,
+                id: authUser.id,
+                level: newUserData.level,
+                totalXP: newUserData.totalXP,
+                streak: newUserData.streak,
+              },
+              isPremium: newUserData.isPremium,
+            };
+          }
+        }
+        
         logger.error(
           LogModule.AUTH,
-          'Perfil no encontrado para usuario con sesión activa',
+          'No se pudo obtener o crear perfil para usuario con sesión activa',
           { userId: authUser.id, email: authUser.email }
         );
         return null;
@@ -327,8 +374,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!authUser) throw new Error('No se pudo crear la cuenta');
 
         // Para signup, el usuario se creará automáticamente por el trigger de la DB
-        // Esperamos un poco y luego cargamos los datos
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Esperamos más tiempo y luego cargamos los datos con reintentos
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         const userData = await loadUserData(authUser);
 

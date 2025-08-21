@@ -21,7 +21,7 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     logout();
-    router.replace('/(auth)/onboarding');
+    router.replace('/(auth)/simple-onboarding');
   };
 
   const nextLevelXP = Math.pow((user?.level || 1) + 1, 2) * 4;

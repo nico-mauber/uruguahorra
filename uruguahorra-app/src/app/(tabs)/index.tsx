@@ -175,7 +175,7 @@ export default function DashboardScreen() {
   // Redirigir si no hay usuario (debe estar ANTES de cualquier return condicional)
   useEffect(() => {
     if (!initializing && !user) {
-      router.replace('/(auth)/onboarding');
+      router.replace('/(auth)/simple-onboarding');
     }
   }, [initializing, user, router]);
 

@@ -84,7 +84,7 @@ export default function CreateGoalScreen() {
           'No hay usuario autenticado para crear meta'
         );
         Alert.alert('Error', 'Debes iniciar sesión para crear una meta');
-        router.replace('/(auth)/onboarding');
+        router.replace('/(auth)/simple-onboarding');
         return;
       }
 
@@ -140,7 +140,16 @@ export default function CreateGoalScreen() {
                 : 'shield',
       };
 
-      logger.debug(LogModule.GOALS, 'Datos de la meta a crear', goalData);
+      logger.debug(LogModule.GOALS, 'Datos de la meta a crear', {
+        goalData,
+        userId: user.id,
+        userEmail: user.email,
+      });
+
+      // Verificar una vez más que tenemos el ID del usuario
+      if (!user.id) {
+        throw new Error('ID de usuario no disponible');
+      }
 
       // Crear la meta en Supabase
       const createdGoal = await GoalsService.createGoal(user.id, goalData);
@@ -386,7 +395,7 @@ export default function CreateGoalScreen() {
           </Text>
           <Button
             title="Ir al inicio"
-            onPress={() => router.replace('/(auth)/onboarding')}
+            onPress={() => router.replace('/(auth)/simple-onboarding')}
             size="large"
             style={{ marginTop: 20 }}
           />

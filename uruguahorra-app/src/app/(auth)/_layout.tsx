@@ -8,7 +8,7 @@ export default function AuthLayout() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="simple-onboarding" />
     </Stack>
   );
 }

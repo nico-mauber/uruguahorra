@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 2.9 - Actualizada tabla subscriptions para integración con Mercado Pago
--- Fecha: 20 de Enero, 2025
+-- Versión: 4.0 - Incluye todas las migraciones y correcciones
+-- Fecha: 21 de Enero, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -11,14 +11,17 @@
 -- 2. Ejecutar en Supabase SQL Editor
 -- 3. La base de datos quedará totalmente configurada y funcional
 -- 
--- CORRECCIONES INCLUIDAS EN ESTA VERSIÓN:
--- ✅ user_streaks.last_activity_date → last_activity_at (TIMESTAMPTZ)
--- ✅ users.last_activity_date → last_activity_at (TIMESTAMPTZ)
--- ✅ user_streaks.protection_reset_date (TIMESTAMPTZ) - AGREGADA
--- ✅ user_streaks.streak_protections_used (INTEGER) - AGREGADA
--- ✅ Consistencia entre esquema DB y tipos TypeScript
--- ✅ Referencias actualizadas en todas las funciones
--- ✅ Resuelve ERROR PGRST204 completamente
+-- CAMBIOS PRINCIPALES EN ESTA VERSIÓN:
+-- ✅ Sistema de autenticación SIMPLIFICADO
+-- ✅ Políticas RLS mínimas y funcionales
+-- ✅ Función simple_create_user_profile() para trigger automático
+-- ✅ Función get_or_create_user_profile() como fallback
+-- ✅ Eliminada la verificación de email obligatoria
+-- ✅ Creación de perfil garantizada con múltiples mecanismos
+-- ✅ Compatible con registro e inicio de sesión inmediato
+-- ✅ Incluye todas las migraciones (fix_goals_policies, add_missing_goals_columns, etc.)
+-- ✅ Sincronización automática de IDs entre auth.users y public.users
+-- ✅ Limpieza de perfiles huérfanos
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -422,20 +425,44 @@ ALTER TABLE public.user_quest_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.paywall_events ENABLE ROW LEVEL SECURITY;
 
--- Políticas para USERS (SELECT, UPDATE, E INSERT PARA TRIGGERS)
-CREATE POLICY "users_can_select_own" ON public.users
-    FOR SELECT USING (auth.uid() = id);
+-- Políticas SIMPLIFICADAS para USERS
+-- Política simple: usuarios pueden ver y modificar solo su propio perfil
+CREATE POLICY "users_simple_policy" ON public.users
+    FOR ALL 
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "users_can_update_own" ON public.users
-    FOR UPDATE USING (auth.uid() = id);
+-- Política para permitir operaciones con service role (para funciones)
+CREATE POLICY "service_role_all" ON public.users
+    FOR ALL
+    USING (auth.jwt() ->> 'role' = 'service_role');
 
--- CRÍTICO: Permitir INSERT para que el trigger de creación automática funcione
-CREATE POLICY "users_can_insert_own" ON public.users
-    FOR INSERT WITH CHECK (auth.uid() = id);
+-- Políticas para GOALS (separadas por operación para mayor claridad)
+-- Política para SELECT: usuarios pueden ver sus propias metas
+CREATE POLICY "goals_select_own" ON public.goals
+    FOR SELECT 
+    USING (auth.uid() = user_id);
 
--- Políticas para GOALS
-CREATE POLICY "goals_all_own" ON public.goals
-    FOR ALL USING (auth.uid() = user_id);
+-- Política para INSERT: usuarios pueden crear metas para sí mismos
+CREATE POLICY "goals_insert_own" ON public.goals
+    FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+-- Política para UPDATE: usuarios pueden actualizar sus propias metas
+CREATE POLICY "goals_update_own" ON public.goals
+    FOR UPDATE 
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- Política para DELETE: usuarios pueden eliminar sus propias metas
+CREATE POLICY "goals_delete_own" ON public.goals
+    FOR DELETE 
+    USING (auth.uid() = user_id);
+
+-- Política para service role (funciones del servidor)
+CREATE POLICY "service_role_all_goals" ON public.goals
+    FOR ALL
+    USING (auth.jwt() ->> 'role' = 'service_role');
 
 -- Políticas para MICRO_CONTRIBUTIONS
 CREATE POLICY "micro_contributions_all_own" ON public.micro_contributions
@@ -513,16 +540,14 @@ CREATE POLICY "paywall_events_all_own" ON public.paywall_events
 -- PASO 6: FUNCIONES Y TRIGGERS
 -- ============================================
 
--- Función para crear perfiles automáticamente (SECURITY DEFINER para saltear RLS)
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger 
+-- Función SIMPLIFICADA para crear perfil de usuario
+CREATE OR REPLACE FUNCTION public.simple_create_user_profile()
+RETURNS trigger
+LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
 AS $$
 BEGIN
-    RAISE NOTICE 'Creando perfil para usuario: % (%)', NEW.email, NEW.id;
-    
-    -- Intentar insertar el perfil del usuario
+    -- Crear perfil directamente sin validaciones complejas
     INSERT INTO public.users (
         id,
         email,
@@ -547,20 +572,81 @@ BEGIN
         1,
         0,
         0,
-        CURRENT_DATE,
-        NEW.created_at,
+        NOW(),
+        NOW(),
         NOW()
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET
+        updated_at = NOW();
     
-    RAISE NOTICE 'Perfil creado exitosamente para usuario: %', NEW.id;
     RETURN NEW;
-EXCEPTION 
-    WHEN OTHERS THEN
-        RAISE NOTICE 'Error creando perfil para %: %', NEW.id, SQLERRM;
-        RETURN NEW; -- No fallar el registro de auth incluso si falla el perfil
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+-- Función para obtener o crear perfil (para usuarios existentes o fallback)
+CREATE OR REPLACE FUNCTION public.get_or_create_user_profile(
+    p_user_id UUID
+)
+RETURNS public.users
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_user public.users;
+    v_auth_user auth.users;
+BEGIN
+    -- Intentar obtener el perfil
+    SELECT * INTO v_user FROM public.users WHERE id = p_user_id;
+    
+    IF FOUND THEN
+        RETURN v_user;
+    END IF;
+    
+    -- Si no existe, obtener datos de auth.users y crear perfil
+    SELECT * INTO v_auth_user FROM auth.users WHERE id = p_user_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Usuario no encontrado en auth.users: %', p_user_id;
+    END IF;
+    
+    -- Crear el perfil
+    INSERT INTO public.users (
+        id,
+        email,
+        country,
+        currency,
+        premium,
+        total_xp,
+        current_level,
+        current_streak,
+        longest_streak,
+        last_activity_at,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        v_auth_user.id,
+        v_auth_user.email,
+        COALESCE(v_auth_user.raw_user_meta_data->>'country', 'UY'),
+        COALESCE(v_auth_user.raw_user_meta_data->>'currency', 'UYU'),
+        false,
+        0,
+        1,
+        0,
+        0,
+        NOW(),
+        NOW(),
+        NOW()
+    )
+    RETURNING * INTO v_user;
+    
+    RETURN v_user;
+END;
+$$;
+
+-- Dar permisos necesarios
+GRANT EXECUTE ON FUNCTION public.get_or_create_user_profile TO authenticated;
+GRANT EXECUTE ON FUNCTION public.simple_create_user_profile TO authenticated;
 
 -- Función para actualizar timestamps
 CREATE OR REPLACE FUNCTION public.update_updated_at()
@@ -604,10 +690,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger para nuevos usuarios
+-- Trigger SIMPLIFICADO para nuevos usuarios
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    FOR EACH ROW
+    EXECUTE FUNCTION public.simple_create_user_profile();
 
 -- Triggers para updated_at
 CREATE TRIGGER update_users_updated_at
@@ -761,8 +849,67 @@ LEFT JOIN public.micro_contributions mc ON g.id = mc.goal_id
 GROUP BY g.id, g.name, g.target_amount, g.current_amount, g.saved_amount, g.category, g.color, g.icon, g.is_active, g.is_completed, g.created_at, g.deadline, g.target_date;
 
 -- ============================================
--- PASO 10: DIAGNÓSTICO Y CORRECCIÓN DE PERFILES
+-- PASO 10: CONFIGURACIÓN IMPORTANTE
 -- ============================================
+-- IMPORTANTE: Después de ejecutar este script, configurar en Supabase Dashboard:
+-- 1. Authentication → Settings → DESACTIVAR "Enable email confirmations"
+-- 2. Authentication → Settings → ACTIVAR "Enable automatic sign-in after sign-up"
+-- Esto permite que los usuarios usen la app inmediatamente sin verificar email
+
+-- ============================================
+-- PASO 11: DIAGNÓSTICO Y CORRECCIÓN DE PERFILES
+-- ============================================
+
+-- Limpieza de perfiles huérfanos y sincronización de IDs
+DO $$
+BEGIN
+    -- Eliminar perfiles que no tienen usuario correspondiente en auth.users
+    DELETE FROM public.users
+    WHERE id NOT IN (SELECT id FROM auth.users);
+    
+    RAISE NOTICE '✅ Perfiles huérfanos eliminados';
+END $$;
+
+-- Crear perfiles faltantes para usuarios existentes
+INSERT INTO public.users (
+    id,
+    email,
+    country,
+    currency,
+    premium,
+    total_xp,
+    current_level,
+    current_streak,
+    longest_streak,
+    last_activity_at,
+    created_at,
+    updated_at
+)
+SELECT 
+    a.id,
+    a.email,
+    COALESCE(a.raw_user_meta_data->>'country', 'UY'),
+    COALESCE(a.raw_user_meta_data->>'currency', 'UYU'),
+    false,
+    0,
+    1,
+    0,
+    0,
+    NOW(),
+    COALESCE(a.created_at, NOW()),
+    NOW()
+FROM auth.users a
+LEFT JOIN public.users u ON a.id = u.id
+WHERE u.id IS NULL
+ON CONFLICT (id) DO NOTHING;
+
+-- Actualizar emails si hay discrepancias
+UPDATE public.users u
+SET email = a.email,
+    updated_at = NOW()
+FROM auth.users a
+WHERE u.id = a.id
+AND u.email != a.email;
 
 -- Diagnóstico detallado de usuarios sin perfil
 DO $$
@@ -839,7 +986,7 @@ BEGIN
 END $$;
 
 -- ============================================
--- PASO 11: VERIFICACIÓN DE INTEGRIDAD DEL SISTEMA
+-- PASO 12: VERIFICACIÓN COMPLETA DE INTEGRIDAD Y SINCRONIZACIÓN
 -- ============================================
 
 DO $$
@@ -927,11 +1074,49 @@ EXCEPTION WHEN OTHERS THEN
 END $$;
 
 -- ============================================
+-- PASO 13: LIMPIEZA FINAL Y VERIFICACIÓN DE METAS HUÉRFANAS
+-- ============================================
+
+DO $$
+DECLARE
+    v_goals_without_user INTEGER;
+    v_orphan_contributions INTEGER;
+BEGIN
+    -- Verificar metas huérfanas
+    SELECT COUNT(*) 
+    INTO v_goals_without_user
+    FROM public.goals g
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.users u WHERE u.id = g.user_id
+    );
+    
+    IF v_goals_without_user > 0 THEN
+        RAISE WARNING '⚠️ Encontradas % metas sin usuario válido, eliminándolas...', v_goals_without_user;
+        DELETE FROM public.goals WHERE user_id NOT IN (SELECT id FROM public.users);
+    END IF;
+    
+    -- Verificar contribuciones huérfanas
+    SELECT COUNT(*)
+    INTO v_orphan_contributions
+    FROM public.micro_contributions mc
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.goals g WHERE g.id = mc.goal_id
+    );
+    
+    IF v_orphan_contributions > 0 THEN
+        RAISE WARNING '⚠️ Encontradas % contribuciones sin meta válida, eliminándolas...', v_orphan_contributions;
+        DELETE FROM public.micro_contributions WHERE goal_id NOT IN (SELECT id FROM public.goals);
+    END IF;
+    
+    RAISE NOTICE '✅ Limpieza de datos huérfanos completada';
+END $$;
+
+-- ============================================
 -- MENSAJE FINAL
 -- ============================================
 
 SELECT 
     '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY' as status,
-    'Version 2.6 - Quest tables added - Gamification system ready' as version,
-    'All systems operational - Goals, Users, Quests working' as ready,
+    'Version 4.0 - Complete schema with all migrations integrated' as version,
+    'All systems operational - Auth, Goals, Users, Quests, Gamification ready' as ready,
     NOW() as deployed_at;

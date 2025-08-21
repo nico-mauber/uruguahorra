@@ -19,7 +19,11 @@
       "Bash(SUPABASE_ACCESS_TOKEN=\"sbp_9cdca10bc54c141762f7047ae47ba2c0b7b2c9a3\" npx supabase functions deploy create-subscription --project-ref ebkzqfmppdntmynfjehh)",
       "Bash(chmod:*)",
       "Bash(node:*)",
-      "Bash(SUPABASE_ACCESS_TOKEN=\"sbp_9cdca10bc54c141762f7047ae47ba2c0b7b2c9a3\" npx supabase functions deploy cleanup-pending-subscriptions --project-ref ebkzqfmppdntmynfjehh)"
+      "Bash(SUPABASE_ACCESS_TOKEN=\"sbp_9cdca10bc54c141762f7047ae47ba2c0b7b2c9a3\" npx supabase functions deploy cleanup-pending-subscriptions --project-ref ebkzqfmppdntmynfjehh)",
+      "Bash(npx expo start:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": [],

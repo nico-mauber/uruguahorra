@@ -13,8 +13,6 @@ console.log('[Metro Config] Web mode detected:', isWeb);
 
 config.transformer = {
   ...config.transformer,
-  // Transformer personalizado completamente deshabilitado
-  // babelTransformerPath: require.resolve('./metro.transform.js'),
   minifierPath: 'metro-minify-terser',
   minifierConfig: {
     keep_fnames: true,
@@ -33,25 +31,31 @@ config.transformer = {
   getTransformOptions: async () => ({
     transform: {
       experimentalImportSupport: false,
-      inlineRequires: true, // Cambiar a true para mejor performance en mobile
+      inlineRequires: true,
     },
   }),
 };
 
-// Configuración del resolver
+// Configuración del resolver con mejor manejo de watchman
 config.resolver = {
   ...config.resolver,
   sourceExts: [...config.resolver.sourceExts, 'cjs', 'mjs'],
-  // Asegurar que los archivos web se sirvan correctamente
   assetExts: [
     ...config.resolver.assetExts.filter((ext) => ext !== 'svg'),
     'svg',
   ],
+  // Ignorar archivos problemáticos
+  blacklistRE: /node_modules[\/\\]@expo[\/\\]ngrok.*|\.bin.*/,
 };
 
-// Configuración del servidor
+// Configuración del watchman para evitar problemas de permisos
+config.watchFolders = [__dirname];
+config.resolver.watchFolders = [__dirname];
+
+// Configuración del servidor con mejor manejo de errores
 config.server = {
   ...config.server,
+  port: 8081,
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
       // Servir archivos polyfill desde la carpeta web
@@ -87,9 +91,27 @@ config.server = {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       }
 
+      // Log de todas las peticiones en desarrollo
+      if (__DEV__ && req.url && !req.url.includes('symbolicate')) {
+        console.log(`[Metro] ${req.method} ${req.url}`);
+      }
+      
       return middleware(req, res, next);
     };
   },
+  // Configuración adicional para mejor debugging
+  rewriteRequestUrl: (url) => {
+    if (__DEV__) {
+      console.log('[Metro] Request URL:', url);
+    }
+    return url;
+  },
+};
+
+// Configuración del watcher para evitar problemas en Windows
+config.watcher = {
+  ...config.watcher,
+  watchman: false, // Desactivar watchman en Windows si causa problemas
 };
 
 module.exports = config;

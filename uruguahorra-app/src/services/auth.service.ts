@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin, hasServiceRoleKey } from '@/lib/supabase-admin';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import { authInterceptor, RateLimitError } from '@/lib/auth-interceptor';
@@ -81,11 +82,31 @@ export class AuthService {
             'Esperando creación automática del perfil...'
           );
 
-          // Pequeña espera para que el trigger procese
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Espera más larga para dar tiempo al trigger
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          // Verificar que el perfil fue creado
-          const profile = await this.getUserProfile(authData.user.id);
+          // Verificar que el perfil fue creado con reintentos
+          let profile = await this.getUserProfile(authData.user.id);
+          
+          // Si no existe, esperar un poco más y reintentar
+          if (!profile) {
+            logger.info(LogModule.AUTH, 'Perfil aún no creado, esperando más...');
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            profile = await this.getUserProfile(authData.user.id);
+          }
+          
+          // Si aún no existe, intentar crearlo manualmente
+          if (!profile) {
+            logger.warn(
+              LogModule.AUTH,
+              'Trigger no creó el perfil, creando manualmente...'
+            );
+            profile = await this.createUserProfile(
+              authData.user.id,
+              authData.user.email || email,
+              metadata
+            );
+          }
 
           if (profile) {
             logger.success(LogModule.AUTH, 'Perfil creado automáticamente', {
@@ -628,6 +649,114 @@ export class AuthService {
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal verificando premium', error);
       return false;
+    }
+  }
+
+  /**
+   * Crear perfil de usuario manualmente (fallback si el trigger falla)
+   * @param userId - ID del usuario de auth.users
+   * @param email - Email del usuario
+   * @param metadata - Metadata opcional con country y currency
+   */
+  static async createUserProfile(
+    userId: string,
+    email: string,
+    metadata?: { country?: string; currency?: string }
+  ): Promise<User | null> {
+    try {
+      logger.start(LogModule.DB, 'Creando perfil de usuario', {
+        userId,
+        email,
+        metadata,
+      });
+
+      // Primero verificar si el perfil ya existe
+      const existingProfile = await this.getUserProfile(userId);
+      if (existingProfile) {
+        logger.info(LogModule.DB, 'Perfil ya existe, no es necesario crear', {
+          userId,
+        });
+        return existingProfile;
+      }
+
+      // Intentar usar la función RPC que bypasea RLS
+      logger.info(LogModule.DB, 'Usando función RPC create_user_profile');
+      
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('create_user_profile', {
+          p_user_id: userId,
+          p_email: email,
+          p_country: metadata?.country || 'UY',
+          p_currency: metadata?.currency || 'UYU',
+        });
+
+      if (!rpcError && rpcData) {
+        logger.success(LogModule.DB, 'Perfil creado con función RPC', {
+          userId: rpcData.id,
+          email: rpcData.email,
+        });
+        return rpcData as User;
+      }
+
+      if (rpcError) {
+        logger.warn(LogModule.DB, 'Error en función RPC, intentando método directo', rpcError);
+      }
+
+      // Si la función RPC no existe o falla, intentar método directo
+      // Usar cliente admin si está disponible para bypasear RLS
+      const clientToUse = hasServiceRoleKey() ? supabaseAdmin : supabase;
+      
+      if (!hasServiceRoleKey()) {
+        logger.warn(
+          LogModule.DB,
+          'Service Role Key no disponible, intentando con cliente normal'
+        );
+      }
+
+      // Crear el perfil directamente
+      const { data, error } = await clientToUse
+        .from('users')
+        .insert({
+          id: userId,
+          email,
+          country: metadata?.country || 'UY',
+          currency: metadata?.currency || 'UYU',
+          premium: false,
+          total_xp: 0,
+          current_level: 1,
+          current_streak: 0,
+          longest_streak: 0,
+          last_activity_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Si el error es que ya existe (duplicate key), intentar obtenerlo
+        if (error.code === '23505') {
+          logger.info(
+            LogModule.DB,
+            'Perfil ya existe (error de duplicado), obteniendo perfil existente',
+            { userId }
+          );
+          return await this.getUserProfile(userId);
+        }
+
+        logger.error(LogModule.DB, 'Error creando perfil de usuario', error);
+        return null;
+      }
+
+      logger.success(LogModule.DB, 'Perfil de usuario creado exitosamente', {
+        userId: data.id,
+        email: data.email,
+      });
+
+      return data;
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error fatal creando perfil', error);
+      return null;
     }
   }
 }

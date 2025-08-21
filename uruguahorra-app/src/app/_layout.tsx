@@ -4,12 +4,34 @@ import { ThemeProvider } from '@theme';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth, AuthProvider } from '@/contexts';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, LogBox } from 'react-native';
 import { logger, LogModule } from '@/utils/logger';
 import Toast from 'react-native-toast-message';
 import { ErrorBoundary, PWAStatus } from '@components';
 import { PostHogProvider } from 'posthog-react-native';
 import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
+
+// Configurar logging mejorado en desarrollo
+if (__DEV__) {
+  // Mostrar todos los logs
+  LogBox.ignoreAllLogs(false);
+  
+  // Interceptar errores de red
+  const originalFetch = global.fetch;
+  global.fetch = async (...args) => {
+    try {
+      console.log('🌐 Fetch request:', args[0]);
+      const response = await originalFetch(...args);
+      if (!response.ok) {
+        console.error('🔴 Fetch error:', response.status, response.statusText);
+      }
+      return response;
+    } catch (error) {
+      console.error('🔴 Network error:', error);
+      throw error;
+    }
+  };
+}
 
 function LoadingScreen() {
   return (
@@ -50,7 +72,7 @@ function RootLayoutNav() {
       router.replace('/(tabs)');
     } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
       logger.info(LogModule.NAV, 'Redirigiendo a onboarding');
-      router.replace('/(auth)/onboarding');
+      router.replace('/(auth)/simple-onboarding');
     }
   }, [isLoading, isAuthenticated, segments, router]);
 
@@ -99,6 +121,13 @@ function AppContent() {
   const { track } = useAnalytics();
 
   useEffect(() => {
+    // Log de inicio y estado de la red
+    if (__DEV__) {
+      console.log('🚀 App started in development mode');
+      console.log('📱 Platform:', Platform.OS);
+      console.log('🌐 Supabase URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
+    }
+    
     // Track app opened
     track(AnalyticsEvents.APP_OPENED);
   }, [track]);

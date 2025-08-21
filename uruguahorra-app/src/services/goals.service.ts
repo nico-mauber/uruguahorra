@@ -183,6 +183,11 @@ export class GoalsService {
    */
   static async updateGoal(goalId: string, updates: GoalUpdate): Promise<Goal> {
     try {
+      logger.info(LogModule.GOALS, 'Actualizando meta', {
+        goalId,
+        updates,
+      });
+
       const { data, error } = await supabase
         .from('goals')
         .update(updates)
@@ -190,10 +195,19 @@ export class GoalsService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogModule.GOALS, 'Error actualizando meta', error);
+        throw error;
+      }
+
+      logger.success(LogModule.GOALS, 'Meta actualizada exitosamente', {
+        goalId,
+        newData: data,
+      });
+
       return data;
     } catch (error) {
-      console.error('Error actualizando meta:', error);
+      logger.error(LogModule.GOALS, 'Error fatal actualizando meta', error);
       throw error;
     }
   }

@@ -108,7 +108,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
 
     setIsUpdating(true);
     try {
-      await GoalsService.updateGoal(goalId, user.id, {
+      await GoalsService.updateGoal(goalId, {
         target_amount: newTarget,
       });
 

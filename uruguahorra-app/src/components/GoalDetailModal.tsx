@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
@@ -59,6 +60,11 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   const [isLoadingContributions, setIsLoadingContributions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+  
+  // Estados para editar monto objetivo
+  const [isEditingTarget, setIsEditingTarget] = useState(false);
+  const [newTargetAmount, setNewTargetAmount] = useState('');
+  const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
   const loadContributions = React.useCallback(async () => {
     if (!goal?.id) return;
@@ -162,6 +168,80 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleUpdateTargetAmount = async () => {
+    const newTarget = parseFloat(newTargetAmount);
+
+    // Validaciones
+    if (isNaN(newTarget) || newTarget <= 0) {
+      ToastService.warning('Monto inválido', 'Ingresa un monto válido mayor a 0');
+      return;
+    }
+
+    if (newTarget < goal.savedAmount) {
+      ToastService.warning(
+        'Objetivo muy bajo',
+        `El objetivo debe ser mayor a lo ya ahorrado ($${goal.savedAmount.toFixed(0)})`
+      );
+      return;
+    }
+
+    if (!user?.id) {
+      ToastService.error('Error', 'No se pudo identificar el usuario');
+      return;
+    }
+
+    setIsUpdatingTarget(true);
+    try {
+      logger.info(LogModule.UI, 'Actualizando monto objetivo', {
+        goalId: goal.id,
+        oldTarget: goal.targetAmount,
+        newTarget,
+      });
+
+      // Actualizar la meta usando el servicio existente
+      await GoalsService.updateGoal(goal.id, {
+        target_amount: newTarget,
+      });
+
+      ToastService.success(
+        'Objetivo actualizado',
+        `Nuevo objetivo: $${newTarget.toFixed(0)}`
+      );
+
+      // Resetear estados de edición
+      setIsEditingTarget(false);
+      setNewTargetAmount('');
+
+      // Actualizar la meta localmente para reflejar el cambio inmediatamente
+      goal.targetAmount = newTarget;
+
+      // Llamar callback para refrescar datos si está disponible
+      if (onGoalUpdate) {
+        await onGoalUpdate();
+      }
+
+      logger.success(LogModule.UI, 'Monto objetivo actualizado correctamente');
+    } catch (error) {
+      logger.error(LogModule.UI, 'Error actualizando monto objetivo', error);
+      ToastService.error(
+        'Error',
+        'No se pudo actualizar el objetivo. Por favor intenta de nuevo.'
+      );
+    } finally {
+      setIsUpdatingTarget(false);
+    }
+  };
+
+  const startEditingTarget = () => {
+    setNewTargetAmount(goal.targetAmount.toString());
+    setIsEditingTarget(true);
+  };
+
+  const cancelEditingTarget = () => {
+    setIsEditingTarget(false);
+    setNewTargetAmount('');
   };
 
   const calculateProgress = () => {
@@ -389,6 +469,64 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       padding: 40,
       alignItems: 'center',
     },
+    // Estilos para editar monto objetivo
+    targetContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    editTargetButton: {
+      padding: 4,
+      borderRadius: 4,
+    },
+    editTargetContainer: {
+      gap: 8,
+      width: '100%',
+    },
+    editTargetLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    editTargetInput: {
+      height: 44,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      color: theme.text,
+      backgroundColor: theme.surface,
+    },
+    editTargetButtons: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    editButton: {
+      flex: 1,
+      height: 36,
+      borderRadius: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cancelButton: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    saveButton: {
+      backgroundColor: theme.primary,
+    },
+    cancelButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    saveButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: 'white',
+    },
   });
 
   const progress = calculateProgress();
@@ -455,15 +593,63 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                     <Text style={styles.progressValue}>
                       ${goal.savedAmount.toFixed(0)}
                     </Text>
-                    <Text style={styles.progressLabel}>
-                      de ${goal.targetAmount.toFixed(0)} ahorrados
-                    </Text>
+                    {!isEditingTarget ? (
+                      <View style={styles.targetContainer}>
+                        <Text style={styles.progressLabel}>
+                          de ${goal.targetAmount.toFixed(0)} ahorrados
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.editTargetButton}
+                          onPress={startEditingTarget}
+                          disabled={isCompleted}
+                        >
+                          <Ionicons 
+                            name="pencil" 
+                            size={16} 
+                            color={isCompleted ? theme.textSecondary : theme.primary} 
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={styles.editTargetContainer}>
+                        <Text style={styles.editTargetLabel}>Nuevo objetivo:</Text>
+                        <TextInput
+                          style={styles.editTargetInput}
+                          placeholder="Ingresa el nuevo monto"
+                          placeholderTextColor={theme.textSecondary}
+                          value={newTargetAmount}
+                          onChangeText={setNewTargetAmount}
+                          keyboardType="numeric"
+                          autoFocus
+                        />
+                        <View style={styles.editTargetButtons}>
+                          <TouchableOpacity
+                            style={[styles.editButton, styles.cancelButton]}
+                            onPress={cancelEditingTarget}
+                            disabled={isUpdatingTarget}
+                          >
+                            <Text style={styles.cancelButtonText}>Cancelar</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.editButton, styles.saveButton]}
+                            onPress={handleUpdateTargetAmount}
+                            disabled={isUpdatingTarget}
+                          >
+                            <Text style={styles.saveButtonText}>
+                              {isUpdatingTarget ? 'Guardando...' : 'Guardar'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
                   </View>
-                  <ProgressBar
-                    progress={progress}
-                    showLabel
-                    color={isCompleted ? theme.success : theme.primary}
-                  />
+                  {!isEditingTarget && (
+                    <ProgressBar
+                      progress={progress}
+                      showLabel
+                      color={isCompleted ? theme.success : theme.primary}
+                    />
+                  )}
                 </Card>
 
                 <View style={styles.statsGrid}>

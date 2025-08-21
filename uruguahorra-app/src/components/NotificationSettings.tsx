@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { useTheme } from '@theme';
 
 export interface NotificationSettingsProps {
   onClose?: () => void;
@@ -20,6 +21,7 @@ export interface NotificationSettingsProps {
 export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   onClose,
 }) => {
+  const { theme } = useTheme();
   const {
     isInitialized,
     permissionsGranted,

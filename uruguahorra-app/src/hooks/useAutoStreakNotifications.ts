@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSession } from '@/hooks/useSession';
+import { useAuth } from '@/contexts';
 import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { StreaksService } from '@/features/gamification';
 import { logger, LogModule } from '@/utils/logger';
@@ -9,7 +9,7 @@ import { logger, LogModule } from '@/utils/logger';
  * Se ejecuta cuando el usuario está autenticado
  */
 export function useAutoStreakNotifications() {
-  const { user, isLoading } = useSession();
+  const { user, isLoading } = useAuth();
   const {
     isInitialized,
     permissionsGranted,

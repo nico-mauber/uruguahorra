@@ -37,36 +37,57 @@ export class NotificationsService {
     STREAK_WARNING: 'streak-warning-24h',
   };
 
+  // Control para evitar spam de logs
+  private static lastPermissionWarning = 0;
+  private static readonly WARNING_INTERVAL = 30000; // 30 segundos entre warnings
+  private static isInitialized = false;
+
   /**
    * Inicializar el servicio de notificaciones
    * Solicitar permisos y registrar token
    */
   static async initialize(): Promise<boolean> {
     try {
+      // Si ya está inicializado, devolver el estado guardado
+      if (this.isInitialized) {
+        return await this.areNotificationsEnabled();
+      }
+
       logger.start(LogModule.API, 'Inicializando servicio de notificaciones');
 
       // Verificar si es dispositivo físico
       if (!Device.isDevice) {
-        logger.warn(
-          LogModule.API,
-          'Notificaciones push no funcionan en simulador'
-        );
+        // Solo loggear una vez cada 30 segundos para evitar spam
+        const now = Date.now();
+        if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
+          logger.warn(
+            LogModule.API,
+            'Notificaciones push no funcionan en simulador'
+          );
+          this.lastPermissionWarning = now;
+        }
         return false;
       }
 
       // Solicitar permisos
       const permissionsGranted = await this.requestPermissions();
       if (!permissionsGranted) {
-        logger.warn(
-          LogModule.API,
-          'Permisos de notificación no concedidos'
-        );
+        // Solo loggear una vez cada 30 segundos para evitar spam
+        const now = Date.now();
+        if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
+          logger.warn(
+            LogModule.API,
+            'Permisos de notificación no concedidos'
+          );
+          this.lastPermissionWarning = now;
+        }
         return false;
       }
 
       // Registrar token para notificaciones push (si se necesita en el futuro)
       await this.registerPushToken();
 
+      this.isInitialized = true;
       logger.success(
         LogModule.API,
         'Servicio de notificaciones inicializado correctamente'

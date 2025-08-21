@@ -66,6 +66,13 @@ function TabLayoutContent() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null, // Esto oculta la pantalla de la barra de tabs
+          title: 'Notificaciones',
+        }}
+      />
       {__DEV__ && (
         <Tabs.Screen
           name="test-notifications"

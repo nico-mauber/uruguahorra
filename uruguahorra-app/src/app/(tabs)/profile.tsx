@@ -12,12 +12,14 @@ import { useRouter } from 'expo-router';
 import { Card, Button, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
+import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { permissionsGranted, settings } = useStreakNotifications();
 
   const handleLogout = () => {
     logout();
@@ -149,6 +151,9 @@ export default function ProfileScreen() {
       fontSize: 12,
       fontWeight: '600',
     },
+    notificationStatus: {
+      marginRight: 8,
+    },
   });
 
   return (
@@ -254,7 +259,10 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(tabs)/notifications')}
+            >
               <Ionicons
                 name="notifications"
                 size={24}
@@ -262,6 +270,21 @@ export default function ProfileScreen() {
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Notificaciones</Text>
+              <View style={styles.notificationStatus}>
+                <Ionicons
+                  name={
+                    permissionsGranted && settings.enabled
+                      ? 'checkmark-circle'
+                      : 'close-circle'
+                  }
+                  size={16}
+                  color={
+                    permissionsGranted && settings.enabled
+                      ? '#10B981'
+                      : '#6B7280'
+                  }
+                />
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}

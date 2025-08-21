@@ -48,19 +48,23 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   // Cargar usuario al iniciar
   useEffect(() => {
     loadUser();
 
     // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[SimpleAuth] Auth state changed:', event);
         
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          await loadUserProfile(session.user.id);
+          // NO llamamos loadUserProfile aquí para evitar duplicados
+          // Se maneja en signIn/signUp donde tenemos más control
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
@@ -91,7 +95,14 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
 
   // Cargar perfil del usuario
   const loadUserProfile = async (userId: string) => {
+    // Evitar llamadas duplicadas
+    if (loadingProfile) {
+      console.log('[SimpleAuth] Ya se está cargando el perfil, omitiendo...');
+      return;
+    }
+
     try {
+      setLoadingProfile(true);
       console.log('[SimpleAuth] Cargando perfil para usuario:', userId);
       
       const { data, error } = await supabase
@@ -154,6 +165,8 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
       }
     } catch (error) {
       console.error('[SimpleAuth] Error loading profile:', error);
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -174,7 +187,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
         if (result.profile) {
           setProfile(result.profile);
         } else {
-          await loadUserProfile(result.user.id, result.user.email);
+          await loadUserProfile(result.user.id);
         }
         
         return true;
@@ -202,7 +215,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
         if (result.profile) {
           setProfile(result.profile);
         } else {
-          await loadUserProfile(result.user.id, result.user.email);
+          await loadUserProfile(result.user.id);
         }
         
         return true;

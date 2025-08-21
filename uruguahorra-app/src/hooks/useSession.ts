@@ -21,7 +21,7 @@ interface UseSessionOptions {
 export function useSession(options: UseSessionOptions = {}) {
   const { autoRefreshOnFocus = true, refreshInterval = 30 } = options;
 
-  const { user, isAuthenticated, isLoading, checkSession } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [sessionState, setSessionState] = useState<SessionState>({
     isLoading: true,
     isAuthenticated: false,
@@ -32,13 +32,15 @@ export function useSession(options: UseSessionOptions = {}) {
 
   // Update session state when auth store changes
   useEffect(() => {
-    setSessionState({
+    setSessionState((prev) => ({
+      ...prev,
       isLoading,
       isAuthenticated,
       user,
       error: null,
-      lastRefresh: new Date(),
-    });
+      // Solo actualizar lastRefresh si realmente cambió el estado de autenticación
+      lastRefresh: prev.isAuthenticated !== isAuthenticated ? new Date() : prev.lastRefresh,
+    }));
   }, [isLoading, isAuthenticated, user]);
 
   // Refresh session function
@@ -59,7 +61,7 @@ export function useSession(options: UseSessionOptions = {}) {
 
       if (data.session) {
         logger.success(LogModule.AUTH, 'Session refreshed successfully');
-        await checkSession(); // Update auth store with new session
+        // Session is automatically updated by the AuthProvider
         setSessionState((prev) => ({
           ...prev,
           error: null,
@@ -73,11 +75,11 @@ export function useSession(options: UseSessionOptions = {}) {
       logger.error(LogModule.AUTH, 'Session refresh error', error);
       setSessionState((prev) => ({
         ...prev,
-        error: error.message,
+        error: (error as Error)?.message || 'Unknown error',
       }));
       return false;
     }
-  }, [checkSession]);
+  }, []);
 
   // Check if session needs refresh
   const shouldRefresh = useCallback(() => {
@@ -164,17 +166,17 @@ export function useSession(options: UseSessionOptions = {}) {
     setSessionState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      await checkSession();
+      // Just refresh the session, AuthProvider handles the rest
       await refreshSession();
     } catch (error: unknown) {
       logger.error(LogModule.AUTH, 'Force refresh failed', error);
       setSessionState((prev) => ({
         ...prev,
-        error: error.message,
+        error: (error as Error)?.message || 'Unknown error',
         isLoading: false,
       }));
     }
-  }, [checkSession, refreshSession]);
+  }, [refreshSession]);
 
   // Get session info
   const getSessionInfo = useCallback(async () => {
@@ -196,12 +198,11 @@ export function useSession(options: UseSessionOptions = {}) {
     }
   }, []);
 
-  // Initial session check
+  // Initial session check - not needed anymore, AuthProvider handles this
   useEffect(() => {
-    if (sessionState.isLoading && !isLoading) {
-      checkSession();
-    }
-  }, [sessionState.isLoading, isLoading, checkSession]);
+    // AuthProvider already handles initial session loading
+    // This effect is no longer needed
+  }, []);
 
   return {
     // Session state

@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { NotificationsService } from '@/services/notifications.service';
 import { StreaksService } from '@/features/gamification';
-import { useSession } from '@/hooks/useSession';
+import { useAuth } from '@/contexts';
 import { logger, LogModule } from '@/utils/logger';
 import { storage } from '@/lib/storage';
 
@@ -53,20 +53,24 @@ const DEFAULT_SETTINGS: StreakNotificationSettings = {
 const SETTINGS_STORAGE_KEY = 'streak_notification_settings';
 
 export function useStreakNotifications(): UseStreakNotificationsReturn {
-  const { user } = useSession();
+  const { user } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [settings, setSettings] = useState<StreakNotificationSettings>(DEFAULT_SETTINGS);
   const [scheduledNotifications, setScheduledNotifications] = useState(0);
+  
+  // Ref para evitar reinicialización múltiple
+  const initializationAttempted = useRef(false);
 
   // Cargar configuración guardada
   useEffect(() => {
     loadSettings();
   }, []);
 
-  // Inicializar cuando el usuario esté disponible
+  // Inicializar cuando el usuario esté disponible (solo una vez)
   useEffect(() => {
-    if (user && !isInitialized) {
+    if (user && !isInitialized && !initializationAttempted.current) {
+      initializationAttempted.current = true;
       initialize();
     }
   }, [user, isInitialized]);

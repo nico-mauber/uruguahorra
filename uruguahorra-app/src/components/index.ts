@@ -9,3 +9,4 @@ export { PWAStatus } from './PWAStatus';
 export { SubscriptionManager } from './SubscriptionManager';
 export { NotificationSettings } from './NotificationSettings';
 export { NotificationTesting } from './NotificationTesting';
+export { NotificationsBanner } from './NotificationsBanner';

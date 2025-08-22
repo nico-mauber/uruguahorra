@@ -2,7 +2,7 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 5.1 - Challenge System V2 + Goal Progress Fix
+-- Versión: 5.2 - Challenge System V2 + Goal Progress Fix + User Streaks Fix
 -- Fecha: 22 de Agosto, 2025
 -- ============================================
 -- 
@@ -14,6 +14,7 @@
 -- CAMBIOS PRINCIPALES EN ESTA VERSIÓN:
 -- ✅ CHALLENGE SYSTEM V2 INTEGRADO: Nuevo sistema de retos con categorías, sesiones y duración personalizable
 -- ✅ CORREGIDO: Triggers para actualizar automáticamente el progreso de metas cuando se agregan ahorros
+-- ✅ CORREGIDO: Inicialización automática de user_streaks para nuevos usuarios y función de recuperación
 -- ✅ Sistema de categorías de retos con UI mejorada (iconos, colores)
 -- ✅ Sesiones de usuario con seguimiento de progreso y renovación
 -- ✅ Funciones auxiliares para gestión automática de expiración
@@ -33,6 +34,7 @@
 -- ✅ Función auxiliar create_user_quest_progress_safe() incluida
 -- ✅ Sistema de quests completamente funcional sin parches defensivos
 -- ✅ TRIGGERS CORREGIDOS - Progreso de metas se actualiza automáticamente al agregar ahorros
+-- ✅ USER_STREAKS FIX - Inicialización automática y función de recuperación para error 406
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -680,6 +682,29 @@ BEGIN
     ON CONFLICT (id) DO UPDATE SET
         updated_at = NOW();
     
+    -- Inicializar user_streaks para el nuevo usuario
+    INSERT INTO public.user_streaks (
+        user_id,
+        current_streak,
+        longest_streak,
+        last_activity_at,
+        streak_protections_used,
+        protection_reset_date,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        NEW.id,
+        0,
+        0,
+        NOW(),
+        0,
+        DATE_TRUNC('month', NOW()) + INTERVAL '1 month',
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (user_id) DO NOTHING;
+    
     RETURN NEW;
 END;
 $$;
@@ -741,6 +766,29 @@ BEGIN
     )
     RETURNING * INTO v_user;
     
+    -- Inicializar user_streaks para el usuario
+    INSERT INTO public.user_streaks (
+        user_id,
+        current_streak,
+        longest_streak,
+        last_activity_at,
+        streak_protections_used,
+        protection_reset_date,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        v_auth_user.id,
+        0,
+        0,
+        NOW(),
+        0,
+        DATE_TRUNC('month', NOW()) + INTERVAL '1 month',
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (user_id) DO NOTHING;
+    
     RETURN v_user;
 END;
 $$;
@@ -748,6 +796,58 @@ $$;
 -- Dar permisos necesarios
 GRANT EXECUTE ON FUNCTION public.get_or_create_user_profile TO authenticated;
 GRANT EXECUTE ON FUNCTION public.simple_create_user_profile TO authenticated;
+
+-- Función para inicializar user_streaks para usuarios existentes
+CREATE OR REPLACE FUNCTION public.get_or_create_user_streak(
+    p_user_id UUID
+)
+RETURNS public.user_streaks
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_streak public.user_streaks;
+BEGIN
+    -- Intentar obtener la racha existente
+    SELECT * INTO v_streak FROM public.user_streaks WHERE user_id = p_user_id;
+    
+    IF FOUND THEN
+        RETURN v_streak;
+    END IF;
+    
+    -- Verificar que el usuario existe
+    IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = p_user_id) THEN
+        RAISE EXCEPTION 'Usuario no encontrado: %', p_user_id;
+    END IF;
+    
+    -- Crear nueva entrada user_streaks
+    INSERT INTO public.user_streaks (
+        user_id,
+        current_streak,
+        longest_streak,
+        last_activity_at,
+        streak_protections_used,
+        protection_reset_date,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        p_user_id,
+        0,
+        0,
+        NOW(),
+        0,
+        DATE_TRUNC('month', NOW()) + INTERVAL '1 month',
+        NOW(),
+        NOW()
+    )
+    RETURNING * INTO v_streak;
+    
+    RETURN v_streak;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_or_create_user_streak TO authenticated;
 
 -- Función para crear quest progress de manera segura (SOLUCIÓN DE RAÍZ INTEGRADA)
 CREATE OR REPLACE FUNCTION create_user_quest_progress_safe(
@@ -974,8 +1074,7 @@ BEGIN
         jsonb_build_object(
             'expired_count', final_count,
             'session_ids', expired_sessions,
-            'execution_time', start_time,
-            'duration_ms', EXTRACT(MILLISECONDS FROM (NOW() - start_time))
+            'execution_time', start_time
         ), 
         NOW()
     );
@@ -1528,8 +1627,8 @@ END $$;
 
 SELECT 
     '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - CHALLENGE SYSTEM V2 INTEGRATED' as status,
-    'Version 5.1 - Complete Challenge System V2 + Fixed Goal Progress Tracking' as version_notes,
-    'Includes: Challenge categories, user sessions, automatic expiration, duration customization, and FIXED goal progress updates' as features_included,
+    'Version 5.2 - Complete Challenge System V2 + Fixed Goal Progress + User Streaks Error 406 Fix' as version_notes,
+    'Includes: Challenge categories, user sessions, automatic expiration, duration customization, FIXED goal progress updates, and FIXED user_streaks 406 error' as features_included,
     'Ready for: Challenge catalog UI, progress tracking, and notification system' as next_steps,
     NOW() as deployed_at;
 
@@ -1564,3 +1663,4 @@ SELECT
 -- Si ya ejecutaste fix_quests_rls_policies.sql previamente, no hay problema - 
 -- este esquema es idempotente y aplicará las mismas correcciones.
 -- 
+

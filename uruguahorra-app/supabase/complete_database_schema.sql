@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 4.0 - Incluye todas las migraciones y correcciones
--- Fecha: 21 de Enero, 2025
+-- Versión: 4.1 - Incluye todas las migraciones y correcciones + Quest System Fix
+-- Fecha: 21 de Agosto, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -22,6 +22,9 @@
 -- ✅ Incluye todas las migraciones (fix_goals_policies, add_missing_goals_columns, etc.)
 -- ✅ Sincronización automática de IDs entre auth.users y public.users
 -- ✅ Limpieza de perfiles huérfanos
+-- ✅ QUEST SYSTEM FIX INTEGRADO - Políticas RLS corregidas para weekly_quests y user_quest_progress
+-- ✅ Función auxiliar create_user_quest_progress_safe() incluida
+-- ✅ Sistema de quests completamente funcional sin parches defensivos
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -520,13 +523,24 @@ CREATE POLICY "user_streaks_all_own" ON public.user_streaks
 CREATE POLICY "user_xp_log_all_own" ON public.user_xp_log
     FOR ALL USING (auth.uid() = user_id);
 
--- Políticas para WEEKLY_QUESTS (lectura pública)
+-- Políticas para WEEKLY_QUESTS (CORREGIDAS - SOLUCIÓN DE RAÍZ)
+-- Permitir lectura pública y creación por el sistema
 CREATE POLICY "weekly_quests_read_all" ON public.weekly_quests
     FOR SELECT USING (true);
 
--- Políticas para USER_QUEST_PROGRESS
-CREATE POLICY "user_quest_progress_all_own" ON public.user_quest_progress
-    FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "weekly_quests_insert_system" ON public.weekly_quests
+    FOR INSERT WITH CHECK (true);
+
+-- Políticas para USER_QUEST_PROGRESS (CORREGIDAS - SOLUCIÓN DE RAÍZ)  
+-- Separar operaciones para mayor control y permitir que el sistema cree progress
+CREATE POLICY "user_quest_progress_read_own" ON public.user_quest_progress
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "user_quest_progress_insert_own_or_system" ON public.user_quest_progress
+    FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.uid() IS NOT NULL);
+
+CREATE POLICY "user_quest_progress_update_own" ON public.user_quest_progress
+    FOR UPDATE USING (auth.uid() = user_id);
 
 -- Políticas para AUDIT_LOGS (solo lectura propia)
 CREATE POLICY "audit_logs_read_own" ON public.audit_logs
@@ -647,6 +661,58 @@ $$;
 -- Dar permisos necesarios
 GRANT EXECUTE ON FUNCTION public.get_or_create_user_profile TO authenticated;
 GRANT EXECUTE ON FUNCTION public.simple_create_user_profile TO authenticated;
+
+-- Función para crear quest progress de manera segura (SOLUCIÓN DE RAÍZ INTEGRADA)
+CREATE OR REPLACE FUNCTION create_user_quest_progress_safe(
+    p_user_id UUID,
+    p_quest_id UUID
+) RETURNS UUID
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_progress_id UUID;
+BEGIN
+    -- Verificar que el usuario existe
+    IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id) THEN
+        RAISE EXCEPTION 'Usuario no existe: %', p_user_id;
+    END IF;
+
+    -- Verificar que la quest existe
+    IF NOT EXISTS (SELECT 1 FROM weekly_quests WHERE id = p_quest_id) THEN
+        RAISE EXCEPTION 'Quest no existe: %', p_quest_id;
+    END IF;
+
+    -- Verificar que no existe ya progreso para esta combinación
+    SELECT id INTO v_progress_id
+    FROM user_quest_progress 
+    WHERE user_id = p_user_id AND quest_id = p_quest_id;
+
+    IF v_progress_id IS NOT NULL THEN
+        RETURN v_progress_id; -- Ya existe, retornar ID
+    END IF;
+
+    -- Crear nuevo progreso
+    INSERT INTO user_quest_progress (
+        user_id,
+        quest_id,
+        completed_challenge_ids,
+        completion_percentage,
+        completed_at
+    ) VALUES (
+        p_user_id,
+        p_quest_id,
+        '{}',
+        0,
+        NULL
+    ) RETURNING id INTO v_progress_id;
+
+    RETURN v_progress_id;
+END;
+$$;
+
+-- Dar permisos a la función de quest progress
+GRANT EXECUTE ON FUNCTION create_user_quest_progress_safe TO authenticated;
 
 -- Función para actualizar timestamps
 CREATE OR REPLACE FUNCTION public.update_updated_at()
@@ -1116,7 +1182,23 @@ END $$;
 -- ============================================
 
 SELECT 
-    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY' as status,
-    'Version 4.0 - Complete schema with all migrations integrated' as version,
-    'All systems operational - Auth, Goals, Users, Quests, Gamification ready' as ready,
+    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - QUEST SYSTEM INTEGRATED' as status,
+    'Version 4.1 - Quest RLS policies fixed and integrated' as version_notes,
+    'No need to run fix_quests_rls_policies.sql separately' as migration_notes,
     NOW() as deployed_at;
+
+-- ============================================
+-- NOTAS IMPORTANTES SOBRE QUEST SYSTEM FIX
+-- ============================================
+-- 
+-- Este archivo YA INCLUYE las correcciones del sistema de quests:
+-- ✅ Políticas RLS corregidas para weekly_quests (SELECT + INSERT)
+-- ✅ Políticas RLS corregidas para user_quest_progress (SELECT, INSERT, UPDATE separadas)  
+-- ✅ Función create_user_quest_progress_safe() incluida
+-- 
+-- NO es necesario ejecutar fix_quests_rls_policies.sql por separado.
+-- Este archivo es la ÚNICA FUENTE DE VERDAD para la estructura de la base de datos.
+-- 
+-- Si ya ejecutaste fix_quests_rls_policies.sql previamente, no hay problema - 
+-- este esquema es idempotente y aplicará las mismas correcciones.
+-- 

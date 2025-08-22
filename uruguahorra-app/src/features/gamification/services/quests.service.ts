@@ -8,6 +8,7 @@ import {
 } from '../utils/formulas';
 import { QUEST_SETTINGS } from '../utils/constants';
 import { XPService } from './xp.service';
+import { QuestInitializationService } from './quest-initialization.service';
 // import { callThrottler } from '@/lib/throttle'; // TODO: Use when throttling is needed
 
 export class QuestsService {
@@ -19,6 +20,13 @@ export class QuestsService {
   ): Promise<QuestProgress[]> {
     try {
       logger.start(LogModule.DB, 'Evaluando progreso de quests', { userId });
+
+      // SOLUCIÓN DE RAÍZ: Inicializar sistema de quests antes de usarlo
+      const questSystemReady = await QuestInitializationService.initialize();
+      if (!questSystemReady) {
+        logger.warn(LogModule.DB, 'Sistema de quests no disponible, retornando array vacío');
+        return [];
+      }
 
       // Obtener quests activos del usuario
       const activeQuests = await this.getUserActiveQuests(userId);
@@ -51,26 +59,8 @@ export class QuestsService {
 
       return updatedQuests;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error fatal evaluando quests', error);
-
-      // Si es error de tabla no encontrada, retornar array vacío
-      if (
-        error instanceof Error &&
-        (error.message?.includes(
-          'relation "public.weekly_quests" does not exist'
-        ) ||
-          error.message?.includes(
-            'relation "public.user_quest_progress" does not exist'
-          ) ||
-          error.message?.includes('Could not find the table'))
-      ) {
-        logger.warn(
-          LogModule.DB,
-          'Tablas de quests no existen, retornando array vacío'
-        );
-        return [];
-      }
-      throw error;
+      logger.error(LogModule.DB, 'Error evaluando quests', error);
+      throw error; // REVERTIDO: Propagar error, el sistema debe funcionar correctamente
     }
   }
 
@@ -80,6 +70,12 @@ export class QuestsService {
   static async generateWeeklyQuest(): Promise<WeeklyQuest> {
     try {
       logger.start(LogModule.DB, 'Generando quest semanal');
+
+      // SOLUCIÓN DE RAÍZ: Usar el servicio de inicialización
+      const questSystemReady = await QuestInitializationService.initialize();
+      if (!questSystemReady) {
+        throw new Error('Sistema de quests no inicializado correctamente');
+      }
 
       const weekStartDate = getWeekStartDate();
 
@@ -92,27 +88,7 @@ export class QuestsService {
         .limit(1)
         .maybeSingle();
 
-      if (existingError && existingError.code !== 'PGRST116') {
-        // Si es error de tabla no encontrada o RLS, retornar quest por defecto
-        if (
-          existingError.message?.includes(
-            'relation "public.weekly_quests" does not exist'
-          ) ||
-          existingError.message?.includes('Could not find the table') ||
-          existingError.code === '42501'
-        ) {
-          logger.warn(
-            LogModule.DB,
-            'No se puede acceder a weekly_quests, retornando quest por defecto'
-          );
-          return {
-            id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
-            week_start_date: weekStartDate.toISOString().split('T')[0],
-            challenge_ids: [],
-            is_active: true,
-            created_at: new Date().toISOString(),
-          } as WeeklyQuest;
-        }
+      if (existingError) {
         throw existingError;
       }
 
@@ -137,33 +113,6 @@ export class QuestsService {
         .single();
 
       if (createError) {
-        // Este error es esperado si las quests no están configuradas - no mostrar al usuario
-        logger.devError(
-          LogModule.DB,
-          'Error creando quest semanal',
-          createError
-        );
-
-        // Si es error de RLS o tabla no existe, retornar quest por defecto
-        if (
-          createError.message?.includes(
-            'relation "public.weekly_quests" does not exist'
-          ) ||
-          createError.message?.includes('Could not find the table') ||
-          createError.code === '42501'
-        ) {
-          logger.warn(
-            LogModule.DB,
-            'No se puede crear quest semanal, retornando quest por defecto'
-          );
-          return {
-            id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
-            week_start_date: weekStartDate.toISOString().split('T')[0],
-            challenge_ids: challengeIds,
-            is_active: true,
-            created_at: new Date().toISOString(),
-          } as WeeklyQuest;
-        }
         throw createError;
       }
 
@@ -174,30 +123,8 @@ export class QuestsService {
 
       return newQuest;
     } catch (error) {
-      logger.error(LogModule.DB, 'Error fatal generando quest semanal', error);
-
-      // Si es error de tabla no encontrada o RLS, retornar quest por defecto
-      if (
-        error instanceof Error &&
-        (error.message?.includes(
-          'relation "public.weekly_quests" does not exist'
-        ) ||
-          error.message?.includes('Could not find the table') ||
-          (error as { code?: string }).code === '42501')
-      ) {
-        logger.warn(
-          LogModule.DB,
-          'Sistema de quests no disponible, retornando quest por defecto'
-        );
-        return {
-          id: '00000000-0000-0000-0000-000000000000', // UUID válido por defecto
-          week_start_date: getWeekStartDate().toISOString().split('T')[0],
-          challenge_ids: [],
-          is_active: true,
-          created_at: new Date().toISOString(),
-        } as WeeklyQuest;
-      }
-      throw error;
+      logger.error(LogModule.DB, 'Error generando quest semanal', error);
+      throw error; // REVERTIDO: Propagar error, el sistema debe funcionar
     }
   }
 
@@ -210,16 +137,15 @@ export class QuestsService {
         userId,
       });
 
-      // Primero asegurar que exista quest para semana actual (con manejo de errores)
-      try {
-        await this.generateWeeklyQuest();
-      } catch (error) {
-        logger.warn(
-          LogModule.DB,
-          'No se pudo generar quest semanal, continuando sin ella',
-          error
-        );
+      // SOLUCIÓN DE RAÍZ: Inicializar sistema antes de usar
+      const questSystemReady = await QuestInitializationService.initialize();
+      if (!questSystemReady) {
+        logger.warn(LogModule.DB, 'Sistema de quests no disponible');
+        return [];
       }
+
+      // Asegurar que exista quest para semana actual
+      await this.generateWeeklyQuest();
 
       const { data, error } = await supabase
         .from('user_quest_progress')
@@ -232,31 +158,6 @@ export class QuestsService {
         .eq('user_id', userId);
 
       if (error) {
-        logger.error(
-          LogModule.DB,
-          'Error obteniendo quests del usuario',
-          error
-        );
-
-        // Si es error de tabla no encontrada o columna no existe, retornar array vacío
-        if (
-          error.message?.includes(
-            'relation "public.user_quest_progress" does not exist'
-          ) ||
-          error.message?.includes(
-            'relation "public.weekly_quests" does not exist'
-          ) ||
-          error.message?.includes('Could not find the table') ||
-          (error.message?.includes('column') &&
-            error.message?.includes('does not exist')) ||
-          error.code === '42703'
-        ) {
-          logger.warn(
-            LogModule.DB,
-            'Tablas o columnas de quests no existen, retornando array vacío'
-          );
-          return [];
-        }
         throw error;
       }
 
@@ -264,8 +165,8 @@ export class QuestsService {
 
       // Ordenar por fecha de inicio de la quest (más reciente primero)
       quests.sort((a: QuestProgress, b: QuestProgress) => {
-        const dateA = a.quest?.week_start_date || a.created_at || '';
-        const dateB = b.quest?.week_start_date || b.created_at || '';
+        const dateA = a.quest?.week_start_date || '';
+        const dateB = b.quest?.week_start_date || '';
         return dateB.localeCompare(dateA);
       });
 
@@ -274,30 +175,23 @@ export class QuestsService {
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
       const activeQuests = quests.filter((q: QuestProgress) => {
+        if (!q.quest) return false;
         const questDate = new Date(q.quest.week_start_date);
         return questDate >= fourWeeksAgo;
       });
 
-      // Crear progreso para quest actual si no existe (con manejo de errores)
-      try {
-        const currentWeekQuest = await this.getCurrentWeekQuest();
-        const hasCurrentWeekProgress = activeQuests.some(
-          (q: QuestProgress) => q.quest_id === currentWeekQuest.id
-        );
+      // Crear progreso para quest actual si no existe
+      const currentWeekQuest = await this.getCurrentWeekQuest();
+      const hasCurrentWeekProgress = activeQuests.some(
+        (q: QuestProgress) => q.quest_id === currentWeekQuest.id
+      );
 
-        if (!hasCurrentWeekProgress) {
-          const newProgress = await this.createQuestProgress(
-            userId,
-            currentWeekQuest.id
-          );
-          activeQuests.unshift(newProgress);
-        }
-      } catch (error) {
-        logger.warn(
-          LogModule.DB,
-          'No se pudo crear progreso para quest actual',
-          error
+      if (!hasCurrentWeekProgress) {
+        const newProgress = await this.createQuestProgress(
+          userId,
+          currentWeekQuest.id
         );
+        activeQuests.unshift(newProgress);
       }
 
       logger.success(
@@ -306,31 +200,8 @@ export class QuestsService {
       );
       return activeQuests;
     } catch (error) {
-      logger.error(
-        LogModule.DB,
-        'Error fatal obteniendo quests activos',
-        error
-      );
-
-      // Si es error de tabla no encontrada o RLS, retornar array vacío
-      if (
-        error instanceof Error &&
-        (error.message?.includes(
-          'relation "public.weekly_quests" does not exist'
-        ) ||
-          error.message?.includes(
-            'relation "public.user_quest_progress" does not exist'
-          ) ||
-          error.message?.includes('Could not find the table') ||
-          (error as { code?: string }).code === '42501')
-      ) {
-        logger.warn(
-          LogModule.DB,
-          'Sistema de quests no disponible, retornando array vacío'
-        );
-        return [];
-      }
-      throw error;
+      logger.error(LogModule.DB, 'Error obteniendo quests activos', error);
+      throw error; // REVERTIDO: Propagar error, el sistema debe funcionar
     }
   }
 

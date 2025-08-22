@@ -92,17 +92,17 @@ export default function DashboardScreen() {
   // Función optimizada para cargar estadísticas de gamificación (SOLO cuando sea necesario)
   const loadGamificationStats = async (
     userId: string,
-    skipQuests: boolean = false
+    skipQuests: boolean = false // REVERTIDO: Intentar cargar quests con inicialización robusta
   ) => {
     try {
-      // OPTIMIZACIÓN: Cargar solo stats básicas, no quests fallidos
+      // SOLUCIÓN DE RAÍZ: Cargar stats completas con inicialización robusta de quests
       const stats = await GamificationService.getUserBasicStats(userId, {
         skipQuests,
       });
       setGamificationStats(stats);
       logger.success(
         LogModule.UI,
-        'Estadísticas de gamificación cargadas (optimizada)'
+        'Estadísticas de gamificación cargadas completamente'
       );
     } catch (error) {
       logger.error(
@@ -110,24 +110,7 @@ export default function DashboardScreen() {
         'Error cargando estadísticas de gamificación',
         error
       );
-      // No mostrar error al usuario, usar valores por defecto
-      setGamificationStats({
-        totalXP: 0,
-        level: 1,
-        levelInfo: { level: 1, progress: 0, nextLevelXP: 4, currentLevelXP: 0 },
-        streak: {
-          id: '',
-          user_id: '',
-          current_streak: 0,
-          longest_streak: 0,
-          last_activity_at: new Date().toISOString(),
-          streak_protections_used: 0,
-          protection_reset_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        activeQuests: [],
-      });
+      throw error; // REVERTIDO: Propagar error en lugar de ocultarlo con valores por defecto
     }
   };
 

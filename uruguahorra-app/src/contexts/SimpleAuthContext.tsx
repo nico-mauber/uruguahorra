@@ -1,6 +1,6 @@
 /**
  * Contexto de Autenticación Simplificado
- *
+ * 
  * Reemplaza el complejo AuthContext con una versión minimalista y funcional
  */
 
@@ -18,7 +18,7 @@ interface SimpleAuthContextType {
   profile: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-
+  
   // Métodos simples
   signUp: (
     email: string,
@@ -30,9 +30,7 @@ interface SimpleAuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(
-  undefined
-);
+const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(undefined);
 
 export const useSimpleAuth = () => {
   const context = useContext(SimpleAuthContext);
@@ -46,9 +44,7 @@ interface SimpleAuthProviderProps {
   children: React.ReactNode;
 }
 
-export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
-  children,
-}) => {
+export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,18 +57,20 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
     // Escuchar cambios de autenticación
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[SimpleAuth] Auth state changed:', event);
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
+    } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[SimpleAuth] Auth state changed:', event);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
         // NO llamamos loadUserProfile aquí para evitar duplicados
-        // Se maneja en signIn/signUp donde tenemos más control
+          // Se maneja en signIn/signUp donde tenemos más control
       } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
+          setUser(null);
+          setProfile(null);
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -81,9 +79,9 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
   const loadUser = async () => {
     try {
       setIsLoading(true);
-
+      
       const session = await SimpleAuthService.getSession();
-
+      
       if (session?.user) {
         setUser(session.user);
         await loadUserProfile(session.user.id);
@@ -106,7 +104,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
     try {
       setLoadingProfile(true);
       console.log('[SimpleAuth] Cargando perfil para usuario:', userId);
-
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -118,15 +116,15 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
         setProfile(data);
       } else {
         console.log('[SimpleAuth] Perfil no encontrado, creándolo...');
-
+        
         // Obtener datos del usuario autenticado
         const { data: authUser } = await supabase.auth.getUser();
-
+        
         if (!authUser?.user) {
           console.error('[SimpleAuth] No se pudo obtener usuario autenticado');
           return;
         }
-
+        
         // Crear perfil directamente
         const { data: newProfile, error: insertError } = await supabase
           .from('users')
@@ -146,18 +144,16 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
           })
           .select()
           .single();
-
+        
         if (insertError) {
           console.error('[SimpleAuth] Error creando perfil:', insertError);
-
+          
           // Fallback: intentar con RPC
-          const { data: rpcProfile } = await supabase.rpc(
-            'get_or_create_user_profile',
-            {
+          const { data: rpcProfile } = await supabase
+            .rpc('get_or_create_user_profile', {
               p_user_id: userId,
-            }
-          );
-
+            });
+          
           if (rpcProfile) {
             console.log('[SimpleAuth] Perfil creado con RPC');
             setProfile(rpcProfile);
@@ -182,21 +178,21 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
-
+      
       const result = await SimpleAuthService.signUp(email, password, metadata);
-
+      
       if (result.success && result.user) {
         setUser(result.user);
-
+        
         if (result.profile) {
           setProfile(result.profile);
         } else {
           await loadUserProfile(result.user.id);
         }
-
+        
         return true;
       }
-
+      
       return false;
     } catch (error) {
       console.error('[SimpleAuth] SignUp error:', error);
@@ -210,21 +206,21 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-
+      
       const result = await SimpleAuthService.signIn(email, password);
-
+      
       if (result.success && result.user) {
         setUser(result.user);
-
+        
         if (result.profile) {
           setProfile(result.profile);
         } else {
           await loadUserProfile(result.user.id);
         }
-
+        
         return true;
       }
-
+      
       return false;
     } catch (error) {
       console.error('[SimpleAuth] SignIn error:', error);
@@ -273,20 +269,17 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
 // Hook de compatibilidad para migración gradual
 export const useAuth = () => {
   const context = useSimpleAuth();
-
+  
   // Adaptar a la interfaz anterior para compatibilidad
   // IMPORTANTE: Usar el ID del usuario autenticado, no del perfil
   return {
-    user:
-      context.profile && context.user
-        ? {
-            ...context.profile,
-            id: context.user.id, // Usar SIEMPRE el ID del usuario autenticado de Supabase
-            level: 1,
-            totalXP: context.profile.total_xp || 0,
-            streak: context.profile.current_streak || 0,
-          }
-        : null,
+    user: context.profile && context.user ? {
+      ...context.profile,
+      id: context.user.id, // Usar SIEMPRE el ID del usuario autenticado de Supabase
+      level: 1,
+      totalXP: context.profile.total_xp || 0,
+      streak: context.profile.current_streak || 0,
+    } : null,
     supabaseUser: context.user,
     isAuthenticated: context.isAuthenticated,
     isLoading: context.isLoading,

@@ -337,7 +337,9 @@ export const toastConfig = {
     <View style={[styles.toastContainer, styles.successToast]}>
       <Ionicons name="checkmark-circle" size={24} color="#10B981" />
       <View style={styles.textContainer}>
-        <Text style={[styles.title, styles.successTitle]}>{props.text1 || ''}</Text>
+        <Text style={[styles.title, styles.successTitle]}>
+          {props.text1 || ''}
+        </Text>
         {props.text2 ? (
           <Text style={[styles.message, styles.successMessage]}>
             {props.text2}
@@ -350,7 +352,9 @@ export const toastConfig = {
     <View style={[styles.toastContainer, styles.errorToast]}>
       <Ionicons name="alert-circle" size={24} color="#EF4444" />
       <View style={styles.textContainer}>
-        <Text style={[styles.title, styles.errorTitle]}>{props.text1 || ''}</Text>
+        <Text style={[styles.title, styles.errorTitle]}>
+          {props.text1 || ''}
+        </Text>
         {props.text2 ? (
           <Text style={[styles.message, styles.errorMessage]}>
             {props.text2}
@@ -363,7 +367,9 @@ export const toastConfig = {
     <View style={[styles.toastContainer, styles.infoToast]}>
       <Ionicons name="information-circle" size={24} color="#3B82F6" />
       <View style={styles.textContainer}>
-        <Text style={[styles.title, styles.infoTitle]}>{props.text1 || ''}</Text>
+        <Text style={[styles.title, styles.infoTitle]}>
+          {props.text1 || ''}
+        </Text>
         {props.text2 ? (
           <Text style={[styles.message, styles.infoMessage]}>
             {props.text2}
@@ -376,7 +382,9 @@ export const toastConfig = {
     <View style={[styles.toastContainer, styles.warningToast]}>
       <Ionicons name="warning" size={24} color="#F59E0B" />
       <View style={styles.textContainer}>
-        <Text style={[styles.title, styles.warningTitle]}>{props.text1 || ''}</Text>
+        <Text style={[styles.title, styles.warningTitle]}>
+          {props.text1 || ''}
+        </Text>
         {props.text2 ? (
           <Text style={[styles.message, styles.warningMessage]}>
             {props.text2}

@@ -63,7 +63,9 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
             text: 'Aumentar objetivo',
             onPress: () => {
               setEditingGoalId(goalId);
-              setNewTargetAmount((goal.targetAmount + pendingAmount).toString());
+              setNewTargetAmount(
+                (goal.targetAmount + pendingAmount).toString()
+              );
             },
           },
           {

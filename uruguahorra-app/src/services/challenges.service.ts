@@ -12,7 +12,10 @@ import {
 } from '@/services/analytics.service';
 
 // Helper function for challenge tracking
-const trackChallengeEvent = (event: string, props?: Record<string, unknown>) => {
+const trackChallengeEvent = (
+  event: string,
+  props?: Record<string, unknown>
+) => {
   AnalyticsService.track(event, props);
 };
 

@@ -1,6 +1,6 @@
 /**
  * Servicio de Autenticación Simplificado
- * 
+ *
  * Este servicio reemplaza el complejo AuthService anterior con una versión
  * mucho más simple y directa que funciona correctamente.
  */
@@ -18,7 +18,7 @@ export interface AuthResponse {
 }
 
 // Helper para manejar rate limiting
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Último timestamp de operación para evitar rate limiting
 let lastAuthOperation = 0;
@@ -28,13 +28,15 @@ export class SimpleAuthService {
   private static async waitForRateLimit() {
     const now = Date.now();
     const timeSinceLastOp = now - lastAuthOperation;
-    
+
     if (timeSinceLastOp < 2000) {
       const waitTime = 2000 - timeSinceLastOp;
-      console.log(`[SimpleAuth] Esperando ${waitTime}ms para evitar rate limiting`);
+      console.log(
+        `[SimpleAuth] Esperando ${waitTime}ms para evitar rate limiting`
+      );
       await delay(waitTime);
     }
-    
+
     lastAuthOperation = Date.now();
   }
   /**
@@ -48,7 +50,7 @@ export class SimpleAuthService {
   ): Promise<AuthResponse> {
     try {
       console.log('[SimpleAuth] Iniciando registro:', email);
-      
+
       // Esperar si es necesario para evitar rate limiting
       await this.waitForRateLimit();
 
@@ -64,15 +66,16 @@ export class SimpleAuthService {
 
       if (authError) {
         console.error('[SimpleAuth] Error en signUp:', authError);
-        
+
         // Si el error es de rate limiting, esperar y mostrar mensaje claro
         if (authError.message?.includes('rate_limit')) {
           return {
             success: false,
-            error: 'Por favor espera unos segundos antes de intentar nuevamente',
+            error:
+              'Por favor espera unos segundos antes de intentar nuevamente',
           };
         }
-        
+
         return {
           success: false,
           error: authError.message,
@@ -90,7 +93,7 @@ export class SimpleAuthService {
       // Detectamos esto si identities está vacío
       if (authData.user.identities?.length === 0) {
         console.log('[SimpleAuth] Usuario ya existía, tratando como login');
-        
+
         // Hacer login automáticamente
         const loginResult = await this.signIn(email, password);
         return loginResult;
@@ -99,24 +102,24 @@ export class SimpleAuthService {
       console.log('[SimpleAuth] Usuario creado/recuperado:', authData.user.id);
 
       // 2. Esperar un momento para que el trigger cree el perfil
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // 3. Forzar creación del perfil si no existe
       let profile = null;
-      
+
       // Primero intentar obtener el perfil
       const { data: existingProfile } = await supabase
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
         .single();
-      
+
       if (existingProfile) {
         profile = existingProfile;
       } else {
         // Si no existe, crearlo directamente
         console.log('[SimpleAuth] Perfil no existe, creándolo...');
-        
+
         const { data: newProfile, error: insertError } = await supabase
           .from('users')
           .insert({
@@ -135,24 +138,28 @@ export class SimpleAuthService {
           })
           .select()
           .single();
-        
+
         if (insertError) {
           console.error('[SimpleAuth] Error creando perfil:', insertError);
-          
+
           // Si falla la inserción, intentar con RPC como fallback
-          const { data: rpcProfile } = await supabase
-            .rpc('get_or_create_user_profile', {
+          const { data: rpcProfile } = await supabase.rpc(
+            'get_or_create_user_profile',
+            {
               p_user_id: authData.user.id,
-            });
-          
+            }
+          );
+
           profile = rpcProfile;
         } else {
           profile = newProfile;
         }
       }
-      
+
       if (!profile) {
-        console.warn('[SimpleAuth] No se pudo crear el perfil, pero continuando...');
+        console.warn(
+          '[SimpleAuth] No se pudo crear el perfil, pero continuando...'
+        );
       }
 
       console.log('[SimpleAuth] Registro completado');
@@ -178,7 +185,7 @@ export class SimpleAuthService {
   static async signIn(email: string, password: string): Promise<AuthResponse> {
     try {
       console.log('[SimpleAuth] Iniciando sesión:', email);
-      
+
       // Esperar si es necesario para evitar rate limiting
       await this.waitForRateLimit();
 
@@ -191,37 +198,46 @@ export class SimpleAuthService {
 
       if (authError) {
         console.error('[SimpleAuth] Error en signIn:', authError);
-        
+
         // Manejar error de email no confirmado
-        if (authError.message === 'Email not confirmed' || authError.message?.includes('email_not_confirmed')) {
-          console.log('[SimpleAuth] Email no confirmado, intentando obtener usuario de otra forma');
-          
+        if (
+          authError.message === 'Email not confirmed' ||
+          authError.message?.includes('email_not_confirmed')
+        ) {
+          console.log(
+            '[SimpleAuth] Email no confirmado, intentando obtener usuario de otra forma'
+          );
+
           // Intentar obtener el usuario por email para al menos tener el perfil
           const { data: profile } = await supabase
             .from('users')
             .select('*')
             .eq('email', email)
             .single();
-          
+
           if (profile) {
-            console.log('[SimpleAuth] Perfil encontrado aunque email no confirmado');
+            console.log(
+              '[SimpleAuth] Perfil encontrado aunque email no confirmado'
+            );
             // Retornar éxito parcial con perfil pero sin sesión completa
             return {
               success: false,
-              error: 'Tu email aún no está confirmado. Por favor revisa tu correo o contacta soporte.',
+              error:
+                'Tu email aún no está confirmado. Por favor revisa tu correo o contacta soporte.',
               profile: profile,
             };
           }
         }
-        
+
         // Manejar rate limiting
         if (authError.message?.includes('rate_limit')) {
           return {
             success: false,
-            error: 'Por favor espera unos segundos antes de intentar nuevamente',
+            error:
+              'Por favor espera unos segundos antes de intentar nuevamente',
           };
         }
-        
+
         return {
           success: false,
           error: authError.message,
@@ -239,7 +255,7 @@ export class SimpleAuthService {
 
       // 2. Obtener o crear el perfil del usuario
       let profile = null;
-      
+
       // Primero intentar obtener el perfil
       const { data: existingProfile, error: profileError } = await supabase
         .from('users')
@@ -248,8 +264,11 @@ export class SimpleAuthService {
         .single();
 
       if (profileError) {
-        console.warn('[SimpleAuth] Perfil no encontrado, creándolo...', profileError);
-        
+        console.warn(
+          '[SimpleAuth] Perfil no encontrado, creándolo...',
+          profileError
+        );
+
         // Si no existe el perfil, crearlo directamente
         const { data: newProfile, error: insertError } = await supabase
           .from('users')
@@ -269,16 +288,18 @@ export class SimpleAuthService {
           })
           .select()
           .single();
-        
+
         if (insertError) {
           console.error('[SimpleAuth] Error creando perfil:', insertError);
-          
+
           // Si falla la inserción directa, intentar con RPC
-          const { data: rpcProfile } = await supabase
-            .rpc('get_or_create_user_profile', {
+          const { data: rpcProfile } = await supabase.rpc(
+            'get_or_create_user_profile',
+            {
               p_user_id: authData.user.id,
-            });
-          
+            }
+          );
+
           profile = rpcProfile;
         } else {
           profile = newProfile;
@@ -344,8 +365,11 @@ export class SimpleAuthService {
     profile: UserProfile | null;
   } | null> {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
       if (error || !user) {
         return null;
       }
@@ -392,7 +416,10 @@ export class SimpleAuthService {
       console.log('[SimpleAuth] Perfil actualizado');
       return data;
     } catch (error) {
-      console.error('[SimpleAuth] Error inesperado actualizando perfil:', error);
+      console.error(
+        '[SimpleAuth] Error inesperado actualizando perfil:',
+        error
+      );
       return null;
     }
   }

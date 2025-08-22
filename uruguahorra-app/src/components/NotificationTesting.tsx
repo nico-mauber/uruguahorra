@@ -38,7 +38,10 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
   const [devInterval, setDevInterval] = useState('1');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleAction = async (action: () => Promise<void>, actionName: string) => {
+  const handleAction = async (
+    action: () => Promise<void>,
+    actionName: string
+  ) => {
     if (!permissionsGranted) {
       Alert.alert(
         'Permisos necesarios',
@@ -70,7 +73,8 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
       id: 'test-basic',
       title: '🧪 Notificación Básica',
       subtitle: `En ${testDelay} segundos`,
-      action: () => handleAction(sendTestNotification, 'Notificación de prueba'),
+      action: () =>
+        handleAction(sendTestNotification, 'Notificación de prueba'),
       input: {
         value: testDelay,
         onChange: setTestDelay,
@@ -81,10 +85,11 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
       id: 'test-reminder',
       title: '🔥 Recordatorio de Racha',
       subtitle: `En ${reminderDelay} segundos`,
-      action: () => handleAction(
-        () => sendTestStreakReminder(parseInt(reminderDelay)),
-        'Recordatorio de racha'
-      ),
+      action: () =>
+        handleAction(
+          () => sendTestStreakReminder(parseInt(reminderDelay)),
+          'Recordatorio de racha'
+        ),
       input: {
         value: reminderDelay,
         onChange: setReminderDelay,
@@ -95,10 +100,11 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
       id: 'test-warning',
       title: '⚠️ Alerta de Racha',
       subtitle: `En ${warningDelay} segundos`,
-      action: () => handleAction(
-        () => sendTestStreakWarning(parseInt(warningDelay)),
-        'Alerta de racha'
-      ),
+      action: () =>
+        handleAction(
+          () => sendTestStreakWarning(parseInt(warningDelay)),
+          'Alerta de racha'
+        ),
       input: {
         value: warningDelay,
         onChange: setWarningDelay,
@@ -109,10 +115,11 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
       id: 'dev-reminder',
       title: '🔄 Recordatorio de Desarrollo',
       subtitle: `Cada ${devInterval} minuto(s) - ¡CUIDADO: Se repite!`,
-      action: () => handleAction(
-        () => startDevReminder(parseInt(devInterval)),
-        'Recordatorio de desarrollo'
-      ),
+      action: () =>
+        handleAction(
+          () => startDevReminder(parseInt(devInterval)),
+          'Recordatorio de desarrollo'
+        ),
       input: {
         value: devInterval,
         onChange: setDevInterval,
@@ -140,7 +147,8 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
             {
               text: 'Sí, cancelar todas',
               style: 'destructive',
-              onPress: () => handleAction(cancelAllNotifications, 'Cancelar todas'),
+              onPress: () =>
+                handleAction(cancelAllNotifications, 'Cancelar todas'),
             },
           ]
         );
@@ -153,7 +161,9 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
     return (
       <Card style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Inicializando notificaciones...</Text>
+          <Text style={styles.loadingText}>
+            Inicializando notificaciones...
+          </Text>
         </View>
       </Card>
     );
@@ -176,7 +186,8 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
           <View style={styles.warningContainer}>
             <Ionicons name="warning" size={20} color="#F59E0B" />
             <Text style={styles.warningText}>
-              Las notificaciones están deshabilitadas. Habilítalas primero en la configuración.
+              Las notificaciones están deshabilitadas. Habilítalas primero en la
+              configuración.
             </Text>
           </View>
         )}
@@ -206,7 +217,8 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧪 Pruebas Disponibles</Text>
           <Text style={styles.sectionDescription}>
-            Estas funciones están disponibles solo en desarrollo para probar el sistema de notificaciones.
+            Estas funciones están disponibles solo en desarrollo para probar el
+            sistema de notificaciones.
           </Text>
 
           {testButtons.map((button) => (
@@ -218,25 +230,33 @@ export const NotificationTesting: React.FC<NotificationTestingProps> = ({
                   button.destructive && styles.testButtonDestructive,
                 ]}
                 onPress={button.action}
-                disabled={isLoading || (!permissionsGranted && button.id !== 'cancel-all')}
+                disabled={
+                  isLoading ||
+                  (!permissionsGranted && button.id !== 'cancel-all')
+                }
               >
                 <View style={styles.testButtonContent}>
-                  <Text style={[
-                    styles.testButtonTitle,
-                    button.warning && styles.testButtonTitleWarning,
-                    button.destructive && styles.testButtonTitleDestructive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.testButtonTitle,
+                      button.warning && styles.testButtonTitleWarning,
+                      button.destructive && styles.testButtonTitleDestructive,
+                    ]}
+                  >
                     {button.title}
                   </Text>
-                  <Text style={[
-                    styles.testButtonSubtitle,
-                    button.warning && styles.testButtonSubtitleWarning,
-                    button.destructive && styles.testButtonSubtitleDestructive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.testButtonSubtitle,
+                      button.warning && styles.testButtonSubtitleWarning,
+                      button.destructive &&
+                        styles.testButtonSubtitleDestructive,
+                    ]}
+                  >
                     {button.subtitle}
                   </Text>
                 </View>
-                
+
                 {button.input && (
                   <TextInput
                     style={styles.testInput}

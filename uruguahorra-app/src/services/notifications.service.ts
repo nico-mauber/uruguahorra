@@ -75,10 +75,7 @@ export class NotificationsService {
         // Solo loggear una vez cada 30 segundos para evitar spam
         const now = Date.now();
         if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
-          logger.warn(
-            LogModule.API,
-            'Permisos de notificación no concedidos'
-          );
+          logger.warn(LogModule.API, 'Permisos de notificación no concedidos');
           this.lastPermissionWarning = now;
         }
         return false;
@@ -108,7 +105,8 @@ export class NotificationsService {
    */
   static async requestPermissions(): Promise<boolean> {
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
@@ -117,7 +115,10 @@ export class NotificationsService {
       }
 
       const granted = finalStatus === 'granted';
-      await storage.setItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED, granted.toString());
+      await storage.setItem(
+        this.STORAGE_KEYS.PERMISSIONS_GRANTED,
+        granted.toString()
+      );
 
       logger.info(LogModule.API, 'Permisos de notificación', {
         granted,
@@ -170,7 +171,10 @@ export class NotificationsService {
   /**
    * Programar notificación diaria de recordatorio de racha
    */
-  static async scheduleStreakReminder(hour: number = 20, minute: number = 0): Promise<boolean> {
+  static async scheduleStreakReminder(
+    hour: number = 20,
+    minute: number = 0
+  ): Promise<boolean> {
     try {
       logger.start(LogModule.API, 'Programando recordatorio diario de racha', {
         hour,
@@ -199,7 +203,10 @@ export class NotificationsService {
         trigger,
       });
 
-      await storage.setItem(this.STORAGE_KEYS.STREAK_REMINDER_ID, notificationId);
+      await storage.setItem(
+        this.STORAGE_KEYS.STREAK_REMINDER_ID,
+        notificationId
+      );
 
       logger.success(LogModule.API, 'Recordatorio de racha programado', {
         notificationId,
@@ -220,7 +227,9 @@ export class NotificationsService {
   /**
    * Programar notificación de alerta de racha a punto de romperse
    */
-  static async scheduleStreakWarning(hoursBeforeBreak: number = 2): Promise<boolean> {
+  static async scheduleStreakWarning(
+    hoursBeforeBreak: number = 2
+  ): Promise<boolean> {
     try {
       logger.start(LogModule.API, 'Programando alerta de racha', {
         hoursBeforeBreak,
@@ -249,7 +258,10 @@ export class NotificationsService {
         trigger,
       });
 
-      await storage.setItem(this.STORAGE_KEYS.STREAK_WARNING_ID, notificationId);
+      await storage.setItem(
+        this.STORAGE_KEYS.STREAK_WARNING_ID,
+        notificationId
+      );
 
       logger.success(LogModule.API, 'Alerta de racha programada', {
         notificationId,
@@ -258,11 +270,7 @@ export class NotificationsService {
 
       return true;
     } catch (error) {
-      logger.error(
-        LogModule.API,
-        'Error programando alerta de racha',
-        error
-      );
+      logger.error(LogModule.API, 'Error programando alerta de racha', error);
       return false;
     }
   }
@@ -272,12 +280,14 @@ export class NotificationsService {
    */
   static async cancelStreakReminder(): Promise<void> {
     try {
-      const notificationId = await storage.getItem(this.STORAGE_KEYS.STREAK_REMINDER_ID);
-      
+      const notificationId = await storage.getItem(
+        this.STORAGE_KEYS.STREAK_REMINDER_ID
+      );
+
       if (notificationId) {
         await Notifications.cancelScheduledNotificationAsync(notificationId);
         await storage.removeItem(this.STORAGE_KEYS.STREAK_REMINDER_ID);
-        
+
         logger.info(LogModule.API, 'Recordatorio de racha cancelado', {
           notificationId,
         });
@@ -301,12 +311,14 @@ export class NotificationsService {
    */
   static async cancelStreakWarning(): Promise<void> {
     try {
-      const notificationId = await storage.getItem(this.STORAGE_KEYS.STREAK_WARNING_ID);
-      
+      const notificationId = await storage.getItem(
+        this.STORAGE_KEYS.STREAK_WARNING_ID
+      );
+
       if (notificationId) {
         await Notifications.cancelScheduledNotificationAsync(notificationId);
         await storage.removeItem(this.STORAGE_KEYS.STREAK_WARNING_ID);
-        
+
         logger.info(LogModule.API, 'Alerta de racha cancelada', {
           notificationId,
         });
@@ -317,11 +329,7 @@ export class NotificationsService {
         this.NOTIFICATION_IDS.STREAK_WARNING
       );
     } catch (error) {
-      logger.error(
-        LogModule.API,
-        'Error cancelando alerta de racha',
-        error
-      );
+      logger.error(LogModule.API, 'Error cancelando alerta de racha', error);
     }
   }
 
@@ -338,10 +346,13 @@ export class NotificationsService {
   /**
    * Obtener todas las notificaciones programadas
    */
-  static async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
+  static async getScheduledNotifications(): Promise<
+    Notifications.NotificationRequest[]
+  > {
     try {
-      const notifications = await Notifications.getAllScheduledNotificationsAsync();
-      
+      const notifications =
+        await Notifications.getAllScheduledNotificationsAsync();
+
       logger.info(LogModule.API, 'Notificaciones programadas obtenidas', {
         count: notifications.length,
       });
@@ -382,18 +393,16 @@ export class NotificationsService {
       await Notifications.dismissAllNotificationsAsync();
       logger.info(LogModule.API, 'Todas las notificaciones limpiadas');
     } catch (error) {
-      logger.error(
-        LogModule.API,
-        'Error limpiando notificaciones',
-        error
-      );
+      logger.error(LogModule.API, 'Error limpiando notificaciones', error);
     }
   }
 
   /**
    * Programar notificación inmediata para testing
    */
-  static async scheduleTestNotification(delaySeconds: number = 5): Promise<string> {
+  static async scheduleTestNotification(
+    delaySeconds: number = 5
+  ): Promise<string> {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '🧪 Notificación de prueba',
@@ -403,9 +412,9 @@ export class NotificationsService {
           timestamp: Date.now(),
         },
       },
-      trigger: { 
+      trigger: {
         type: 'timeInterval',
-        seconds: delaySeconds 
+        seconds: delaySeconds,
       } as const,
     });
 
@@ -420,7 +429,9 @@ export class NotificationsService {
   /**
    * Programar recordatorio de prueba (en segundos en lugar de diario)
    */
-  static async scheduleTestStreakReminder(delaySeconds: number = 10): Promise<string> {
+  static async scheduleTestStreakReminder(
+    delaySeconds: number = 10
+  ): Promise<string> {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '🔥 ¡Mantén tu racha viva! (PRUEBA)',
@@ -430,9 +441,9 @@ export class NotificationsService {
           timestamp: Date.now(),
         },
       },
-      trigger: { 
+      trigger: {
         type: 'timeInterval',
-        seconds: delaySeconds 
+        seconds: delaySeconds,
       } as const,
     });
 
@@ -447,7 +458,9 @@ export class NotificationsService {
   /**
    * Programar alerta de racha de prueba
    */
-  static async scheduleTestStreakWarning(delaySeconds: number = 15): Promise<string> {
+  static async scheduleTestStreakWarning(
+    delaySeconds: number = 15
+  ): Promise<string> {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '⚠️ ¡Tu racha está en peligro! (PRUEBA)',
@@ -458,9 +471,9 @@ export class NotificationsService {
           hoursLeft: 2,
         },
       },
-      trigger: { 
+      trigger: {
         type: 'timeInterval',
-        seconds: delaySeconds 
+        seconds: delaySeconds,
       } as const,
     });
 
@@ -475,7 +488,9 @@ export class NotificationsService {
   /**
    * Programar recordatorio con intervalo personalizado (para desarrollo)
    */
-  static async scheduleDevReminder(intervalMinutes: number = 1): Promise<string> {
+  static async scheduleDevReminder(
+    intervalMinutes: number = 1
+  ): Promise<string> {
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '🔥 Recordatorio de Desarrollo',
@@ -486,10 +501,10 @@ export class NotificationsService {
           intervalMinutes,
         },
       },
-      trigger: { 
+      trigger: {
         type: 'timeInterval',
         seconds: intervalMinutes * 60,
-        repeats: true
+        repeats: true,
       } as const,
     });
 
@@ -509,18 +524,24 @@ export class NotificationsService {
       // Cancelar todas las notificaciones de desarrollo
       const notifications = await this.getScheduledNotifications();
       const devNotifications = notifications.filter(
-        notif => notif.content.data?.type === 'dev_reminder'
+        (notif) => notif.content.data?.type === 'dev_reminder'
       );
 
       for (const notification of devNotifications) {
-        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        await Notifications.cancelScheduledNotificationAsync(
+          notification.identifier
+        );
       }
 
       logger.info(LogModule.API, 'Recordatorios de desarrollo cancelados', {
         count: devNotifications.length,
       });
     } catch (error) {
-      logger.error(LogModule.API, 'Error cancelando recordatorios de desarrollo', error);
+      logger.error(
+        LogModule.API,
+        'Error cancelando recordatorios de desarrollo',
+        error
+      );
     }
   }
 }

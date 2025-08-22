@@ -2,7 +2,7 @@
  * Cliente Supabase con Service Role para operaciones administrativas
  * IMPORTANTE: Este cliente bypasea RLS y debe usarse con extremo cuidado
  * Solo para operaciones que requieren permisos elevados como crear perfiles
- * 
+ *
  * NOTA: En producción, estas operaciones deberían realizarse mediante
  * Edge Functions o un backend seguro, nunca desde el cliente.
  */
@@ -17,8 +17,9 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 // Service Role Key - DEBE MANTENERSE SEGURA
 // En producción real, esto NUNCA debería estar en el cliente
 // Por ahora usaremos la anon key como fallback si no existe service key
-const serviceRoleKey = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || 
-                      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey =
+  process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('Missing Supabase admin configuration');

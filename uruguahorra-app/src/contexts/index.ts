@@ -1,5 +1,8 @@
 // Usar el nuevo SimpleAuthContext en lugar del antiguo AuthContext
-import { useAuth as useAuthHook, SimpleAuthProvider as AuthProvider } from './SimpleAuthContext';
+import {
+  useAuth as useAuthHook,
+  SimpleAuthProvider as AuthProvider,
+} from './SimpleAuthContext';
 
 // Re-export for direct usage con los mismos nombres para compatibilidad
 export { AuthProvider };

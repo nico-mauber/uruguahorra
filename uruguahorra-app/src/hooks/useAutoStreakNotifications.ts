@@ -33,38 +33,54 @@ export function useAutoStreakNotifications() {
     checkUserStreakStatus();
 
     // Configurar verificación periódica (cada hora)
-    const interval = setInterval(() => {
-      checkUserStreakStatus();
-    }, 60 * 60 * 1000); // 1 hora
+    const interval = setInterval(
+      () => {
+        checkUserStreakStatus();
+      },
+      60 * 60 * 1000
+    ); // 1 hora
 
     return () => clearInterval(interval);
   }, [isInitialized, user, settings.enabled, checkUserStreakStatus]);
 
   const initializeNotifications = async () => {
     try {
-      logger.info(LogModule.API, 'Inicializando sistema de notificaciones automático');
-      
+      logger.info(
+        LogModule.API,
+        'Inicializando sistema de notificaciones automático'
+      );
+
       const success = await initialize();
-      
+
       if (success) {
-        logger.success(LogModule.API, 'Sistema de notificaciones inicializado correctamente');
-        
+        logger.success(
+          LogModule.API,
+          'Sistema de notificaciones inicializado correctamente'
+        );
+
         // Verificar estado inicial de racha
         if (user) {
           await checkStreakStatus(user.id);
         }
       } else {
-        logger.warn(LogModule.API, 'No se pudieron inicializar las notificaciones');
+        logger.warn(
+          LogModule.API,
+          'No se pudieron inicializar las notificaciones'
+        );
       }
     } catch (error) {
-      logger.error(LogModule.API, 'Error inicializando notificaciones automáticas', error);
+      logger.error(
+        LogModule.API,
+        'Error inicializando notificaciones automáticas',
+        error
+      );
     }
   };
 
   const checkStreakStatus = async (userId: string) => {
     try {
       const streak = await StreaksService.getUserStreak(userId);
-      
+
       if (streak) {
         logger.info(LogModule.API, 'Estado de racha verificado', {
           userId,
@@ -76,8 +92,9 @@ export function useAutoStreakNotifications() {
         if (streak.current_streak > 0) {
           const lastActivity = new Date(streak.last_activity_at);
           const now = new Date();
-          const hoursSinceLastActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
-          
+          const hoursSinceLastActivity =
+            (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
+
           logger.info(LogModule.API, 'Horas desde última actividad', {
             hours: hoursSinceLastActivity,
           });

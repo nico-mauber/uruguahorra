@@ -14,7 +14,9 @@ class AnalyticsService {
   }
 
   static isFeatureEnabled(flagKey: string): boolean {
-    console.log(`[AnalyticsService] Feature flag ${flagKey} check - defaulting to false`);
+    console.log(
+      `[AnalyticsService] Feature flag ${flagKey} check - defaulting to false`
+    );
     return false;
   }
 
@@ -24,11 +26,17 @@ class AnalyticsService {
 }
 
 // Helper functions for common event tracking
-export const trackGoalEvent = (event: string, props?: Record<string, unknown>) => {
+export const trackGoalEvent = (
+  event: string,
+  props?: Record<string, unknown>
+) => {
   AnalyticsService.track(event, props);
 };
 
-export const trackContributionEvent = (event: string, props?: Record<string, unknown>) => {
+export const trackContributionEvent = (
+  event: string,
+  props?: Record<string, unknown>
+) => {
   AnalyticsService.track(event, props);
 };
 

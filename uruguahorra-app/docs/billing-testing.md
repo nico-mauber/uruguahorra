@@ -3,6 +3,7 @@
 ## Testing MercadoPago Webhooks
 
 ### 1. Test preapproval creation
+
 ```bash
 curl -X POST http://localhost:54321/functions/v1/billing-webhooks \
   -H "Content-Type: application/json" \
@@ -18,6 +19,7 @@ curl -X POST http://localhost:54321/functions/v1/billing-webhooks \
 ```
 
 ### 2. Test payment success
+
 ```bash
 curl -X POST http://localhost:54321/functions/v1/billing-webhooks \
   -H "Content-Type: application/json" \
@@ -40,6 +42,7 @@ curl -X POST http://localhost:54321/functions/v1/billing-webhooks \
 ## Testing MercadoPago Webhooks
 
 ### 1. Test preapproval created
+
 ```bash
 curl -X POST http://localhost:54321/functions/v1/billing-webhooks?provider=mercadopago \
   -H "Content-Type: application/json" \
@@ -55,6 +58,7 @@ curl -X POST http://localhost:54321/functions/v1/billing-webhooks?provider=merca
 ```
 
 ### 2. Test payment notification
+
 ```bash
   -H "Content-Type: application/json" \
   -d '{

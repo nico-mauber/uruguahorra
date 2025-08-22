@@ -60,7 +60,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   const [isLoadingContributions, setIsLoadingContributions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
-  
+
   // Estados para editar monto objetivo
   const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [newTargetAmount, setNewTargetAmount] = useState('');
@@ -175,7 +175,10 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
 
     // Validaciones
     if (isNaN(newTarget) || newTarget <= 0) {
-      ToastService.warning('Monto inválido', 'Ingresa un monto válido mayor a 0');
+      ToastService.warning(
+        'Monto inválido',
+        'Ingresa un monto válido mayor a 0'
+      );
       return;
     }
 
@@ -603,16 +606,20 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                           onPress={startEditingTarget}
                           disabled={isCompleted}
                         >
-                          <Ionicons 
-                            name="pencil" 
-                            size={16} 
-                            color={isCompleted ? theme.textSecondary : theme.primary} 
+                          <Ionicons
+                            name="pencil"
+                            size={16}
+                            color={
+                              isCompleted ? theme.textSecondary : theme.primary
+                            }
                           />
                         </TouchableOpacity>
                       </View>
                     ) : (
                       <View style={styles.editTargetContainer}>
-                        <Text style={styles.editTargetLabel}>Nuevo objetivo:</Text>
+                        <Text style={styles.editTargetLabel}>
+                          Nuevo objetivo:
+                        </Text>
                         <TextInput
                           style={styles.editTargetInput}
                           placeholder="Ingresa el nuevo monto"
@@ -628,7 +635,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                             onPress={cancelEditingTarget}
                             disabled={isUpdatingTarget}
                           >
-                            <Text style={styles.cancelButtonText}>Cancelar</Text>
+                            <Text style={styles.cancelButtonText}>
+                              Cancelar
+                            </Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.editButton, styles.saveButton]}

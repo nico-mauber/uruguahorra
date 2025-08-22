@@ -38,7 +38,10 @@ export class QuestInitializationService {
       // 2. Verificar políticas RLS
       const rlsWorking = await this._verifyRLSPolicies();
       if (!rlsWorking) {
-        logger.warn(LogModule.DB, 'Políticas RLS de quests necesitan corrección');
+        logger.warn(
+          LogModule.DB,
+          'Políticas RLS de quests necesitan corrección'
+        );
         // No retornar false aquí, intentar continuar con valores por defecto
       }
 
@@ -46,9 +49,11 @@ export class QuestInitializationService {
       await this._ensureCurrentWeekQuest();
 
       this.initialized = true;
-      logger.success(LogModule.DB, 'Sistema de quests inicializado correctamente');
+      logger.success(
+        LogModule.DB,
+        'Sistema de quests inicializado correctamente'
+      );
       return true;
-
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal inicializando quests', error);
       return false;
@@ -73,14 +78,18 @@ export class QuestInitializationService {
         .select('id')
         .limit(1);
 
-      if (questsError?.message?.includes('does not exist') || 
-          questsError?.message?.includes('Could not find the table')) {
+      if (
+        questsError?.message?.includes('does not exist') ||
+        questsError?.message?.includes('Could not find the table')
+      ) {
         logger.error(LogModule.DB, 'Tabla weekly_quests no existe');
         return false;
       }
 
-      if (progressError?.message?.includes('does not exist') || 
-          progressError?.message?.includes('Could not find the table')) {
+      if (
+        progressError?.message?.includes('does not exist') ||
+        progressError?.message?.includes('Could not find the table')
+      ) {
         logger.error(LogModule.DB, 'Tabla user_quest_progress no existe');
         return false;
       }
@@ -110,10 +119,9 @@ export class QuestInitializationService {
 
       // Test 2: Verificar INSERT en weekly_quests (sin ejecutar realmente)
       // Esto es más difícil de testear sin hacer un INSERT real
-      
+
       logger.info(LogModule.DB, 'Políticas RLS básicas funcionando');
       return true;
-
     } catch (error) {
       logger.warn(LogModule.DB, 'Error verificando políticas RLS', error);
       return false;
@@ -142,13 +150,15 @@ export class QuestInitializationService {
       }
 
       if (existingQuest) {
-        logger.info(LogModule.DB, 'Quest semanal ya existe', { id: existingQuest.id });
+        logger.info(LogModule.DB, 'Quest semanal ya existe', {
+          id: existingQuest.id,
+        });
         return existingQuest;
       }
 
       // Intentar crear nueva quest
       const challengeIds = await this._getRandomChallengeIds();
-      
+
       const { data: newQuest, error: insertError } = await supabase
         .from('weekly_quests')
         .insert({
@@ -161,18 +171,28 @@ export class QuestInitializationService {
 
       if (insertError) {
         if (insertError.code === '42501') {
-          logger.warn(LogModule.DB, 'Sin permisos para crear quest semanal (esto es esperado)');
+          logger.warn(
+            LogModule.DB,
+            'Sin permisos para crear quest semanal (esto es esperado)'
+          );
         } else {
-          logger.error(LogModule.DB, 'Error creando quest semanal', insertError);
+          logger.error(
+            LogModule.DB,
+            'Error creando quest semanal',
+            insertError
+          );
         }
         return null;
       }
 
       logger.success(LogModule.DB, 'Quest semanal creada', { id: newQuest.id });
       return newQuest;
-
     } catch (error) {
-      logger.warn(LogModule.DB, 'No se pudo crear/verificar quest semanal', error);
+      logger.warn(
+        LogModule.DB,
+        'No se pudo crear/verificar quest semanal',
+        error
+      );
       return null;
     }
   }
@@ -193,9 +213,13 @@ export class QuestInitializationService {
         return [];
       }
 
-      return (challenges || []).map(c => c.id);
+      return (challenges || []).map((c) => c.id);
     } catch (error) {
-      logger.warn(LogModule.DB, 'Error obteniendo challenges aleatorios', error);
+      logger.warn(
+        LogModule.DB,
+        'Error obteniendo challenges aleatorios',
+        error
+      );
       return [];
     }
   }
@@ -244,34 +268,47 @@ export class QuestInitializationService {
         return existing as QuestProgress;
       }
 
-      // Intentar crear nuevo progreso
-      const { data: newProgress, error: insertError } = await supabase
+      // Usar la función segura que maneja conflictos automáticamente
+      const { data: functionResult, error: functionError } = await supabase.rpc(
+        'create_user_quest_progress_safe',
+        {
+          p_user_id: userId,
+          p_quest_id: questId,
+        }
+      );
+
+      if (functionError) {
+        logger.error(
+          LogModule.DB,
+          'Error usando función segura para quest progress',
+          functionError
+        );
+        return null;
+      }
+
+      // Obtener el progreso creado/existente
+      const { data: newProgress, error: fetchError } = await supabase
         .from('user_quest_progress')
-        .insert({
-          user_id: userId,
-          quest_id: questId,
-          completed_challenge_ids: [],
-          completion_percentage: 0,
-          completed_at: null,
-        })
-        .select(`
+        .select(
+          `
           *,
           quest:weekly_quests(*)
-        `)
+        `
+        )
+        .eq('id', functionResult)
         .single();
 
-      if (insertError) {
-        if (insertError.code === '42501') {
-          logger.warn(LogModule.DB, 'Sin permisos para crear quest progress (esto es esperado)');
-        } else {
-          logger.error(LogModule.DB, 'Error creando quest progress', insertError);
-        }
+      if (fetchError) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo quest progress creado',
+          fetchError
+        );
         return null;
       }
 
       logger.success(LogModule.DB, 'Quest progress creado exitosamente');
       return newProgress as QuestProgress;
-
     } catch (error) {
       logger.error(LogModule.DB, 'Error creando quest progress', error);
       return null;
@@ -289,7 +326,7 @@ export class QuestInitializationService {
   }> {
     const tablesExist = await this._verifyTablesExist();
     const rlsWorking = await this._verifyRLSPolicies();
-    
+
     // Test crear quest (sin hacer commit real)
     let canCreateQuests = false;
     try {
@@ -309,23 +346,36 @@ export class QuestInitializationService {
       canCreateQuests = false;
     }
 
-    // Test crear progress (requiere usuario autenticado)
+    // Test crear progress (requiere usuario autenticado y quest real)
     let canCreateProgress = false;
     try {
       const { data: user } = await supabase.auth.getUser();
       if (user?.user?.id) {
-        const { error } = await supabase
-          .from('user_quest_progress')
-          .insert({
-            user_id: user.user.id,
-            quest_id: '00000000-0000-0000-0000-000000000000',
-            completed_challenge_ids: [],
-            completion_percentage: 0,
-          })
-          .select()
-          .single();
+        // Primero intentar obtener una quest real
+        const { data: realQuest } = await supabase
+          .from('weekly_quests')
+          .select('id')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
 
-        canCreateProgress = !error || error.code !== '42501';
+        if (realQuest) {
+          // Usar función segura para el test en lugar de INSERT directo
+          const { error } = await supabase.rpc(
+            'create_user_quest_progress_safe',
+            {
+              p_user_id: user.user.id,
+              p_quest_id: realQuest.id,
+            }
+          );
+
+          canCreateProgress = !error || error.code !== '42501';
+
+          // La función segura maneja duplicados automáticamente, no necesitamos limpiar
+        } else {
+          // No hay quests disponibles, solo verificar permisos básicos
+          canCreateProgress = false;
+        }
       }
     } catch {
       canCreateProgress = false;
@@ -335,7 +385,7 @@ export class QuestInitializationService {
       tablesExist,
       rlsWorking,
       canCreateQuests,
-      canCreateProgress
+      canCreateProgress,
     };
   }
 }

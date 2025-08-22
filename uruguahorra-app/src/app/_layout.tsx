@@ -16,12 +16,12 @@ import { toastConfig } from '@/utils/toast';
 if (__DEV__) {
   // Mostrar todos los logs
   LogBox.ignoreAllLogs(false);
-  
+
   // Interceptar errores de red (excluyendo Metro bundler)
   const originalFetch = global.fetch;
   global.fetch = async (...args) => {
     const url = args[0]?.toString() || '';
-    
+
     // No interceptar requests de Metro bundler para evitar conflictos 409
     if (
       url.includes(':8081') || // Metro dev server
@@ -32,12 +32,17 @@ if (__DEV__) {
     ) {
       return originalFetch(...args);
     }
-    
+
     try {
       console.log('🌐 Fetch request:', url);
       const response = await originalFetch(...args);
       if (!response.ok) {
-        console.error('🔴 Fetch error:', response.status, response.statusText, url);
+        console.error(
+          '🔴 Fetch error:',
+          response.status,
+          response.statusText,
+          url
+        );
       }
       return response;
     } catch (error) {
@@ -141,7 +146,7 @@ function AppContent() {
       console.log('📱 Platform:', Platform.OS);
       console.log('🌐 Supabase URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
     }
-    
+
     // Track app opened
     track(AnalyticsEvents.APP_OPENED);
 
@@ -149,27 +154,35 @@ function AppContent() {
     if (__DEV__) {
       const checkQuestSystem = async () => {
         try {
-          const { QuestInitializationService } = await import('@/features/gamification/services/quest-initialization.service');
+          const { QuestInitializationService } = await import(
+            '@/features/gamification/services/quest-initialization.service'
+          );
           const health = await QuestInitializationService.healthCheck();
           console.log('🎮 Quest System Health Check:', health);
-          
+
           if (!health.tablesExist) {
-            console.warn('⚠️ Quest tables do not exist - run complete_database_schema.sql');
+            console.warn(
+              '⚠️ Quest tables do not exist - run complete_database_schema.sql'
+            );
           }
           if (!health.rlsWorking) {
-            console.warn('⚠️ Quest RLS policies need fixing - run fix_quests_rls_policies.sql');
+            console.warn(
+              '⚠️ Quest RLS policies need fixing - run fix_quests_rls_policies.sql'
+            );
           }
           if (!health.canCreateQuests) {
             console.warn('⚠️ Cannot create weekly quests - check RLS policies');
           }
           if (!health.canCreateProgress) {
-            console.warn('⚠️ Cannot create quest progress - check RLS policies');
+            console.warn(
+              '⚠️ Cannot create quest progress - check RLS policies'
+            );
           }
         } catch (error) {
           console.error('🔴 Quest System Health Check failed:', error);
         }
       };
-      
+
       checkQuestSystem();
     }
   }, [track]);

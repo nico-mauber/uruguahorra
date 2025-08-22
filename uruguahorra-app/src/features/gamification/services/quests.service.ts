@@ -24,7 +24,10 @@ export class QuestsService {
       // SOLUCIÓN DE RAÍZ: Inicializar sistema de quests antes de usarlo
       const questSystemReady = await QuestInitializationService.initialize();
       if (!questSystemReady) {
-        logger.warn(LogModule.DB, 'Sistema de quests no disponible, retornando array vacío');
+        logger.warn(
+          LogModule.DB,
+          'Sistema de quests no disponible, retornando array vacío'
+        );
         return [];
       }
 
@@ -180,18 +183,33 @@ export class QuestsService {
         return questDate >= fourWeeksAgo;
       });
 
-      // Crear progreso para quest actual si no existe
+      // Crear progreso para quest actual si no existe (usando función segura)
       const currentWeekQuest = await this.getCurrentWeekQuest();
       const hasCurrentWeekProgress = activeQuests.some(
         (q: QuestProgress) => q.quest_id === currentWeekQuest.id
       );
 
       if (!hasCurrentWeekProgress) {
-        const newProgress = await this.createQuestProgress(
-          userId,
-          currentWeekQuest.id
-        );
-        activeQuests.unshift(newProgress);
+        // SOLUCIÓN DE RAÍZ: Usar función segura que maneja duplicados automáticamente
+        // En lugar de verificar existencia, dejar que la función maneje el caso
+        try {
+          const newProgress = await this.createQuestProgress(
+            userId,
+            currentWeekQuest.id
+          );
+          activeQuests.unshift(newProgress);
+        } catch (error: any) {
+          // Si el error es de duplicate key, significa que otro proceso ya lo creó
+          // En este caso, refrescar la lista
+          if (error?.code === '23505') {
+            logger.info(
+              LogModule.DB,
+              'Quest progress ya existe, refrescando lista'
+            );
+            return this.getUserActiveQuests(userId);
+          }
+          throw error;
+        }
       }
 
       logger.success(
@@ -437,27 +455,35 @@ export class QuestsService {
   }
 
   /**
-   * Crear progreso inicial para una quest
+   * Crear progreso inicial para una quest usando función segura
    */
   private static async createQuestProgress(
     userId: string,
     questId: string
   ): Promise<QuestProgress> {
+    // Usar la función segura para evitar conflictos 409
+    const { data: progressId, error: rpcError } = await supabase.rpc(
+      'create_user_quest_progress_safe',
+      {
+        p_user_id: userId,
+        p_quest_id: questId,
+      }
+    );
+
+    if (rpcError) {
+      throw rpcError;
+    }
+
+    // Obtener el progreso completo
     const { data, error } = await supabase
       .from('user_quest_progress')
-      .insert({
-        user_id: userId,
-        quest_id: questId,
-        completed_challenge_ids: [],
-        completion_percentage: 0,
-        completed_at: null,
-      })
       .select(
         `
         *,
         quest:weekly_quests(*)
       `
       )
+      .eq('id', progressId)
       .single();
 
     if (error) {

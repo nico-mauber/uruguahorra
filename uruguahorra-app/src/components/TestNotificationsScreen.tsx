@@ -22,26 +22,35 @@ export default function TestNotificationsScreen() {
 
   const setupNotifications = async () => {
     if (!Device.isDevice) {
-      Alert.alert('Error', 'Las notificaciones no funcionan en simuladores. Usa un dispositivo físico.');
+      Alert.alert(
+        'Error',
+        'Las notificaciones no funcionan en simuladores. Usa un dispositivo físico.'
+      );
       return;
     }
 
     // Solicitar permisos
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permisos denegados', 'Necesitas habilitar las notificaciones para usar esta función.');
+      Alert.alert(
+        'Permisos denegados',
+        'Necesitas habilitar las notificaciones para usar esta función.'
+      );
       return;
     }
 
     console.log('✅ Notificaciones configuradas correctamente');
-    Alert.alert('✅ Listo', 'Las notificaciones están configuradas. ¡Ya puedes probar!');
+    Alert.alert(
+      '✅ Listo',
+      'Las notificaciones están configuradas. ¡Ya puedes probar!'
+    );
   };
 
   // Función más simple posible para enviar notificación
   const sendTestNotification = async () => {
     try {
       console.log('🧪 Programando notificación de prueba...');
-      
+
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: '🧪 ¡Funciona!',
@@ -53,19 +62,22 @@ export default function TestNotificationsScreen() {
 
       console.log('✅ Notificación programada con ID:', notificationId);
       Alert.alert(
-        '🚀 Notificación programada', 
+        '🚀 Notificación programada',
         'Recibirás una notificación en 3 segundos. ¡Mira la parte superior de tu pantalla!'
       );
     } catch (error) {
       console.error('❌ Error:', error);
-      Alert.alert('Error', 'No se pudo enviar la notificación: ' + error.message);
+      Alert.alert(
+        'Error',
+        'No se pudo enviar la notificación: ' + error.message
+      );
     }
   };
 
   const sendQuickSequence = async () => {
     try {
       console.log('🚀 Programando secuencia de prueba...');
-      
+
       // 3 notificaciones en secuencia
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -118,14 +130,22 @@ export default function TestNotificationsScreen() {
         <Text style={styles.buttonText}>🚀 Notificación en 3 segundos</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={sendQuickSequence}>
+      <TouchableOpacity
+        style={[styles.button, styles.primaryButton]}
+        onPress={sendQuickSequence}
+      >
         <Text style={[styles.buttonText, styles.primaryButtonText]}>
           🎯 Secuencia de 3 notificaciones
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelAllNotifications}>
-        <Text style={[styles.buttonText, styles.dangerButtonText]}>🗑️ Cancelar todas</Text>
+      <TouchableOpacity
+        style={[styles.button, styles.dangerButton]}
+        onPress={cancelAllNotifications}
+      >
+        <Text style={[styles.buttonText, styles.dangerButtonText]}>
+          🗑️ Cancelar todas
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.instructions}>

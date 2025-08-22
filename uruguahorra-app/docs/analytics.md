@@ -39,25 +39,30 @@ useEffect(() => {
 ## Eventos Principales
 
 ### Eventos de Aplicación
+
 - `app_opened` - Usuario abre la aplicación
 - `app_backgrounded` - Usuario pone la aplicación en segundo plano
 
 ### Eventos de Autenticación
+
 - `user_signed_up` - Usuario se registra
 - `user_signed_in` - Usuario inicia sesión
 - `user_signed_out` - Usuario cierra sesión
 
 ### Eventos de Metas
+
 - `goal_created` - Usuario crea una nueva meta
 - `goal_updated` - Usuario actualiza una meta existente
 - `goal_completed` - Usuario completa una meta
 - `goal_deleted` - Usuario elimina una meta
 
 ### Eventos de Contribuciones
+
 - `micro_contribution` - Usuario hace una micro contribución
 - `contribution_created` - Se crea una nueva contribución
 
 ### Eventos de Gamificación
+
 - `challenge_started` - Usuario inicia un reto
 - `challenge_completed` - Usuario completa un reto
 - `challenge_failed` - Usuario falla un reto
@@ -66,6 +71,7 @@ useEffect(() => {
 - `streak_updated` - Racha del usuario se actualiza
 
 ### Eventos de Suscripción
+
 - `paywall_viewed` - Usuario ve la pantalla de paywall
 - `checkout_started` - Usuario inicia proceso de compra
 - `checkout_completed` - Usuario completa la compra
@@ -73,6 +79,7 @@ useEffect(() => {
 - `subscription_cancelled` - Suscripción se cancela
 
 ### Eventos de Errores
+
 - `error_occurred` - Error en la aplicación
 
 ## Propiedades Comunes
@@ -81,66 +88,75 @@ Todas las propiedades se envían automáticamente con cada evento:
 
 ```typescript
 interface CommonProps {
-  country?: string;        // País del usuario (ISO code, ej: "UY")
-  currency?: string;       // Moneda del usuario (ISO code, ej: "UYU")
-  plan?: string;          // Plan de suscripción ("free" | "premium")
-  app_version?: string;    // Versión de la aplicación
-  platform?: string;      // Plataforma ("web" | "ios" | "android")
-  timestamp: string;       // Timestamp del evento (ISO string)
+  country?: string; // País del usuario (ISO code, ej: "UY")
+  currency?: string; // Moneda del usuario (ISO code, ej: "UYU")
+  plan?: string; // Plan de suscripción ("free" | "premium")
+  app_version?: string; // Versión de la aplicación
+  platform?: string; // Plataforma ("web" | "ios" | "android")
+  timestamp: string; // Timestamp del evento (ISO string)
 }
 ```
 
 ## Propiedades Específicas por Evento
 
 ### Eventos de Metas
+
 ```typescript
 interface GoalEventProps {
-  goal_id: string;         // ID único de la meta
-  goal_type?: string;      // Categoría de la meta
-  target_amount?: number;  // Monto objetivo
+  goal_id: string; // ID único de la meta
+  goal_type?: string; // Categoría de la meta
+  target_amount?: number; // Monto objetivo
   current_amount?: number; // Monto actual ahorrado
-  category?: string;       // Categoría de la meta
+  category?: string; // Categoría de la meta
 }
 ```
 
 ### Eventos de Contribuciones
+
 ```typescript
 interface ContributionEventProps {
   contribution_id: string; // ID único de la contribución
-  goal_id: string;        // ID de la meta asociada
-  amount: number;         // Monto de la contribución
-  method?: string;        // Método ("manual", "automatic", etc.)
+  goal_id: string; // ID de la meta asociada
+  amount: number; // Monto de la contribución
+  method?: string; // Método ("manual", "automatic", etc.)
 }
 ```
 
 ### Eventos de Suscripción
+
 ```typescript
 interface SubscriptionEventProps {
-  plan_id: string;              // ID del plan
+  plan_id: string; // ID del plan
   plan_type: 'premium_monthly' | 'premium_yearly'; // Tipo de plan
-  amount: number;               // Precio del plan
-  currency: string;             // Moneda del plan
+  amount: number; // Precio del plan
+  currency: string; // Moneda del plan
   period: 'monthly' | 'yearly'; // Período de facturación
-  source?: string;              // Fuente del evento
-  coupon?: string;              // Código de cupón si existe
+  source?: string; // Fuente del evento
+  coupon?: string; // Código de cupón si existe
 }
 ```
 
 ### Eventos de Retos
+
 ```typescript
 interface ChallengeEventProps {
-  challenge_id: string;    // ID único del reto
-  challenge_type: string;  // Tipo de reto ("daily", "weekly", "pod", etc.)
-  difficulty?: string;     // Dificultad del reto
-  reward_xp?: number;      // XP de recompensa
+  challenge_id: string; // ID único del reto
+  challenge_type: string; // Tipo de reto ("daily", "weekly", "pod", etc.)
+  difficulty?: string; // Dificultad del reto
+  reward_xp?: number; // XP de recompensa
 }
 ```
 
 ## Uso en Componentes
 
 ### Tracking Manual de Eventos
+
 ```typescript
-import { posthogClient, AnalyticsEvents, trackGoalEvent } from '@/lib/analytics';
+import {
+  posthogClient,
+  AnalyticsEvents,
+  trackGoalEvent,
+} from '@/lib/analytics';
 
 // Evento simple
 posthogClient.track(AnalyticsEvents.PAYWALL_VIEWED, {
@@ -159,6 +175,7 @@ trackGoalEvent(AnalyticsEvents.GOAL_CREATED, {
 ```
 
 ### Identificación de Usuario
+
 ```typescript
 // Identificar usuario al hacer login
 posthogClient.identify(user.id, {
@@ -171,6 +188,7 @@ posthogClient.identify(user.id, {
 ```
 
 ### Configuración de Contexto
+
 ```typescript
 // Actualizar contexto cuando cambian los datos del usuario
 posthogClient.setContext({
@@ -183,12 +201,13 @@ posthogClient.setContext({
 ## Feature Flags
 
 ### Hook para Feature Flag de Pods
+
 ```typescript
 import { useFlagPodsAhorro } from '@/hooks/useFeatureFlags';
 
 function MyComponent() {
   const isPodsEnabled = useFlagPodsAhorro();
-  
+
   return (
     <div>
       {isPodsEnabled && <PodsSection />}
@@ -198,12 +217,13 @@ function MyComponent() {
 ```
 
 ### Hook Genérico para Feature Flags
+
 ```typescript
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 
 function MyComponent() {
   const isNewFeatureEnabled = useFeatureFlag('new_feature_key');
-  
+
   return (
     <div>
       {isNewFeatureEnabled && <NewFeature />}
@@ -215,6 +235,7 @@ function MyComponent() {
 ## Implementación Actual
 
 ### Archivos Principales
+
 - `src/lib/analytics.ts` - Cliente principal de analytics
 - `src/hooks/useFeatureFlags.ts` - Hooks para feature flags
 - `src/contexts/AuthContext.tsx` - Integración con autenticación

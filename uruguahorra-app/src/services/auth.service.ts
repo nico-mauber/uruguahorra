@@ -87,14 +87,17 @@ export class AuthService {
 
           // Verificar que el perfil fue creado con reintentos
           let profile = await this.getUserProfile(authData.user.id);
-          
+
           // Si no existe, esperar un poco más y reintentar
           if (!profile) {
-            logger.info(LogModule.AUTH, 'Perfil aún no creado, esperando más...');
+            logger.info(
+              LogModule.AUTH,
+              'Perfil aún no creado, esperando más...'
+            );
             await new Promise((resolve) => setTimeout(resolve, 3000));
             profile = await this.getUserProfile(authData.user.id);
           }
-          
+
           // Si aún no existe, intentar crearlo manualmente
           if (!profile) {
             logger.warn(
@@ -681,14 +684,16 @@ export class AuthService {
 
       // Intentar usar la función RPC que bypasea RLS
       logger.info(LogModule.DB, 'Usando función RPC create_user_profile');
-      
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('create_user_profile', {
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        'create_user_profile',
+        {
           p_user_id: userId,
           p_email: email,
           p_country: metadata?.country || 'UY',
           p_currency: metadata?.currency || 'UYU',
-        });
+        }
+      );
 
       if (!rpcError && rpcData) {
         logger.success(LogModule.DB, 'Perfil creado con función RPC', {
@@ -699,13 +704,17 @@ export class AuthService {
       }
 
       if (rpcError) {
-        logger.warn(LogModule.DB, 'Error en función RPC, intentando método directo', rpcError);
+        logger.warn(
+          LogModule.DB,
+          'Error en función RPC, intentando método directo',
+          rpcError
+        );
       }
 
       // Si la función RPC no existe o falla, intentar método directo
       // Usar cliente admin si está disponible para bypasear RLS
       const clientToUse = hasServiceRoleKey() ? supabaseAdmin : supabase;
-      
+
       if (!hasServiceRoleKey()) {
         logger.warn(
           LogModule.DB,

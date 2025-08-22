@@ -7,6 +7,7 @@ Se ha implementado una funcionalidad completa para permitir a los usuarios modif
 ## 🎯 **Características**
 
 ### **1. Interfaz de Usuario**
+
 - ✅ **Botón de edición** en el GoalDetailModal (ícono de lápiz)
 - ✅ **Input de monto** con validación en tiempo real
 - ✅ **Botones de acción** (Cancelar / Guardar)
@@ -14,12 +15,14 @@ Se ha implementado una funcionalidad completa para permitir a los usuarios modif
 - ✅ **Feedback visual** con notificaciones toast
 
 ### **2. Validaciones de Seguridad**
+
 - ✅ **Monto válido**: Debe ser mayor a 0
 - ✅ **Monto mínimo**: No puede ser menor al monto ya ahorrado
 - ✅ **Autenticación**: Solo usuarios autenticados pueden editar
 - ✅ **Autorización**: Solo el propietario de la meta puede editarla
 
 ### **3. Backend y Base de Datos**
+
 - ✅ **Servicio actualizado**: `GoalsService.updateGoal()`
 - ✅ **Validación en BD**: RLS (Row Level Security) aplicado
 - ✅ **Logging completo**: Seguimiento de todas las operaciones
@@ -28,6 +31,7 @@ Se ha implementado una funcionalidad completa para permitir a los usuarios modif
 ## 🚀 **Cómo Usar la Funcionalidad**
 
 ### **Desde GoalDetailModal**
+
 1. **Abrir una meta** - Tocar cualquier meta desde el dashboard
 2. **Ver detalles** - Asegurarse de estar en la pestaña "Detalles"
 3. **Iniciar edición** - Tocar el ícono de lápiz junto al monto objetivo
@@ -35,6 +39,7 @@ Se ha implementado una funcionalidad completa para permitir a los usuarios modif
 5. **Guardar cambios** - Tocar "Guardar" o "Cancelar" para descartar
 
 ### **Desde GoalSelectionModal**
+
 1. **Intentar ahorrar** - Usar el ahorro rápido del dashboard
 2. **Exceder límite** - Si el monto excede lo que falta para completar la meta
 3. **Seleccionar "Editar objetivo"** - En el alert que aparece
@@ -44,6 +49,7 @@ Se ha implementado una funcionalidad completa para permitir a los usuarios modif
 ## 🔒 **Seguridad Implementada**
 
 ### **Validaciones Frontend**
+
 ```typescript
 // Validación de monto válido
 if (isNaN(newTarget) || newTarget <= 0) {
@@ -68,6 +74,7 @@ if (!user?.id) {
 ```
 
 ### **Seguridad Backend**
+
 - **RLS activado**: `ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;`
 - **Política de UPDATE**: Solo el propietario puede modificar sus metas
 - **Constraint en BD**: `target_amount > 0` verificado en la base de datos
@@ -93,6 +100,7 @@ graph TD
 ## 🧪 **Testing**
 
 ### **Casos de Prueba Cubiertos**
+
 1. ✅ **Monto válido**: Usuario puede actualizar con monto mayor al actual
 2. ✅ **Monto inválido**: Sistema rechaza montos <= 0
 3. ✅ **Monto muy bajo**: Sistema rechaza montos menores al ahorrado
@@ -101,6 +109,7 @@ graph TD
 6. ✅ **Errores de red**: Manejo robusto de fallos de conexión
 
 ### **Pruebas de Seguridad**
+
 1. ✅ **RLS funcional**: Solo el propietario puede editar
 2. ✅ **Validación de esquema**: BD rechaza datos inválidos
 3. ✅ **Logging completo**: Todas las acciones quedan registradas
@@ -108,6 +117,7 @@ graph TD
 ## 📝 **Código Técnico**
 
 ### **Componente Principal**
+
 ```typescript
 // Estados para la funcionalidad
 const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -118,12 +128,12 @@ const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 const handleUpdateTargetAmount = async () => {
   // Validaciones...
   const newTarget = parseFloat(newTargetAmount);
-  
+
   try {
     await GoalsService.updateGoal(goal.id, {
       target_amount: newTarget,
     });
-    
+
     ToastService.success('Objetivo actualizado');
     // Actualizar UI...
   } catch (error) {
@@ -133,6 +143,7 @@ const handleUpdateTargetAmount = async () => {
 ```
 
 ### **Servicio de Backend**
+
 ```typescript
 static async updateGoal(goalId: string, updates: GoalUpdate): Promise<Goal> {
   try {

@@ -6,24 +6,27 @@ if (typeof global !== 'undefined') {
   global.global = global;
   global.window = global;
   global.process = global.process || { env: {} };
-  
+
   // Crear shim para import.meta
   if (!global.__importMeta) {
     global.__importMeta = {
-      url: typeof location !== 'undefined' ? location.href : 'http://localhost:8081',
+      url:
+        typeof location !== 'undefined'
+          ? location.href
+          : 'http://localhost:8081',
       env: {
         MODE: 'development',
         DEV: true,
         PROD: false,
         BASE_URL: '/',
-      }
+      },
     };
   }
-  
+
   // Interceptar errores de import.meta
   if (typeof window !== 'undefined') {
     const originalError = window.Error;
-    window.Error = function(...args) {
+    window.Error = function (...args) {
       const error = new originalError(...args);
       if (error.message && error.message.includes('import.meta')) {
         console.warn('import.meta error intercepted:', error.message);
@@ -31,7 +34,7 @@ if (typeof global !== 'undefined') {
         return {
           message: error.message,
           stack: error.stack,
-          toString: () => error.message
+          toString: () => error.message,
         };
       }
       return error;

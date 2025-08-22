@@ -1,6 +1,6 @@
 /**
  * Pantalla de Onboarding Simplificada
- * 
+ *
  * Solo email + password, sin OTP ni verificación de email
  */
 
@@ -30,7 +30,7 @@ export default function SimpleOnboardingScreen() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);
-  
+
   // Credenciales
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,16 +68,12 @@ export default function SimpleOnboardingScreen() {
 
         if (success) {
           console.log('[Onboarding] Registro exitoso');
-          Alert.alert(
-            '¡Bienvenido!',
-            'Tu cuenta ha sido creada exitosamente',
-            [
-              {
-                text: 'Continuar',
-                onPress: () => router.replace('/(tabs)'),
-              },
-            ]
-          );
+          Alert.alert('¡Bienvenido!', 'Tu cuenta ha sido creada exitosamente', [
+            {
+              text: 'Continuar',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]);
         } else {
           Alert.alert(
             'Error',
@@ -93,10 +89,7 @@ export default function SimpleOnboardingScreen() {
           console.log('[Onboarding] Login exitoso');
           router.replace('/(tabs)');
         } else {
-          Alert.alert(
-            'Error',
-            'Email o contraseña incorrectos'
-          );
+          Alert.alert('Error', 'Email o contraseña incorrectos');
         }
       }
     } catch (error) {
@@ -220,7 +213,9 @@ export default function SimpleOnboardingScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="tu@email.com"
-                  placeholderTextColor={theme?.colors?.textTertiary || '#999999'}
+                  placeholderTextColor={
+                    theme?.colors?.textTertiary || '#999999'
+                  }
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -235,7 +230,9 @@ export default function SimpleOnboardingScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor={theme?.colors?.textTertiary || '#999999'}
+                  placeholderTextColor={
+                    theme?.colors?.textTertiary || '#999999'
+                  }
                   secureTextEntry
                   editable={!isLoading}
                 />
@@ -249,7 +246,9 @@ export default function SimpleOnboardingScreen() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Repite tu contraseña"
-                    placeholderTextColor={theme?.colors?.textTertiary || '#999999'}
+                    placeholderTextColor={
+                      theme?.colors?.textTertiary || '#999999'
+                    }
                     secureTextEntry
                     editable={!isLoading}
                   />
@@ -263,8 +262,8 @@ export default function SimpleOnboardingScreen() {
                     isLoading
                       ? 'Procesando...'
                       : isNewUser
-                      ? 'Crear Cuenta'
-                      : 'Iniciar Sesión'
+                        ? 'Crear Cuenta'
+                        : 'Iniciar Sesión'
                   }
                   onPress={handleSubmit}
                   disabled={isLoading}
@@ -306,7 +305,10 @@ export default function SimpleOnboardingScreen() {
             alignItems: 'center',
           }}
         >
-          <ActivityIndicator size="large" color={theme?.colors?.primary || '#007AFF'} />
+          <ActivityIndicator
+            size="large"
+            color={theme?.colors?.primary || '#007AFF'}
+          />
         </View>
       )}
     </SafeAreaView>

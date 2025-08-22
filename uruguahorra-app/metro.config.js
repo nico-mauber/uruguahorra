@@ -95,7 +95,7 @@ config.server = {
       if (__DEV__ && req.url && !req.url.includes('symbolicate')) {
         console.log(`[Metro] ${req.method} ${req.url}`);
       }
-      
+
       return middleware(req, res, next);
     };
   },

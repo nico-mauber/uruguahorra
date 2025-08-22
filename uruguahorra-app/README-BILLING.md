@@ -3,18 +3,21 @@
 Esta implementación incluye un sistema completo ### 2.### 2.### 3. Configurar webhooks
 
 #### MercadoPago Dashboard
+
 1. URL: `https://your-project.supabase.co/functions/v1/billing-webhooks`
 2. Eventos:
    - `preapproval`
    - `payment`oks
 
 #### MercadoPago Dashboard
+
 1. URL: `https://your-project.supabase.co/functions/v1/billing-webhooks`
 2. Eventos:
    - `preapproval`
    - `payment`oks
 
 #### MercadoPago Dashboard
+
 1. URL: `https://your-project.supabase.co/functions/v1/billing-webhooks`
 2. Eventos:
    - `preapproval`
@@ -23,6 +26,7 @@ Esta implementación incluye un sistema completo ### 2.### 2.### 3. Configurar w
 ## 🚀 Características implementadas
 
 ### ✅ UI - Pantalla Paywall
+
 - **Ubicación**: `src/app/paywall.tsx`
 - Dos planes: Mensual ($4.99) y Anual ($39.99) con 33% descuento
 - Detección automática de usuarios premium
@@ -30,22 +34,26 @@ Esta implementación incluye un sistema completo ### 2.### 2.### 3. Configurar w
 - Estados de carga y manejo de errores
 
 ### ✅ Servicios de Billing
+
 - **BillingService**: Lógica principal de suscripciones
 - **MercadoPagoService**: Integración específica con MercadoPago
 - Optimizado para usuarios en Uruguay
 
 ### ✅ Edge Function de Webhooks
+
 - **Ubicación**: `supabase/functions/billing-webhooks/index.ts`
 - Maneja webhooks de MercadoPago
 - Validación de eventos para seguridad
 - Actualización automática de estado de suscripciones
 
 ### ✅ Tipos y Interfaces
+
 - **Ubicación**: `src/types/billing/index.ts`
 - Tipos TypeScript para MercadoPago
 - Interfaces para checkout y webhooks
 
 ### ✅ Componente de Gestión
+
 - **SubscriptionManager**: Componente para usuarios premium
 - Cancelación y reactivación de suscripciones
 - Información detallada del plan activo
@@ -86,6 +94,7 @@ docs/
 ## 🔧 Configuración
 
 ### 1. Variables de entorno
+
 Crea un archivo `.env.local` con:
 
 ```bash
@@ -100,6 +109,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### 2. Despliegue de Edge Function
+
 ```bash
 supabase functions deploy billing-webhooks
 ```
@@ -107,6 +117,7 @@ supabase functions deploy billing-webhooks
 ### 3. Configurar webhooks
 
 #### MercadoPago Dashboard
+
 1. URL: `https://your-project.supabase.co/functions/v1/billing-webhooks`
 2. Eventos:
    - `preapproval`
@@ -132,6 +143,7 @@ npm run supabase:stop
 ## 🌍 Mercado Objetivo
 
 ### Uruguay - MercadoPago
+
 - Optimizado para usuarios uruguayos
 - Soporte completo para peso uruguayo (UYU)
 - Métodos de pago locales disponibles
@@ -140,14 +152,16 @@ npm run supabase:stop
 ## 💳 Flujo de Suscripción
 
 ### MercadoPago:
+
 1. Usuario selecciona plan → `BillingService.createCheckout()`
-2. Redirect a MercadoPago  
+2. Redirect a MercadoPago
 3. Webhook `preapproval` → crea/actualiza suscripción
 4. Webhooks de pago → tracking de pagos
 
 ## 🧪 Testing
 
 ### Testing local de webhooks:
+
 ```bash
 # MercadoPago - Simulación manual
 curl -X POST http://localhost:54321/functions/v1/billing-webhooks \
@@ -167,21 +181,21 @@ Ver más detalles en `docs/billing-testing.md`
 
 ## 📈 Estado de la Implementación
 
-| Funcionalidad | Estado | Observaciones |
-|---------------|--------|---------------|
-| **UI Paywall** | ✅ | Completa con 2 planes |
-| **MercadoPago Integration** | ✅ | Preapproval + Webhooks |
-| **Edge Function** | ✅ | Solo MercadoPago |
-| **Database Schema** | ✅ | Tabla suscripciones |
-| **Testing Local** | ✅ | Scripts y documentación |
-| **Security** | ✅ | Validación eventos |
-| **Error Handling** | ✅ | Comprehensive |
+| Funcionalidad               | Estado | Observaciones           |
+| --------------------------- | ------ | ----------------------- |
+| **UI Paywall**              | ✅     | Completa con 2 planes   |
+| **MercadoPago Integration** | ✅     | Preapproval + Webhooks  |
+| **Edge Function**           | ✅     | Solo MercadoPago        |
+| **Database Schema**         | ✅     | Tabla suscripciones     |
+| **Testing Local**           | ✅     | Scripts y documentación |
+| **Security**                | ✅     | Validación eventos      |
+| **Error Handling**          | ✅     | Comprehensive           |
 
 ## 🚀 Próximos pasos
 
 1. **Configurar cuenta de producción** en MercadoPago
 2. **Completar variables de entorno** de producción
-3. **Configurar webhooks** en production  
+3. **Configurar webhooks** en production
 4. **Pruebas end-to-end** con pagos reales
 5. **Monitoreo y analytics** de conversión
 
@@ -190,6 +204,7 @@ Ver más detalles en `docs/billing-testing.md`
 ## 📞 Soporte
 
 Para preguntas sobre la implementación:
+
 - Revisar `docs/billing-testing.md` para testing
 - Consultar logs en Supabase Dashboard
 - Verificar configuración en archivos `.env.local`

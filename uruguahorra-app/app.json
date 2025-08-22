@@ -22,10 +22,7 @@
         "backgroundColor": "#6366F1"
       },
       "package": "com.uruguahorra.app",
-      "permissions": [
-        "RECEIVE_BOOT_COMPLETED",
-        "WAKE_LOCK"
-      ]
+      "permissions": ["RECEIVE_BOOT_COMPLETED", "WAKE_LOCK"]
     },
     "web": {
       "favicon": "./assets/favicon.png",

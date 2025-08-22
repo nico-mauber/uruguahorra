@@ -140,7 +140,6 @@ export class GoalsService {
             }
           );
 
-
           throw new Error(
             'No tienes permisos para crear metas. Verifica tu sesión.'
           );

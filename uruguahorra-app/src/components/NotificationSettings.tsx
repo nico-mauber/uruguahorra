@@ -37,7 +37,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
   const handleToggleNotifications = async (enabled: boolean) => {
     setIsLoading(true);
-    
+
     if (enabled && !permissionsGranted) {
       const granted = await requestPermissions();
       if (!granted) {
@@ -46,12 +46,15 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           'Para recibir recordatorios de racha, necesitas habilitar las notificaciones en la configuración de tu dispositivo.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { 
-              text: 'Ir a Configuración', 
+            {
+              text: 'Ir a Configuración',
               onPress: () => {
                 // En una implementación real, podrías abrir la configuración del sistema
-                Alert.alert('Info', 'Ve a Configuración > Aplicaciones > Uruguahorra > Notificaciones');
-              }
+                Alert.alert(
+                  'Info',
+                  'Ve a Configuración > Aplicaciones > Uruguahorra > Notificaciones'
+                );
+              },
             },
           ]
         );
@@ -67,7 +70,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const handleTimeChange = async (hour: number, minute: number) => {
     setIsLoading(true);
     await updateSettings({
-      reminderTime: { hour, minute }
+      reminderTime: { hour, minute },
     });
     setIsLoading(false);
   };
@@ -75,7 +78,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const handleWarningHoursChange = async (hours: number) => {
     setIsLoading(true);
     await updateSettings({
-      warningHours: hours
+      warningHours: hours,
     });
     setIsLoading(false);
   };
@@ -92,7 +95,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     setIsLoading(true);
     await sendTestNotification();
     setIsLoading(false);
-    
+
     Alert.alert(
       '🧪 Prueba enviada',
       'Recibirás una notificación de prueba en unos segundos.'
@@ -126,7 +129,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     return (
       <Card style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Inicializando notificaciones...</Text>
+          <Text style={styles.loadingText}>
+            Inicializando notificaciones...
+          </Text>
         </View>
       </Card>
     );
@@ -165,7 +170,8 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             <View style={styles.warningContainer}>
               <Ionicons name="warning" size={20} color="#F59E0B" />
               <Text style={styles.warningText}>
-                Las notificaciones están deshabilitadas. Toca el interruptor para habilitarlas.
+                Las notificaciones están deshabilitadas. Toca el interruptor
+                para habilitarlas.
               </Text>
             </View>
           )}
@@ -175,8 +181,8 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           <>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>⏰ Recordatorio Diario</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.timeSelector}
                 onPress={() => {
                   // Aquí podrías abrir un picker de tiempo
@@ -187,11 +193,14 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 }}
               >
                 <Text style={styles.timeText}>
-                  {formatTime(settings.reminderTime.hour, settings.reminderTime.minute)}
+                  {formatTime(
+                    settings.reminderTime.hour,
+                    settings.reminderTime.minute
+                  )}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color="#666" />
               </TouchableOpacity>
-              
+
               <Text style={styles.settingDescription}>
                 Te recordaremos hacer tu microaporte diario a esta hora
               </Text>
@@ -199,28 +208,32 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>⚠️ Alerta de Racha</Text>
-              
+
               <View style={styles.warningHoursContainer}>
                 {[1, 2, 4, 6].map((hours) => (
                   <TouchableOpacity
                     key={hours}
                     style={[
                       styles.hourOption,
-                      settings.warningHours === hours && styles.hourOptionSelected
+                      settings.warningHours === hours &&
+                        styles.hourOptionSelected,
                     ]}
                     onPress={() => handleWarningHoursChange(hours)}
                     disabled={isLoading}
                   >
-                    <Text style={[
-                      styles.hourOptionText,
-                      settings.warningHours === hours && styles.hourOptionTextSelected
-                    ]}>
+                    <Text
+                      style={[
+                        styles.hourOptionText,
+                        settings.warningHours === hours &&
+                          styles.hourOptionTextSelected,
+                      ]}
+                    >
                       {hours}h
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               <Text style={styles.settingDescription}>
                 Te avisaremos cuando tu racha esté a punto de romperse
               </Text>
@@ -228,11 +241,15 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>📊 Estado</Text>
-              
+
               <View style={styles.statusContainer}>
                 <View style={styles.statusItem}>
-                  <Text style={styles.statusValue}>{scheduledNotifications}</Text>
-                  <Text style={styles.statusLabel}>Notificaciones programadas</Text>
+                  <Text style={styles.statusValue}>
+                    {scheduledNotifications}
+                  </Text>
+                  <Text style={styles.statusLabel}>
+                    Notificaciones programadas
+                  </Text>
                 </View>
               </View>
             </View>

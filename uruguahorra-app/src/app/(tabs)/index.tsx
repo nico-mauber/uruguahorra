@@ -246,6 +246,16 @@ export default function DashboardScreen() {
 
     // Si solo hay una meta, validar que no exceda el límite
     const goal = goals[0];
+    
+    // Validar si la meta ya está completada
+    if (goal.savedAmount >= goal.targetAmount) {
+      ToastService.warning(
+        '🎯 Meta completada',
+        `"${goal.name}" ya está completada. Ve al detalle de la meta para aumentar el objetivo o crea una nueva meta.`
+      );
+      return;
+    }
+    
     const maxAllowed = goal.targetAmount - goal.savedAmount;
 
     if (amount > maxAllowed) {
@@ -299,6 +309,16 @@ export default function DashboardScreen() {
 
       // Validar que el monto no exceda el objetivo
       const maxAllowed = selectedGoal.targetAmount - selectedGoal.savedAmount;
+      
+      // Si la meta ya está completada (savedAmount >= targetAmount)
+      if (selectedGoal.savedAmount >= selectedGoal.targetAmount) {
+        ToastService.warning(
+          '🎯 Meta ya completada',
+          `"${selectedGoal.name}" ya está completada. ¿Quieres crear una nueva meta o aumentar el objetivo de esta?`
+        );
+        return;
+      }
+      
       if (amount > maxAllowed) {
         ToastService.error(
           'Monto excede el objetivo',

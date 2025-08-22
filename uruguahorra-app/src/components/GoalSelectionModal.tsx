@@ -53,6 +53,28 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     const goal = goals.find((g) => g.id === goalId);
     if (!goal) return;
 
+    // Verificar si la meta ya está completada
+    if (goal.savedAmount >= goal.targetAmount) {
+      Alert.alert(
+        '🎯 Meta completada',
+        `"${goal.name}" ya está completada. ¿Qué quieres hacer con $${pendingAmount}?`,
+        [
+          {
+            text: 'Aumentar objetivo',
+            onPress: () => {
+              setEditingGoalId(goalId);
+              setNewTargetAmount((goal.targetAmount + pendingAmount).toString());
+            },
+          },
+          {
+            text: 'Elegir otra meta',
+            style: 'cancel',
+          },
+        ]
+      );
+      return;
+    }
+
     const maxAllowed = goal.targetAmount - goal.savedAmount;
 
     if (pendingAmount > maxAllowed) {

@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { ErrorBoundary, PWAStatus } from '@components';
 import { PostHogProvider } from 'posthog-react-native';
 import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
+import { toastConfig } from '@/utils/toast';
 
 // Configurar logging mejorado en desarrollo
 if (__DEV__) {
@@ -153,7 +154,7 @@ export default function RootLayout() {
             <AuthProvider>
               <StatusBar style="auto" />
               <AppContent />
-              <Toast />
+              <Toast config={toastConfig} />
             </AuthProvider>
           </SafeAreaProvider>
         </ErrorBoundary>

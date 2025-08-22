@@ -34,6 +34,11 @@ export class XPService {
         case 'challenge_complete':
           xpEarned = calculateChallengeXP();
           break;
+        case 'challenge_session_complete':
+          // Para challenge sessions, usar el XP directamente del eventData
+          xpEarned =
+            typeof eventData.xpAmount === 'number' ? eventData.xpAmount : 50;
+          break;
         case 'daily_streak':
           xpEarned = calculateStreakXP();
           break;
@@ -304,6 +309,7 @@ export class XPService {
       const xpByEventType: Record<XPEventType, number> = {
         contribution: 0,
         challenge_complete: 0,
+        challenge_session_complete: 0,
         daily_streak: 0,
         quest_complete: 0,
       };

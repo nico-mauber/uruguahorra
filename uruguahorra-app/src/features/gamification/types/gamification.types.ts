@@ -1,6 +1,7 @@
 export type XPEventType =
   | 'contribution'
   | 'challenge_complete'
+  | 'challenge_session_complete'
   | 'daily_streak'
   | 'quest_complete';
 

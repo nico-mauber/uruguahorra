@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 4.1 - Incluye todas las migraciones y correcciones + Quest System Fix
--- Fecha: 21 de Agosto, 2025
+-- Versión: 5.1 - Challenge System V2 + Goal Progress Fix
+-- Fecha: 22 de Agosto, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -12,7 +12,14 @@
 -- 3. La base de datos quedará totalmente configurada y funcional
 -- 
 -- CAMBIOS PRINCIPALES EN ESTA VERSIÓN:
--- ✅ Sistema de autenticación SIMPLIFICADO
+-- ✅ CHALLENGE SYSTEM V2 INTEGRADO: Nuevo sistema de retos con categorías, sesiones y duración personalizable
+-- ✅ CORREGIDO: Triggers para actualizar automáticamente el progreso de metas cuando se agregan ahorros
+-- ✅ Sistema de categorías de retos con UI mejorada (iconos, colores)
+-- ✅ Sesiones de usuario con seguimiento de progreso y renovación
+-- ✅ Funciones auxiliares para gestión automática de expiración
+-- ✅ Índices optimizados para consultas de retos y sesiones
+-- ✅ Sistema de gamificación actualizado (XP por completar sesiones)
+-- ✅ Sistema de autenticación SIMPLIFICADO mantenido
 -- ✅ Políticas RLS mínimas y funcionales
 -- ✅ Función simple_create_user_profile() para trigger automático
 -- ✅ Función get_or_create_user_profile() como fallback
@@ -25,6 +32,7 @@
 -- ✅ QUEST SYSTEM FIX INTEGRADO - Políticas RLS corregidas para weekly_quests y user_quest_progress
 -- ✅ Función auxiliar create_user_quest_progress_safe() incluida
 -- ✅ Sistema de quests completamente funcional sin parches defensivos
+-- ✅ TRIGGERS CORREGIDOS - Progreso de metas se actualiza automáticamente al agregar ahorros
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -141,22 +149,62 @@ CREATE TABLE public.micro_contributions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA CHALLENGES
+-- TABLA CHALLENGE_CATEGORIES (NUEVA - PARA SISTEMA V2)
+CREATE TABLE public.challenge_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    icon TEXT,
+    color TEXT DEFAULT '#4CAF50',
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- TABLA CHALLENGES (ACTUALIZADA PARA SISTEMA V2)
 CREATE TABLE public.challenges (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     description TEXT,
-    type TEXT DEFAULT 'savings',
-    difficulty TEXT DEFAULT 'easy',
+    type TEXT DEFAULT 'savings' CHECK (type IN ('savings', 'spending_habits', 'investments', 'budgeting', 'financial_education', 'daily_expenses', 'entertainment')),
+    difficulty TEXT DEFAULT 'easy' CHECK (difficulty IN ('easy', 'medium', 'hard', 'expert')),
     requirement_type TEXT DEFAULT 'savings' CHECK (requirement_type IN ('savings', 'transactions', 'streak', 'goals')),
     xp_reward INTEGER DEFAULT 50,
     target_value DECIMAL(10,2),
     duration_days INTEGER,
     is_active BOOLEAN DEFAULT true,
+    -- Nuevas columnas para sistema V2
+    category_id UUID REFERENCES public.challenge_categories(id),
+    category_name TEXT, -- Temporal para migración
+    tags TEXT[] DEFAULT '{}',
+    icon TEXT,
+    color TEXT DEFAULT '#4CAF50',
+    min_duration_days INTEGER DEFAULT 7,
+    max_duration_days INTEGER DEFAULT 365,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA USER_CHALLENGES
+-- TABLA USER_CHALLENGE_SESSIONS (NUEVA - REEMPLAZA user_challenges)
+CREATE TABLE public.user_challenge_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    challenge_id UUID NOT NULL REFERENCES public.challenges(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'expired', 'renewed', 'cancelled')),
+    duration_type TEXT NOT NULL CHECK (duration_type IN ('1_week', '15_days', '30_days', '1_year')),
+    start_date TIMESTAMPTZ DEFAULT NOW(),
+    end_date TIMESTAMPTZ NOT NULL,
+    progress DECIMAL(5,2) DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    xp_earned INTEGER DEFAULT 0,
+    completed_at TIMESTAMPTZ,
+    renewed_from_session_id UUID REFERENCES public.user_challenge_sessions(id),
+    notification_settings JSONB DEFAULT '{"daily_reminder": true, "progress_updates": true, "expiration_warning": true}',
+    progress_log JSONB DEFAULT '[]', -- Historial de actualizaciones de progreso
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- TABLA USER_CHALLENGES (MANTENIDA PARA COMPATIBILIDAD)
 CREATE TABLE public.user_challenges (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -260,11 +308,11 @@ CREATE TABLE public.user_streaks (
     UNIQUE(user_id)
 );
 
--- TABLA USER_XP_LOG
+-- TABLA USER_XP_LOG (ACTUALIZADA PARA CHALLENGE SYSTEM V2)
 CREATE TABLE public.user_xp_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    event_type TEXT NOT NULL CHECK (event_type IN ('contribution', 'challenge_complete', 'daily_streak', 'quest_complete')),
+    event_type TEXT NOT NULL CHECK (event_type IN ('contribution', 'challenge_complete', 'challenge_session_complete', 'daily_streak', 'quest_complete')),
     xp_earned INTEGER NOT NULL,
     event_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -336,10 +384,25 @@ CREATE INDEX idx_micro_contributions_goal_id ON public.micro_contributions(goal_
 CREATE INDEX idx_micro_contributions_user_id ON public.micro_contributions(user_id);
 CREATE INDEX idx_micro_contributions_date ON public.micro_contributions(created_at DESC);
 
--- Índices para challenges
+-- Índices para challenge_categories
+CREATE INDEX idx_challenge_categories_sort_order ON public.challenge_categories(sort_order);
+CREATE INDEX idx_challenge_categories_active ON public.challenge_categories(is_active) WHERE is_active = true;
+
+-- Índices para challenges (actualizados)
 CREATE INDEX idx_challenges_type ON public.challenges(type);
 CREATE INDEX idx_challenges_difficulty ON public.challenges(difficulty);
 CREATE INDEX idx_challenges_active ON public.challenges(is_active);
+CREATE INDEX idx_challenges_category_id ON public.challenges(category_id);
+
+-- Índices para user_challenge_sessions (nuevos)
+CREATE INDEX idx_user_challenge_sessions_user_id ON public.user_challenge_sessions(user_id);
+CREATE INDEX idx_user_challenge_sessions_challenge_id ON public.user_challenge_sessions(challenge_id);
+CREATE INDEX idx_user_challenge_sessions_status ON public.user_challenge_sessions(status);
+CREATE INDEX idx_user_challenge_sessions_end_date ON public.user_challenge_sessions(end_date);
+CREATE INDEX idx_user_challenge_sessions_user_status ON public.user_challenge_sessions(user_id, status);
+CREATE INDEX idx_user_challenge_sessions_user_challenge ON public.user_challenge_sessions(user_id, challenge_id);
+CREATE INDEX idx_user_challenge_sessions_status_end_date ON public.user_challenge_sessions(status, end_date) WHERE status = 'active';
+CREATE INDEX idx_user_challenge_sessions_active ON public.user_challenge_sessions(user_id, end_date) WHERE status = 'active';
 
 -- Índices para user_challenges
 CREATE INDEX idx_user_challenges_user_id ON public.user_challenges(user_id);
@@ -413,7 +476,9 @@ CREATE INDEX idx_paywall_events_type ON public.paywall_events(event_type);
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.micro_contributions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.challenge_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_challenge_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.squads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.squad_members ENABLE ROW LEVEL SECURITY;
@@ -471,11 +536,33 @@ CREATE POLICY "service_role_all_goals" ON public.goals
 CREATE POLICY "micro_contributions_all_own" ON public.micro_contributions
     FOR ALL USING (auth.uid() = user_id);
 
+-- Políticas para CHALLENGE_CATEGORIES (lectura pública)
+CREATE POLICY "Las categorías son públicas para lectura" 
+    ON public.challenge_categories FOR SELECT 
+    USING (is_active = true);
+
 -- Políticas para CHALLENGES (lectura pública)
 CREATE POLICY "challenges_read_all" ON public.challenges
     FOR SELECT USING (true);
 
--- Políticas para USER_CHALLENGES
+-- Políticas para USER_CHALLENGE_SESSIONS (solo el usuario propietario)
+CREATE POLICY "Los usuarios solo ven sus propias sesiones" 
+    ON public.user_challenge_sessions FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden crear sus propias sesiones" 
+    ON public.user_challenge_sessions FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden actualizar sus propias sesiones" 
+    ON public.user_challenge_sessions FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden eliminar sus propias sesiones" 
+    ON public.user_challenge_sessions FOR DELETE 
+    USING (auth.uid() = user_id);
+
+-- Políticas para USER_CHALLENGES (compatibilidad)
 CREATE POLICY "user_challenges_all_own" ON public.user_challenges
     FOR ALL USING (auth.uid() = user_id);
 
@@ -784,22 +871,280 @@ CREATE TRIGGER update_subscriptions_updated_at
     BEFORE UPDATE ON public.subscriptions
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
--- Trigger para actualizar progreso de metas
-CREATE TRIGGER update_goal_progress_trigger
-    AFTER INSERT OR UPDATE OR DELETE ON public.micro_contributions
+-- Trigger para user_challenge_sessions (nuevo)
+CREATE TRIGGER update_user_challenge_sessions_updated_at
+    BEFORE UPDATE ON public.user_challenge_sessions
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+-- Triggers para actualizar progreso de metas cuando se modifican micro_contributions
+CREATE TRIGGER update_goal_progress_on_contribution_insert
+    AFTER INSERT ON public.micro_contributions
     FOR EACH ROW EXECUTE FUNCTION public.update_goal_progress();
+
+CREATE TRIGGER update_goal_progress_on_contribution_update
+    AFTER UPDATE ON public.micro_contributions
+    FOR EACH ROW EXECUTE FUNCTION public.update_goal_progress();
+
+CREATE TRIGGER update_goal_progress_on_contribution_delete
+    AFTER DELETE ON public.micro_contributions
+    FOR EACH ROW EXECUTE FUNCTION public.update_goal_progress();
+
+-- ============================================
+-- FUNCIONES PARA CHALLENGE SYSTEM V2
+-- ============================================
+
+-- Función para calcular fecha de fin
+CREATE OR REPLACE FUNCTION calculate_challenge_end_date(
+    start_date TIMESTAMPTZ,
+    duration_type TEXT
+)
+RETURNS TIMESTAMPTZ AS $$
+BEGIN
+    RETURN CASE duration_type
+        WHEN '1_week' THEN start_date + INTERVAL '7 days'
+        WHEN '15_days' THEN start_date + INTERVAL '15 days'
+        WHEN '30_days' THEN start_date + INTERVAL '30 days'
+        WHEN '1_year' THEN start_date + INTERVAL '1 year'
+        ELSE start_date + INTERVAL '30 days'
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para validar límite de retos activos (máximo 5)
+CREATE OR REPLACE FUNCTION validate_active_challenge_limit()
+RETURNS TRIGGER AS $$
+DECLARE
+    active_count INTEGER;
+BEGIN
+    -- Solo validar en INSERT o cuando se activa un reto
+    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND OLD.status != 'active' AND NEW.status = 'active') THEN
+        SELECT COUNT(*) INTO active_count
+        FROM public.user_challenge_sessions
+        WHERE user_id = NEW.user_id AND status = 'active';
+        
+        IF active_count >= 5 THEN
+            RAISE EXCEPTION 'Usuario no puede tener más de 5 retos activos simultáneamente';
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para validar límite
+DROP TRIGGER IF EXISTS validate_challenge_limit_trigger ON public.user_challenge_sessions;
+CREATE TRIGGER validate_challenge_limit_trigger
+    BEFORE INSERT OR UPDATE ON public.user_challenge_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_active_challenge_limit();
+
+-- Función para expirar sesiones automáticamente (mejorada)
+CREATE OR REPLACE FUNCTION expire_challenge_sessions()
+RETURNS TABLE(
+    expired_count INTEGER,
+    session_ids UUID[],
+    execution_time TIMESTAMPTZ
+) AS $$
+DECLARE
+    expired_sessions UUID[];
+    final_count INTEGER;
+    start_time TIMESTAMPTZ := NOW();
+BEGIN
+    -- Obtener IDs de sesiones a expirar
+    SELECT ARRAY_AGG(id) INTO expired_sessions
+    FROM public.user_challenge_sessions 
+    WHERE status = 'active' AND end_date < NOW();
+    
+    -- Actualizar sesiones expiradas
+    UPDATE public.user_challenge_sessions 
+    SET status = 'expired', updated_at = NOW()
+    WHERE status = 'active' AND end_date < NOW();
+    
+    GET DIAGNOSTICS final_count = ROW_COUNT;
+    
+    -- Log detallado de la operación
+    INSERT INTO public.audit_logs (
+        action, 
+        table_name, 
+        new_values, 
+        created_at
+    ) VALUES (
+        'expire_sessions', 
+        'user_challenge_sessions', 
+        jsonb_build_object(
+            'expired_count', final_count,
+            'session_ids', expired_sessions,
+            'execution_time', start_time,
+            'duration_ms', EXTRACT(MILLISECONDS FROM (NOW() - start_time))
+        ), 
+        NOW()
+    );
+    
+    -- Retornar resultados
+    RETURN QUERY SELECT 
+        final_count,
+        COALESCE(expired_sessions, ARRAY[]::UUID[]),
+        start_time;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función auxiliar para iniciar sesión (mejorada)
+CREATE OR REPLACE FUNCTION start_challenge_session(
+    p_user_id UUID,
+    p_challenge_id UUID,
+    p_duration_type TEXT
+)
+RETURNS UUID AS $$
+DECLARE
+    v_session_id UUID;
+    v_start_date TIMESTAMPTZ := NOW();
+    v_end_date TIMESTAMPTZ;
+    v_active_count INTEGER;
+BEGIN
+    -- Validar tipo de duración
+    IF p_duration_type NOT IN ('1_week', '15_days', '30_days', '1_year') THEN
+        RAISE EXCEPTION 'Tipo de duración inválido: %', p_duration_type;
+    END IF;
+    
+    -- Verificar que el reto existe y está activo
+    IF NOT EXISTS (
+        SELECT 1 FROM public.challenges 
+        WHERE id = p_challenge_id AND is_active = true
+    ) THEN
+        RAISE EXCEPTION 'El reto especificado no existe o no está activo';
+    END IF;
+    
+    -- Verificar límite de retos activos
+    SELECT COUNT(*) INTO v_active_count
+    FROM public.user_challenge_sessions
+    WHERE user_id = p_user_id AND status = 'active';
+    
+    IF v_active_count >= 5 THEN
+        RAISE EXCEPTION 'No puedes tener más de 5 retos activos simultáneamente';
+    END IF;
+    
+    -- Calcular fecha de fin
+    v_end_date := calculate_challenge_end_date(v_start_date, p_duration_type);
+    
+    -- Crear sesión
+    INSERT INTO public.user_challenge_sessions (
+        user_id, challenge_id, duration_type, start_date, end_date
+    ) VALUES (
+        p_user_id, p_challenge_id, p_duration_type, v_start_date, v_end_date
+    ) RETURNING id INTO v_session_id;
+    
+    -- Log de la operación
+    INSERT INTO public.audit_logs (
+        action, table_name, record_id, new_values, created_at
+    ) VALUES (
+        'create_session', 'user_challenge_sessions', v_session_id,
+        jsonb_build_object(
+            'user_id', p_user_id,
+            'challenge_id', p_challenge_id,
+            'duration_type', p_duration_type,
+            'start_date', v_start_date,
+            'end_date', v_end_date
+        ),
+        NOW()
+    );
+    
+    RETURN v_session_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Dar permisos a las funciones
+GRANT EXECUTE ON FUNCTION calculate_challenge_end_date TO authenticated;
+GRANT EXECUTE ON FUNCTION expire_challenge_sessions TO authenticated;
+GRANT EXECUTE ON FUNCTION start_challenge_session TO authenticated;
 
 -- ============================================
 -- PASO 7: DATOS SEMILLA
 -- ============================================
 
--- Challenges básicos
-INSERT INTO public.challenges (title, description, type, difficulty, xp_reward, target_value, duration_days) VALUES
-('Primer Ahorro', 'Realiza tu primera contribución a cualquier meta', 'savings', 'easy', 50, 1, 7),
-('Ahorro Semanal', 'Ahorra durante 7 días consecutivos', 'streak', 'medium', 100, 7, 7),
-('Meta Alcanzada', 'Completa tu primera meta de ahorro', 'goal', 'medium', 200, 1, 30),
-('Ahorrador Constante', 'Realiza 10 contribuciones en un mes', 'frequency', 'hard', 300, 10, 30),
-('Maestro del Ahorro', 'Completa 5 metas diferentes', 'goal', 'hard', 500, 5, 90);
+-- Datos iniciales - Categorías de retos (Challenge System V2)
+INSERT INTO public.challenge_categories (name, description, icon, color, sort_order) VALUES
+('Gastos Diarios', 'Controla y reduce gastos en compras cotidianas', 'shopping-cart', '#FF5722', 1),
+('Entretenimiento', 'Optimiza gastos en ocio y entretenimiento', 'movie', '#9C27B0', 2),
+('Ropa y Accesorios', 'Gestiona inteligentemente gastos en vestimenta', 'shirt', '#E91E63', 3),
+('Ahorro Sistemático', 'Desarrolla hábitos sólidos de ahorro regular', 'piggy-bank', '#4CAF50', 4),
+('Inversiones', 'Inicia o incrementa tu cartera de inversiones', 'trending-up', '#2196F3', 5),
+('Educación Financiera', 'Mejora tus conocimientos y habilidades financieras', 'book-open', '#FF9800', 6)
+ON CONFLICT (name) DO NOTHING;
+
+-- Challenges básicos actualizados con Challenge System V2
+DO $$
+DECLARE
+    gastos_diarios_id UUID;
+    entretenimiento_id UUID;
+    ahorro_sistematico_id UUID;
+    inversiones_id UUID;
+BEGIN
+    -- Obtener IDs de categorías
+    SELECT id INTO gastos_diarios_id FROM public.challenge_categories WHERE name = 'Gastos Diarios';
+    SELECT id INTO entretenimiento_id FROM public.challenge_categories WHERE name = 'Entretenimiento';
+    SELECT id INTO ahorro_sistematico_id FROM public.challenge_categories WHERE name = 'Ahorro Sistemático';
+    SELECT id INTO inversiones_id FROM public.challenge_categories WHERE name = 'Inversiones';
+    
+    -- Limpiar retos de ejemplo anteriores para evitar duplicados
+    DELETE FROM public.challenges WHERE title IN (
+        'Primer Ahorro', 'Ahorro Semanal', 'Meta Alcanzada', 'Ahorrador Constante', 'Maestro del Ahorro',
+        'No Delivery Challenge', 'Marca Blanca Only', 'Comidas Caseras 100%',
+        'Entretenimiento Gratuito', 'Cero Suscripciones', 'Mes Sin Cine',
+        'Ahorro 5% Mensual', 'Ahorro 20% Extremo', 'Monedas del Día',
+        'Primera Inversión', 'Inversión Mensual'
+    );
+    
+    -- Retos básicos actualizados
+    INSERT INTO public.challenges (title, description, type, difficulty, xp_reward, target_value, duration_days) VALUES
+    ('Primer Ahorro', 'Realiza tu primera contribución a cualquier meta', 'savings', 'easy', 50, 1, 7),
+    ('Ahorro Semanal', 'Ahorra durante 7 días consecutivos', 'savings', 'medium', 100, 7, 7),
+    ('Meta Alcanzada', 'Completa tu primera meta de ahorro', 'savings', 'medium', 200, 1, 30),
+    ('Ahorrador Constante', 'Realiza 10 contribuciones en un mes', 'savings', 'hard', 300, 10, 30),
+    ('Maestro del Ahorro', 'Completa 5 metas diferentes', 'savings', 'hard', 500, 5, 90);
+    
+    -- Retos de Gastos Diarios
+    IF gastos_diarios_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        ('No Delivery Challenge', 'Evita pedir delivery y cocina en casa para ahorrar dinero', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 25, 'home', '#FF5722', '{"delivery", "cocina", "ahorro"}', 7, 30),
+        ('Marca Blanca Only', 'Compra solo productos de marca blanca durante el período', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 50, 'shopping-cart', '#FF5722', '{"supermercado", "marca-blanca"}', 15, 60),
+        ('Comidas Caseras 100%', 'Prepara todas las comidas en casa, sin excepciones', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'hard', 100, 'chef-hat', '#FF5722', '{"cocina", "comida-casera"}', 7, 90);
+    END IF;
+    
+    -- Retos de Entretenimiento
+    IF entretenimiento_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        ('Entretenimiento Gratuito', 'Disfruta solo de entretenimiento gratuito', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 25, 'smile', '#9C27B0', '{"entretenimiento", "gratuito"}', 7, 30),
+        ('Cero Suscripciones', 'Cancela al menos una suscripción no esencial', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 50, 'x-circle', '#9C27B0', '{"suscripciones", "gastos-fijos"}', 30, 365),
+        ('Mes Sin Cine', 'Evita ir al cine durante todo el período', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 25, 'film', '#9C27B0', '{"cine", "entretenimiento"}', 15, 60);
+    END IF;
+    
+    -- Retos de Ahorro Sistemático
+    IF ahorro_sistematico_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        ('Ahorro 5% Mensual', 'Ahorra el 5% de tus ingresos mensuales', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 50, 'piggy-bank', '#4CAF50', '{"ahorro", "porcentaje", "sistemático"}', 30, 365),
+        ('Ahorro 20% Extremo', 'Desafío experto: ahorra el 20% de tus ingresos', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'expert', 200, 'target', '#4CAF50', '{"ahorro", "experto", "alto-porcentaje"}', 30, 365),
+        ('Monedas del Día', 'Guarda todas las monedas que recibas como vuelto', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'easy', 25, 'coins', '#4CAF50', '{"monedas", "vuelto", "micro-ahorro"}', 7, 90);
+    END IF;
+    
+    -- Retos de Inversiones
+    IF inversiones_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        ('Primera Inversión', 'Realiza tu primera inversión en instrumentos financieros', 'investments', inversiones_id, 'Inversiones', 'medium', 75, 'trending-up', '#2196F3', '{"primera-inversión", "instrumentos-financieros"}', 7, 30),
+        ('Inversión Mensual', 'Invierte un monto fijo cada mes', 'investments', inversiones_id, 'Inversiones', 'hard', 100, 'bar-chart', '#2196F3', '{"inversión-mensual", "sistemático"}', 30, 365);
+    END IF;
+END $$;
 
 -- Contenido educativo básico
 INSERT INTO public.learnings (title, content, category, difficulty_level, estimated_read_time, xp_reward) VALUES
@@ -1182,17 +1527,34 @@ END $$;
 -- ============================================
 
 SELECT 
-    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - QUEST SYSTEM INTEGRATED' as status,
-    'Version 4.1 - Quest RLS policies fixed and integrated' as version_notes,
-    'No need to run fix_quests_rls_policies.sql separately' as migration_notes,
+    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - CHALLENGE SYSTEM V2 INTEGRATED' as status,
+    'Version 5.1 - Complete Challenge System V2 + Fixed Goal Progress Tracking' as version_notes,
+    'Includes: Challenge categories, user sessions, automatic expiration, duration customization, and FIXED goal progress updates' as features_included,
+    'Ready for: Challenge catalog UI, progress tracking, and notification system' as next_steps,
     NOW() as deployed_at;
 
 -- ============================================
--- NOTAS IMPORTANTES SOBRE QUEST SYSTEM FIX
+-- NOTAS IMPORTANTES SOBRE CHALLENGE SYSTEM V2
 -- ============================================
 -- 
--- Este archivo YA INCLUYE las correcciones del sistema de quests:
--- ✅ Políticas RLS corregidas para weekly_quests (SELECT + INSERT)
+-- Este archivo INCLUYE el sistema completo de retos v2:
+-- ✅ Challenge categories con UI mejorada (iconos, colores)
+-- ✅ User challenge sessions con progreso y duración personalizable
+-- ✅ Funciones automáticas: start_challenge_session(), expire_challenge_sessions()
+-- ✅ Límite de 5 retos activos por usuario
+-- ✅ Sistema de notificaciones configurables por sesión
+-- ✅ Log de progreso y auditoría completa
+-- ✅ Índices optimizados para consultas frecuentes
+-- ✅ Políticas RLS seguras para multi-tenant
+-- ✅ Compatible con sistema de gamificación (XP por completar sesiones)
+-- ✅ Datos semilla con retos de ejemplo por categoría
+-- 
+-- PRÓXIMOS PASOS:
+-- 1. Implementar servicios TypeScript en frontend
+-- 2. Crear UI para catálogo de retos y selección
+-- 3. Implementar pantalla de retos activos
+-- 4. Configurar sistema de notificaciones push
+-- 5. Integrar con sistema existente de XP y niveles
 -- ✅ Políticas RLS corregidas para user_quest_progress (SELECT, INSERT, UPDATE separadas)  
 -- ✅ Función create_user_quest_progress_safe() incluida
 -- 

@@ -87,6 +87,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Tipos específicos para campos JSONB
+export type NotificationSettings = {
+  daily_reminder: boolean;
+  progress_updates: boolean;
+  expiration_warning: boolean;
+};
+
+export type ProgressLogEntry = {
+  timestamp: string;
+  progress: number;
+  note?: string;
+};
+
+export type ChallengeMetadata = Record<string, unknown>;
+
 // Tipos de base de datos generados
 export type Database = {
   public: {
@@ -208,24 +223,175 @@ export type Database = {
           created_at?: string;
         };
       };
+      challenge_categories: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          icon: string | null;
+          color: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          icon?: string | null;
+          color?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          icon?: string | null;
+          color?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
       challenges: {
         Row: {
           id: string;
           title: string;
-          type: 'daily' | 'weekly' | 'monthly' | 'achievement';
-          points: number;
-          description: string;
-          icon: string | null;
-          requirement_type:
+          description: string | null;
+          type:
             | 'savings'
-            | 'streak'
-            | 'transactions'
-            | 'learning'
-            | 'social'
-            | null;
-          requirement_value: number | null;
-          active: boolean;
+            | 'spending_habits'
+            | 'investments'
+            | 'budgeting'
+            | 'financial_education'
+            | 'daily_expenses'
+            | 'entertainment';
+          difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+          requirement_type: 'savings' | 'transactions' | 'streak' | 'goals';
+          xp_reward: number;
+          target_value: number | null;
+          duration_days: number | null;
+          is_active: boolean;
+          category_id: string | null;
+          category_name: string | null;
+          tags: string[];
+          icon: string | null;
+          color: string;
+          min_duration_days: number;
+          max_duration_days: number;
           created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          type?:
+            | 'savings'
+            | 'spending_habits'
+            | 'investments'
+            | 'budgeting'
+            | 'financial_education'
+            | 'daily_expenses'
+            | 'entertainment';
+          difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
+          requirement_type?: 'savings' | 'transactions' | 'streak' | 'goals';
+          xp_reward?: number;
+          target_value?: number | null;
+          duration_days?: number | null;
+          is_active?: boolean;
+          category_id?: string | null;
+          category_name?: string | null;
+          tags?: string[];
+          icon?: string | null;
+          color?: string;
+          min_duration_days?: number;
+          max_duration_days?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          type?:
+            | 'savings'
+            | 'spending_habits'
+            | 'investments'
+            | 'budgeting'
+            | 'financial_education'
+            | 'daily_expenses'
+            | 'entertainment';
+          difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
+          requirement_type?: 'savings' | 'transactions' | 'streak' | 'goals';
+          xp_reward?: number;
+          target_value?: number | null;
+          duration_days?: number | null;
+          is_active?: boolean;
+          category_id?: string | null;
+          category_name?: string | null;
+          tags?: string[];
+          icon?: string | null;
+          color?: string;
+          min_duration_days?: number;
+          max_duration_days?: number;
+          created_at?: string;
+        };
+      };
+      user_challenge_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          challenge_id: string;
+          status: 'active' | 'completed' | 'expired' | 'renewed' | 'cancelled';
+          duration_type: '1_week' | '15_days' | '30_days' | '1_year';
+          start_date: string;
+          end_date: string;
+          progress: number;
+          xp_earned: number;
+          completed_at: string | null;
+          renewed_from_session_id: string | null;
+          notification_settings: NotificationSettings;
+          progress_log: ProgressLogEntry[];
+          metadata: ChallengeMetadata;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          challenge_id: string;
+          status?: 'active' | 'completed' | 'expired' | 'renewed' | 'cancelled';
+          duration_type: '1_week' | '15_days' | '30_days' | '1_year';
+          start_date?: string;
+          end_date: string;
+          progress?: number;
+          xp_earned?: number;
+          completed_at?: string | null;
+          renewed_from_session_id?: string | null;
+          notification_settings?: NotificationSettings;
+          progress_log?: ProgressLogEntry[];
+          metadata?: ChallengeMetadata;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          challenge_id?: string;
+          status?: 'active' | 'completed' | 'expired' | 'renewed' | 'cancelled';
+          duration_type?: '1_week' | '15_days' | '30_days' | '1_year';
+          start_date?: string;
+          end_date?: string;
+          progress?: number;
+          xp_earned?: number;
+          completed_at?: string | null;
+          renewed_from_session_id?: string | null;
+          notification_settings?: NotificationSettings;
+          progress_log?: ProgressLogEntry[];
+          metadata?: ChallengeMetadata;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       user_challenges: {
@@ -549,16 +715,6 @@ export type Database = {
           learnings_completed: number;
         };
       };
-      squad_rankings: {
-        Row: {
-          squad_id: string;
-          squad_name: string;
-          member_count: number;
-          total_squad_savings: number;
-          avg_monthly_savings: number;
-          ranking: number;
-        };
-      };
       user_xp_stats: {
         Row: {
           user_id: string;
@@ -569,14 +725,6 @@ export type Database = {
           streak_xp: number;
           quest_xp: number;
           last_xp_earned: string | null;
-        };
-      };
-      xp_leaderboard: {
-        Row: {
-          rank: number;
-          user_id: string;
-          total_xp: number;
-          level: number;
         };
       };
       streak_stats: {

@@ -73,8 +73,6 @@ Copia el contenido de `supabase/complete_database_schema.sql` y ejecútalo en el
 
 ### 👥 **Sistema Social**
 
-- Rankings y leaderboards
-- Competencia entre amigos
 - Squads de ahorro
 - Compartir logros
 
@@ -315,14 +313,7 @@ npm test -- --coverage
 - Historial de completados
 - Recompensas ganadas
 
-### 📊 **Leaderboard (`leaderboard.tsx`)**
-
-- Ranking personal
-- Comparación con amigos
-- Estadísticas globales
-- Logros destacados
-
-### 👤 **Profile (`profile.tsx`)**
+###  **Profile (`profile.tsx`)**
 
 - Información de usuario
 - Estadísticas personales

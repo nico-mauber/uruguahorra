@@ -460,39 +460,6 @@ export class SquadsService {
   }
 
   /**
-   * Obtener ranking de squads
-   */
-  static async getSquadRankings(limit: number = 50): Promise<unknown[]> {
-    try {
-      logger.database(LogModule.DB, 'Obteniendo ranking de squads', { limit });
-
-      const { data, error } = await supabase
-        .from('squad_rankings')
-        .select('*')
-        .order('ranking', { ascending: true })
-        .limit(limit);
-
-      if (error) {
-        logger.error(LogModule.DB, 'Error obteniendo ranking de squads', error);
-        throw error;
-      }
-
-      logger.success(
-        LogModule.DB,
-        `${data?.length || 0} squads en ranking obtenidos`
-      );
-      return data || [];
-    } catch (error) {
-      logger.error(
-        LogModule.DB,
-        'Error fatal obteniendo ranking de squads',
-        error
-      );
-      throw error;
-    }
-  }
-
-  /**
    * Buscar squads públicos
    */
   static async searchSquads(

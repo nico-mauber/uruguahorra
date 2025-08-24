@@ -102,9 +102,6 @@ export interface TabRouteParams {
   challenges?: {
     challengeId?: string;
   };
-  leaderboard?: {
-    period?: 'week' | 'month' | 'all';
-  };
   profile?: {
     section?: 'settings' | 'premium' | 'help';
   };

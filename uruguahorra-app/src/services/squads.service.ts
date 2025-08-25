@@ -89,7 +89,7 @@ export class SquadsService {
         throw error;
       }
 
-      // Ahora obtener el count de miembros para cada squad
+      // Ahora obtener el count de miembros y calcular el total ahorrado para cada squad
       const squadsWithCount = await Promise.all(
         (data || []).map(async (item: any) => {
           // Contar miembros del squad
@@ -102,10 +102,25 @@ export class SquadsService {
             logger.warn(LogModule.DB, 'Error contando miembros', countError);
           }
 
+          // Obtener suma total de ahorros del squad
+          const { data: membersData, error: sumError } = await supabase
+            .from('squad_members')
+            .select('total_saved')
+            .eq('squad_id', item.squad.id);
+
+          let totalSquadSaved = 0;
+          if (!sumError && membersData) {
+            totalSquadSaved = membersData.reduce((sum, member) => 
+              sum + (parseFloat(member.total_saved) || 0), 0
+            );
+          }
+
           return {
             ...item.squad,
             memberRole: item.role,
             memberCount: count || 0,
+            totalSquadSaved,  // Total ahorrado por todos los miembros
+            goalAmount: item.squad.goal_amount || 1000,  // Meta del squad
           };
         })
       );

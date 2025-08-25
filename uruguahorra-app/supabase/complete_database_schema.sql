@@ -254,6 +254,8 @@ CREATE TABLE public.squads (
     owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     invite_code TEXT NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true,
+    goal_amount DECIMAL(10,2) DEFAULT 1000.00,  -- Meta grupal del pod
+    total_saved DECIMAL(10,2) DEFAULT 0.00,     -- Total ahorrado por el grupo
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

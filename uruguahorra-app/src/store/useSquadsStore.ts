@@ -21,6 +21,8 @@ interface Squad {
   // Campos calculados
   memberRole?: 'owner' | 'admin' | 'member';
   memberCount?: number;
+  totalSquadSaved?: number;  // Total ahorrado por el squad
+  goalAmount?: number;       // Meta de ahorro del squad
 }
 
 interface SquadMember {
@@ -94,7 +96,9 @@ interface SquadsStore {
 const convertDBSquadToLocal = (
   dbSquad: DBSquad,
   memberRole?: string,
-  memberCount?: number
+  memberCount?: number,
+  totalSquadSaved?: number,
+  goalAmount?: number
 ): Squad => ({
   id: dbSquad.id,
   name: dbSquad.name,
@@ -107,6 +111,8 @@ const convertDBSquadToLocal = (
   updatedAt: dbSquad.updated_at,
   memberRole: memberRole as 'owner' | 'admin' | 'member' | undefined,
   memberCount,
+  totalSquadSaved,
+  goalAmount,
 });
 
 const convertDBSquadMemberToLocal = (
@@ -171,7 +177,9 @@ export const useSquadsStore = create<SquadsStore>((set, get) => ({
         convertDBSquadToLocal(
           squadData,
           squadData.memberRole,
-          squadData.memberCount
+          squadData.memberCount,
+          squadData.totalSquadSaved,
+          squadData.goalAmount
         )
       );
 

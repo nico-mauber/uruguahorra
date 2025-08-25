@@ -81,14 +81,14 @@ export class SquadGamificationService {
    * Registrar evento de XP relacionado con squads
    * @param userId ID del usuario
    * @param eventType Tipo de evento
-   * @param xpAmount Cantidad de XP otorgado
+   * @param xpEarned Cantidad de XP otorgado
    * @param squadId ID del squad (opcional)
    * @param metadata Datos adicionales del evento
    */
   static async logSquadXpEvent(
     userId: string,
     eventType: string,
-    xpAmount: number,
+    xpEarned: number,
     squadId?: string,
     metadata?: Record<string, any>
   ): Promise<void> {
@@ -96,8 +96,8 @@ export class SquadGamificationService {
       const { error } = await supabase.from('user_xp_log').insert({
         user_id: userId,
         event_type: eventType,
-        xp_amount: xpAmount,
-        metadata: {
+        xp_earned: xpEarned,  // Cambiado de xp_amount a xp_earned
+        event_data: {  // Cambiado de metadata a event_data
           squad_id: squadId,
           source: 'squad_gamification',
           ...metadata,
@@ -113,7 +113,7 @@ export class SquadGamificationService {
       logger.success(LogModule.DB, 'Evento XP de squad registrado', {
         userId,
         eventType,
-        xpAmount,
+        xpEarned,
         squadId,
       });
     } catch (error) {
@@ -309,7 +309,7 @@ export class SquadGamificationService {
     recentAchievements: Array<{
       userId: string;
       eventType: string;
-      xpAmount: number;
+      xpEarned: number;
       createdAt: string;
     }>;
   }> {
@@ -338,9 +338,9 @@ export class SquadGamificationService {
       // Obtener logs de XP relacionados con squads para estos usuarios
       const { data: xpLogs, error: logsError } = await supabase
         .from('user_xp_log')
-        .select('user_id, event_type, xp_amount, created_at, metadata')
+        .select('user_id, event_type, xp_earned, created_at, event_data')
         .in('user_id', userIds)
-        .contains('metadata', { squad_id: squadId })
+        .contains('event_data', { squad_id: squadId })
         .order('created_at', { ascending: false });
 
       if (logsError) {
@@ -358,14 +358,14 @@ export class SquadGamificationService {
 
       // Calcular estadísticas
       const totalXpGenerated = (xpLogs || []).reduce(
-        (sum, log) => sum + log.xp_amount,
+        (sum, log) => sum + log.xp_earned,
         0
       );
 
       const userXpMap = new Map<string, number>();
       (xpLogs || []).forEach((log) => {
         const current = userXpMap.get(log.user_id) || 0;
-        userXpMap.set(log.user_id, current + log.xp_amount);
+        userXpMap.set(log.user_id, current + log.xp_earned);
       });
 
       const topXpEarners = Array.from(userXpMap.entries())
@@ -376,7 +376,7 @@ export class SquadGamificationService {
       const recentAchievements = (xpLogs || []).slice(0, 10).map((log) => ({
         userId: log.user_id,
         eventType: log.event_type,
-        xpAmount: log.xp_amount,
+        xpEarned: log.xp_earned,
         createdAt: log.created_at,
       }));
 

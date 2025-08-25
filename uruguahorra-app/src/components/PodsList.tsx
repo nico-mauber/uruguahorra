@@ -204,19 +204,34 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
               </Text>
             </View>
 
-            {/* Progreso simulado - en el futuro será real */}
+            {/* Progreso real del pod */}
             <View style={styles.progressSection}>
-              <ProgressBar
-                progress={0.65}
-                height={8}
-                color={theme.primary}
-                backgroundColor={theme.border}
-              />
-              <Text
-                style={[styles.progressText, { color: theme.textSecondary }]}
-              >
-                65% de la meta grupal
-              </Text>
+              {squad.goalAmount && squad.goalAmount > 0 ? (
+                <>
+                  <ProgressBar
+                    progress={Math.min((squad.totalSquadSaved || 0) / squad.goalAmount, 1)}
+                    height={8}
+                    color={theme.primary}
+                    backgroundColor={theme.border}
+                  />
+                  <Text
+                    style={[styles.progressText, { color: theme.textSecondary }]}
+                  >
+                    {Math.round(((squad.totalSquadSaved || 0) / squad.goalAmount) * 100)}% de la meta grupal
+                  </Text>
+                  <Text
+                    style={[styles.progressAmount, { color: theme.textTertiary, fontSize: 11 }]}
+                  >
+                    ${squad.totalSquadSaved?.toFixed(0) || 0} / ${squad.goalAmount.toFixed(0)}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[styles.progressText, { color: theme.textSecondary }]}
+                >
+                  Sin meta definida
+                </Text>
+              )}
             </View>
 
             <TouchableOpacity

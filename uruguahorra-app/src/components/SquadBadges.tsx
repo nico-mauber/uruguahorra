@@ -31,7 +31,7 @@ export const SquadBadges: React.FC<SquadBadgesProps> = ({ squad, style }) => {
     recentAchievements: Array<{
       userId: string;
       eventType: string;
-      xpAmount: number;
+      xpEarned: number;
       createdAt: string;
     }>;
   } | null>(null);
@@ -175,7 +175,7 @@ export const SquadBadges: React.FC<SquadBadgesProps> = ({ squad, style }) => {
                 <Text
                   style={[styles.achievementXp, { color: badgeInfo.color }]}
                 >
-                  +{achievement.xpAmount} XP
+                  +{achievement.xpEarned} XP
                 </Text>
               </View>
             </View>

@@ -108,10 +108,11 @@ config.server = {
   },
 };
 
-// Configuración del watcher para evitar problemas en Windows
+// Configuración del watcher optimizada
 config.watcher = {
   ...config.watcher,
-  watchman: false, // Desactivar watchman en Windows si causa problemas
+  watchman: true, // Reactivar watchman para mejor performance
+  crawl: false,   // Usar native find en lugar de crawl para mejor velocidad
 };
 
 module.exports = config;

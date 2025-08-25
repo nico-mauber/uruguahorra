@@ -24,7 +24,14 @@
       "Bash(git add:*)",
       "Bash(git push:*)",
       "Bash(git reset:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npx depcheck:*)",
+      "WebSearch",
+      "Bash(npm ls:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": [],

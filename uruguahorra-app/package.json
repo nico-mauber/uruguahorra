@@ -27,7 +27,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.56.0",
     "expo": "~53.0.0",
     "expo-application": "~6.1.5",
     "expo-constants": "~17.1.7",
@@ -41,7 +41,7 @@
     "expo-secure-store": "~14.2.3",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",
-    "posthog-react-native": "^4.4.0",
+    "posthog-react-native": "^4.4.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
@@ -76,9 +76,7 @@
     "lint-staged": "^15.0.0",
     "prettier": "^3.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "~5.8.3",
-    "workbox-cli": "^7.3.0",
-    "workbox-webpack-plugin": "^7.3.0"
+    "typescript": "~5.8.3"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

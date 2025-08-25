@@ -2,11 +2,12 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 import { logger, LogModule } from '@/utils/logger';
 import {
-  AnalyticsService,
   AnalyticsEvents,
   trackGoalEvent,
   trackContributionEvent,
 } from '@/services/analytics.service';
+import { SquadsService } from '@/services/squads.service';
+import { SquadGamificationService } from '@/services/squad-gamification.service';
 
 type Goal = Database['public']['Tables']['goals']['Row'];
 type GoalInsert = Database['public']['Tables']['goals']['Insert'];
@@ -279,6 +280,18 @@ export class GoalsService {
         method: newContribution.source || 'manual',
       });
 
+      // Sincronizar estadísticas con squads (si el usuario pertenece a alguno)
+      try {
+        await this.syncContributionWithSquads(newContribution);
+      } catch (squadSyncError) {
+        // Log el error pero no fallar la contribución principal
+        logger.warn(
+          LogModule.GOALS,
+          'Error sincronizando con squads (contribución guardada correctamente)',
+          squadSyncError
+        );
+      }
+
       return newContribution;
     } catch (error) {
       logger.error(LogModule.GOALS, 'Error agregando contribución', error);
@@ -401,6 +414,89 @@ export class GoalsService {
       };
     } catch (error) {
       console.error('Error obteniendo estadísticas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sincronizar contribución con estadísticas de squads
+   * @private
+   */
+  private static async syncContributionWithSquads(
+    contribution: Contribution
+  ): Promise<void> {
+    try {
+      logger.debug(LogModule.GOALS, 'Iniciando sincronización con squads', {
+        userId: contribution.user_id,
+        amount: contribution.amount,
+      });
+
+      // Obtener squads del usuario
+      const userSquads = await SquadsService.getUserSquads(
+        contribution.user_id
+      );
+
+      if (userSquads.length === 0) {
+        logger.debug(
+          LogModule.GOALS,
+          'Usuario no pertenece a ningún squad, omitiendo sincronización'
+        );
+        return;
+      }
+
+      // Actualizar estadísticas en cada squad
+      const syncPromises = userSquads.map(async (squad) => {
+        try {
+          await SquadsService.updateMemberSavings(
+            contribution.user_id,
+            squad.id
+          );
+          logger.debug(LogModule.GOALS, 'Squad sincronizado', {
+            squadId: squad.id,
+            squadName: squad.name,
+          });
+        } catch (error) {
+          logger.warn(LogModule.GOALS, 'Error sincronizando squad específico', {
+            squadId: squad.id,
+            error,
+          });
+          // No lanzar error para que otros squads se puedan actualizar
+        }
+      });
+
+      await Promise.all(syncPromises);
+
+      // Aplicar gamificación de squads si el usuario pertenece a algún squad
+      if (userSquads.length > 0) {
+        try {
+          // Verificar y otorgar badges por logros grupales
+          const badgePromises = userSquads.map((squad) =>
+            SquadGamificationService.checkAndAwardSquadBadges(
+              contribution.user_id,
+              squad.id
+            )
+          );
+          await Promise.all(badgePromises);
+        } catch (gamificationError) {
+          logger.warn(
+            LogModule.GOALS,
+            'Error en gamificación de squad (no crítico)',
+            gamificationError
+          );
+          // No lanzar error para que no afecte la contribución principal
+        }
+      }
+
+      logger.success(LogModule.GOALS, 'Sincronización con squads completada', {
+        squadsProcessed: userSquads.length,
+        amount: contribution.amount,
+      });
+    } catch (error) {
+      logger.error(
+        LogModule.GOALS,
+        'Error en sincronización con squads',
+        error
+      );
       throw error;
     }
   }

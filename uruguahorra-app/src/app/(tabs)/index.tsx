@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Button, Card, ProgressBar } from '@components';
+import { Button, Card, ProgressBar, PodsList } from '@components';
 import { GoalSelectionModal } from '@/components/GoalSelectionModal';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
@@ -31,7 +31,7 @@ import {
   LevelsService,
 } from '@/features/gamification';
 import { GamificationService } from '@/features/gamification';
-import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
+// import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -39,7 +39,7 @@ export default function DashboardScreen() {
   const { user, isLoading: authLoading } = useAuth();
   const { goals, isLoading, error, fetchGoals, getTotalSaved } =
     useGoalsStore();
-  const analytics = useAnalytics();
+  // const analytics = useAnalytics(); // No usado por ahora
 
   // Feature flags - Pods always enabled
   const isPodsAhorroEnabled = true;
@@ -157,10 +157,15 @@ export default function DashboardScreen() {
 
   // Redirigir si no hay usuario (debe estar ANTES de cualquier return condicional)
   useEffect(() => {
-    if (!initializing && !user) {
-      router.replace('/(auth)/simple-onboarding');
+    // Solo redirigir si definitivamente no hay usuario y no estamos cargando
+    if (!initializing && !authLoading && !user) {
+      logger.warn(LogModule.NAV, 'No hay usuario, redirigiendo a onboarding');
+      // Pequeño delay para evitar conflictos con la navegación principal
+      setTimeout(() => {
+        router.replace('/(auth)/simple-onboarding');
+      }, 200);
     }
-  }, [initializing, user, router]);
+  }, [initializing, authLoading, user]);
 
   // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
   // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
@@ -949,74 +954,8 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Pods de Ahorro Section - Controlled by Feature Flag */}
-        {isPodsAhorroEnabled && (
-          <View style={styles.podsSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                🏛️ Pods de Ahorro
-              </Text>
-              <Text
-                style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
-              >
-                Ahorra junto a otros usuarios
-              </Text>
-            </View>
-            <Card style={styles.podCard}>
-              <View style={styles.podContent}>
-                <View style={styles.podInfo}>
-                  <Text style={[styles.podTitle, { color: theme.text }]}>
-                    Pod Vacaciones 2025
-                  </Text>
-                  <Text
-                    style={[
-                      styles.podDescription,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    12 miembros • Meta: $50,000 UYU
-                  </Text>
-                  <View style={styles.podProgress}>
-                    <ProgressBar
-                      progress={0.65}
-                      height={8}
-                      color={theme.primary}
-                      backgroundColor={theme.border}
-                    />
-                    <Text
-                      style={[
-                        styles.podProgressText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      $32,500 / $50,000 (65%)
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.joinPodButton,
-                    { backgroundColor: theme.primary },
-                  ]}
-                  onPress={() => {
-                    // Track pod interaction
-                    analytics.track(AnalyticsEvents.CHALLENGE_STARTED, {
-                      challenge_type: 'pod',
-                      challenge_id: 'pod_vacaciones_2025',
-                    });
-                  }}
-                >
-                  <Text style={styles.joinPodButtonText}>Unirse</Text>
-                </TouchableOpacity>
-              </View>
-            </Card>
-            <Text
-              style={[styles.featureFlagNote, { color: theme.textSecondary }]}
-            >
-              ✨ Esta función está habilitada por feature flag
-            </Text>
-          </View>
-        )}
+        {/* Pods de Ahorro Section - Funcional */}
+        {isPodsAhorroEnabled && <PodsList />}
       </ScrollView>
 
       {/* FAB Expandible con Opciones */}

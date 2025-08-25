@@ -67,13 +67,9 @@ export default function SimpleOnboardingScreen() {
         });
 
         if (success) {
-          console.log('[Onboarding] Registro exitoso');
-          Alert.alert('¡Bienvenido!', 'Tu cuenta ha sido creada exitosamente', [
-            {
-              text: 'Continuar',
-              onPress: () => router.replace('/(tabs)'),
-            },
-          ]);
+          console.log('[Onboarding] Registro exitoso, navegando al dashboard...');
+          // Navegar directamente sin Alert para evitar que el usuario se quede en onboarding
+          router.replace('/(tabs)');
         } else {
           Alert.alert(
             'Error',

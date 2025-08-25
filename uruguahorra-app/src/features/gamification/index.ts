@@ -84,7 +84,7 @@ export class GamificationService {
         level,
         levelInfo,
         streak: finalStreak,
-        activeQuests: finalActiveQuests,
+        activeQuests: finalActiveQuests || [],
       };
     } catch (error) {
       // Si todo falla, retornar valores por defecto
@@ -110,6 +110,7 @@ export class GamificationService {
 
   /**
    * OPTIMIZACIÓN: Procesar solo contribución SIN evaluar quests fallidos
+   * Incluye bonus de squad si el usuario pertenece a alguno
    */
   static async processContributionEvent(
     userId: string,
@@ -120,10 +121,30 @@ export class GamificationService {
     newLevel?: number;
   }> {
     try {
-      // Solo otorgar XP por contribución
+      // Solo otorgar XP por contribución con bonus de squad
       let xpEarned = 0;
       try {
-        xpEarned = await XPService.awardContributionXP(userId, amount);
+        const baseXp = await XPService.awardContributionXP(userId, amount);
+
+        // Aplicar bonus de squad si es aplicable
+        const { SquadGamificationService } = await import(
+          '@/services/squad-gamification.service'
+        );
+        xpEarned = await SquadGamificationService.calculateSquadBonusXp(
+          baseXp,
+          userId
+        );
+
+        // Registrar evento XP de squad si hay bonus
+        if (xpEarned > baseXp) {
+          await SquadGamificationService.logSquadXpEvent(
+            userId,
+            'contribution_bonus',
+            xpEarned - baseXp,
+            undefined,
+            { amount, baseXp, bonusXp: xpEarned - baseXp }
+          );
+        }
       } catch (error) {
         console.warn('Error awarding XP, continuing with 0 XP:', error);
         xpEarned = 0;
@@ -196,7 +217,7 @@ export class GamificationService {
         level,
         levelInfo,
         streak: finalStreak,
-        activeQuests: finalActiveQuests,
+        activeQuests: finalActiveQuests || [],
       };
     } catch (error) {
       // Si todo falla, retornar valores por defecto

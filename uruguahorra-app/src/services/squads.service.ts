@@ -27,6 +27,7 @@ export class SquadsService {
 
       const squadData: SquadInsert = {
         ...squad,
+        created_by: squad.owner_id, // Agregar created_by con el mismo valor que owner_id
         invite_code: inviteCode,
       };
 
@@ -41,8 +42,8 @@ export class SquadsService {
         throw error;
       }
 
-      // Agregar al creador como miembro con rol owner
-      await this.addSquadMember(data.id, squad.owner_id, 'owner');
+      // Agregar al creador como miembro con rol admin (todos son admin ahora)
+      await this.addSquadMember(data.id, squad.owner_id, 'admin');
 
       logger.success(LogModule.DB, 'Squad creado exitosamente', {
         squadId: data.id,
@@ -170,8 +171,8 @@ export class SquadsService {
         throw new Error('El squad está lleno');
       }
 
-      // Agregar como miembro
-      const member = await this.addSquadMember(squad.id, userId, 'member');
+      // Agregar como admin (todos son admin ahora)
+      const member = await this.addSquadMember(squad.id, userId, 'admin');
 
       logger.success(LogModule.DB, 'Usuario se unió al squad exitosamente', {
         squadId: squad.id,

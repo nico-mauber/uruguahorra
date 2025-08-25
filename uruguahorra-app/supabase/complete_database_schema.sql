@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 5.2 - Challenge System V2 + Goal Progress Fix + User Streaks Fix
--- Fecha: 22 de Agosto, 2025
+-- Versión: 5.4 - Challenge System V2 + Pods System + Igualdad de Permisos + Limpieza Total Opcional
+-- Fecha: 25 de Agosto, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -35,9 +35,35 @@
 -- ✅ Sistema de quests completamente funcional sin parches defensivos
 -- ✅ TRIGGERS CORREGIDOS - Progreso de metas se actualiza automáticamente al agregar ahorros
 -- ✅ USER_STREAKS FIX - Inicialización automática y función de recuperación para error 406
+-- ✅ PODS/SQUADS SYSTEM COMPLETE - Sistema completo de pods de ahorro con invite codes
+-- ✅ FIXED RLS POLICIES - Políticas sin recursión infinita para squad_members
+-- ✅ IGUALDAD DE PERMISOS - Todos los miembros de pods son administradores
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
+-- ============================================
+
+-- ============================================
+-- PASO 0 (OPCIONAL): LIMPIEZA TOTAL DE DATOS Y USUARIOS
+-- ============================================
+-- ADVERTENCIA: Descomenta las siguientes líneas SOLO si quieres eliminar TODO
+-- incluyendo usuarios de auth.users. Útil para desarrollo/testing.
+
+/*
+BEGIN;
+-- Eliminar TODOS los usuarios de auth.users (esto eliminará todo en cascada)
+DO $$
+DECLARE
+    auth_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO auth_count FROM auth.users;
+    DELETE FROM auth.users;
+    RAISE NOTICE '✅ Eliminados % usuarios de auth.users', auth_count;
+    RAISE NOTICE '⚠️  TODA la base de datos ha sido limpiada completamente';
+END $$;
+COMMIT;
+*/
+
 -- ============================================
 
 -- ============================================
@@ -218,24 +244,29 @@ CREATE TABLE public.user_challenges (
     UNIQUE(user_id, challenge_id)
 );
 
--- TABLA SQUADS
+-- TABLA SQUADS (ACTUALIZADA PARA SISTEMA DE PODS)
 CREATE TABLE public.squads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     description TEXT,
     max_members INTEGER DEFAULT 10,
-    is_private BOOLEAN DEFAULT false,
     created_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    invite_code TEXT NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA SQUAD_MEMBERS
+-- TABLA SQUAD_MEMBERS (ACTUALIZADA PARA SISTEMA DE PODS - TODOS SON ADMIN)
 CREATE TABLE public.squad_members (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     squad_id UUID NOT NULL REFERENCES public.squads(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+    role TEXT DEFAULT 'admin' CHECK (role IN ('admin', 'owner', 'member')), -- owner y member para compatibilidad
     joined_at TIMESTAMPTZ DEFAULT NOW(),
+    total_saved DECIMAL(10,2) DEFAULT 0,
+    monthly_saved DECIMAL(10,2) DEFAULT 0,
     UNIQUE(squad_id, user_id)
 );
 
@@ -411,9 +442,11 @@ CREATE INDEX idx_user_challenges_user_id ON public.user_challenges(user_id);
 CREATE INDEX idx_user_challenges_status ON public.user_challenges(status);
 CREATE INDEX idx_user_challenges_challenge_id ON public.user_challenges(challenge_id);
 
--- Índices para squads
+-- Índices para squads (actualizados para pods)
 CREATE INDEX idx_squads_created_by ON public.squads(created_by);
-CREATE INDEX idx_squads_private ON public.squads(is_private);
+CREATE INDEX idx_squads_owner_id ON public.squads(owner_id);
+CREATE INDEX idx_squads_invite_code ON public.squads(invite_code);
+CREATE INDEX idx_squads_active ON public.squads(is_active);
 
 -- Índices para squad_members
 CREATE INDEX idx_squad_members_squad_id ON public.squad_members(squad_id);
@@ -568,22 +601,83 @@ CREATE POLICY "Los usuarios pueden eliminar sus propias sesiones"
 CREATE POLICY "user_challenges_all_own" ON public.user_challenges
     FOR ALL USING (auth.uid() = user_id);
 
--- Políticas para SQUADS
-CREATE POLICY "squads_read_all" ON public.squads
-    FOR SELECT USING (true);
+-- Políticas para SQUADS (IGUALDAD TOTAL - todos los miembros son admin)
+CREATE POLICY "squads_select_active" ON public.squads
+    FOR SELECT 
+    USING (is_active = true);
 
-CREATE POLICY "squads_manage_own" ON public.squads
-    FOR ALL USING (auth.uid() = created_by);
-
--- Políticas para SQUAD_MEMBERS
-CREATE POLICY "squad_members_read_related" ON public.squad_members
-    FOR SELECT USING (
-        auth.uid() = user_id OR 
-        auth.uid() IN (SELECT created_by FROM public.squads WHERE id = squad_id)
+CREATE POLICY "squads_insert_own" ON public.squads
+    FOR INSERT 
+    WITH CHECK (
+        auth.uid() = owner_id 
+        AND auth.uid() = created_by
     );
 
-CREATE POLICY "squad_members_manage_own" ON public.squad_members
-    FOR ALL USING (auth.uid() = user_id);
+-- Todos los miembros del squad pueden actualizar
+CREATE POLICY "squads_update_members" ON public.squads
+    FOR UPDATE 
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.squad_members 
+            WHERE squad_members.squad_id = squads.id 
+            AND squad_members.user_id = auth.uid()
+        )
+    );
+
+-- Todos los miembros del squad pueden eliminar (soft delete)
+CREATE POLICY "squads_delete_members" ON public.squads
+    FOR DELETE 
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.squad_members 
+            WHERE squad_members.squad_id = squads.id 
+            AND squad_members.user_id = auth.uid()
+        )
+    );
+
+-- Políticas para SQUAD_MEMBERS (SIN RECURSIÓN - todos son admin)
+CREATE POLICY "squad_members_select_members" ON public.squad_members
+    FOR SELECT USING (
+        -- Puedes ver miembros si eres parte del squad o si el squad es público
+        auth.uid() = user_id 
+        OR EXISTS (
+            SELECT 1 FROM public.squads 
+            WHERE squads.id = squad_members.squad_id 
+            AND squads.is_active = true
+        )
+    );
+
+CREATE POLICY "squad_members_insert_authorized" ON public.squad_members
+    FOR INSERT WITH CHECK (
+        -- Te puedes agregar a ti mismo o si eres el owner/creador del squad
+        auth.uid() = user_id 
+        OR EXISTS (
+            SELECT 1 FROM public.squads 
+            WHERE squads.id = squad_id 
+            AND (squads.owner_id = auth.uid() OR squads.created_by = auth.uid())
+        )
+    );
+
+CREATE POLICY "squad_members_update_own" ON public.squad_members
+    FOR UPDATE 
+    USING (
+        -- Solo puedes actualizar tu propio registro
+        auth.uid() = user_id
+    )
+    WITH CHECK (
+        auth.uid() = user_id
+    );
+
+CREATE POLICY "squad_members_delete_authorized" ON public.squad_members
+    FOR DELETE USING (
+        -- Te puedes eliminar a ti mismo o si eres owner del squad
+        auth.uid() = user_id 
+        OR EXISTS (
+            SELECT 1 FROM public.squads 
+            WHERE squads.id = squad_members.squad_id 
+            AND (squads.owner_id = auth.uid() OR squads.created_by = auth.uid())
+        )
+    );
 
 -- Políticas para LEARNINGS (lectura pública)
 CREATE POLICY "learnings_read_published" ON public.learnings
@@ -971,6 +1065,10 @@ CREATE TRIGGER update_subscriptions_updated_at
     BEFORE UPDATE ON public.subscriptions
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
+CREATE TRIGGER update_squads_updated_at
+    BEFORE UPDATE ON public.squads
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
 -- Trigger para user_challenge_sessions (nuevo)
 CREATE TRIGGER update_user_challenge_sessions_updated_at
     BEFORE UPDATE ON public.user_challenge_sessions
@@ -1258,6 +1356,30 @@ INSERT INTO public.weekly_quests (week_start_date, challenge_ids, is_active) VAL
 (CURRENT_DATE - EXTRACT(DOW FROM CURRENT_DATE)::INTEGER * INTERVAL '1 day', 
  ARRAY(SELECT id FROM public.challenges WHERE is_active = true LIMIT 3), 
  true);
+
+-- Generar códigos de invitación para squads existentes (migración)
+-- Este código se ejecuta si ya existen squads sin invite_code
+UPDATE public.squads 
+SET invite_code = UPPER(
+  SUBSTRING(MD5(RANDOM()::TEXT || id::TEXT) FROM 1 FOR 6)
+)
+WHERE invite_code IS NULL OR invite_code = '';
+
+-- Migrar owner_id desde created_by si es necesario
+UPDATE public.squads 
+SET owner_id = created_by 
+WHERE owner_id IS NULL;
+
+-- MIGRACIÓN IMPORTANTE: Convertir todos los roles a 'admin' para igualdad total
+UPDATE public.squad_members 
+SET role = 'admin'
+WHERE role IN ('owner', 'member');
+
+-- Mensaje de confirmación
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Todos los miembros de pods ahora tienen permisos de administrador';
+END $$;
 
 -- ============================================
 -- PASO 8: SINCRONIZAR USUARIOS EXISTENTES
@@ -1626,41 +1748,52 @@ END $$;
 -- ============================================
 
 SELECT 
-    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - CHALLENGE SYSTEM V2 INTEGRATED' as status,
-    'Version 5.2 - Complete Challenge System V2 + Fixed Goal Progress + User Streaks Error 406 Fix' as version_notes,
-    'Includes: Challenge categories, user sessions, automatic expiration, duration customization, FIXED goal progress updates, and FIXED user_streaks 406 error' as features_included,
-    'Ready for: Challenge catalog UI, progress tracking, and notification system' as next_steps,
+    '🎉 URUGUAHORRA DATABASE DEPLOYED SUCCESSFULLY - SISTEMA COMPLETO V5.4' as status,
+    'Version 5.4 - Challenge System V2 + Pods con Igualdad Total + Limpieza Opcional' as version_notes,
+    'Includes: Challenges, Goals, Pods democráticos (todos admin), Fixed RLS, Limpieza total opcional de auth.users' as features_included,
+    'Ready for: Colaboración total en pods, todos los miembros con permisos iguales' as next_steps,
     NOW() as deployed_at;
 
 -- ============================================
--- NOTAS IMPORTANTES SOBRE CHALLENGE SYSTEM V2
+-- NOTAS IMPORTANTES - SISTEMA COMPLETO V5.4
 -- ============================================
 -- 
--- Este archivo INCLUYE el sistema completo de retos v2:
+-- Este archivo INCLUYE TODOS los sistemas:
+-- 
+-- CHALLENGE SYSTEM V2:
 -- ✅ Challenge categories con UI mejorada (iconos, colores)
 -- ✅ User challenge sessions con progreso y duración personalizable
 -- ✅ Funciones automáticas: start_challenge_session(), expire_challenge_sessions()
 -- ✅ Límite de 5 retos activos por usuario
 -- ✅ Sistema de notificaciones configurables por sesión
 -- ✅ Log de progreso y auditoría completa
--- ✅ Índices optimizados para consultas frecuentes
--- ✅ Políticas RLS seguras para multi-tenant
--- ✅ Compatible con sistema de gamificación (XP por completar sesiones)
--- ✅ Datos semilla con retos de ejemplo por categoría
 -- 
--- PRÓXIMOS PASOS:
--- 1. Implementar servicios TypeScript en frontend
--- 2. Crear UI para catálogo de retos y selección
--- 3. Implementar pantalla de retos activos
--- 4. Configurar sistema de notificaciones push
--- 5. Integrar con sistema existente de XP y niveles
--- ✅ Políticas RLS corregidas para user_quest_progress (SELECT, INSERT, UPDATE separadas)  
--- ✅ Función create_user_quest_progress_safe() incluida
+-- PODS/SQUADS SYSTEM (DEMOCRÁTICO):
+-- ✅ Sistema completo de pods de ahorro colaborativo
+-- ✅ Códigos de invitación únicos de 6 caracteres
+-- ✅ TODOS los miembros son administradores con permisos iguales
+-- ✅ Sin jerarquías - sistema totalmente democrático
+-- ✅ Tracking de ahorros totales y mensuales por miembro
+-- ✅ Políticas RLS simplificadas para igualdad total
+-- ✅ Nombres de usuario visibles (extraídos del email)
 -- 
--- NO es necesario ejecutar fix_quests_rls_policies.sql por separado.
+-- FIXES INCLUIDOS:
+-- ✅ Goal progress updates automáticos con triggers
+-- ✅ User streaks error 406 solucionado
+-- ✅ Quest system RLS policies corregidas
+-- ✅ Squad members recursión infinita eliminada
+-- 
+-- IMPORTANTE:
 -- Este archivo es la ÚNICA FUENTE DE VERDAD para la estructura de la base de datos.
 -- 
--- Si ya ejecutaste fix_quests_rls_policies.sql previamente, no hay problema - 
--- este esquema es idempotente y aplicará las mismas correcciones.
+-- LIMPIEZA TOTAL OPCIONAL:
+-- - Descomenta el PASO 0 para eliminar TODOS los usuarios incluyendo auth.users
+-- - Útil para desarrollo/testing cuando necesitas empezar desde cero
+-- 
+-- ARCHIVOS OBSOLETOS (ya no necesarios):
+-- - clean_user_data.sql (integrado en PASO 0)
+-- - migrate_squads_table.sql (integrado aquí)
+-- - fix_squad_members_policies.sql (integrado aquí)
+-- - unified_squads_migration.sql (integrado aquí)
 -- 
 

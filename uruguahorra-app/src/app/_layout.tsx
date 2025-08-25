@@ -71,29 +71,42 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading } = useAuth();
+  const [hasInitialNavigation, setHasInitialNavigation] = React.useState(false);
 
   useEffect(() => {
     // El AuthProvider ya maneja la inicialización automáticamente
     // No necesitamos checkSession aquí
 
-    // No navegar mientras se está cargando
-    if (isLoading) return;
+    // No navegar mientras se está cargando o si ya navegamos
+    if (isLoading || hasInitialNavigation) return;
 
     const currentRoute = segments[0];
     const inAuthGroup = currentRoute === '(auth)';
     const inTabsGroup = currentRoute === '(tabs)';
-    const modalRoutes = ['create-goal', 'paywall', 'transactions'];
+    const modalRoutes = ['create-goal', 'paywall', 'transactions', 'squad'];
     const isModalRoute = modalRoutes.includes(currentRoute);
 
     // Solo navegar si no estamos ya en la ruta correcta
     if (isAuthenticated && !inTabsGroup && !isModalRoute) {
-      logger.info(LogModule.NAV, 'Redirigiendo a tabs');
-      router.replace('/(tabs)');
+      logger.info(LogModule.NAV, 'Usuario autenticado, redirigiendo a tabs desde', currentRoute);
+      setHasInitialNavigation(true);
+      // Pequeño delay para asegurar que las rutas estén cargadas en móvil
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 100);
     } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
-      logger.info(LogModule.NAV, 'Redirigiendo a onboarding');
-      router.replace('/(auth)/simple-onboarding');
+      logger.info(LogModule.NAV, 'Usuario no autenticado, redirigiendo a onboarding desde', currentRoute);
+      setHasInitialNavigation(true);
+      setTimeout(() => {
+        router.replace('/(auth)/simple-onboarding');
+      }, 100);
     }
-  }, [isLoading, isAuthenticated, segments, router]);
+  }, [isLoading, isAuthenticated]); // Removido segments de las dependencias para evitar loops
+  
+  // Reset navigation flag cuando cambia el estado de autenticación
+  useEffect(() => {
+    setHasInitialNavigation(false);
+  }, [isAuthenticated]);
 
   // Mostrar pantalla de carga mientras se verifica la sesión
   if (isLoading) {
@@ -122,6 +135,14 @@ function RootLayoutNav() {
           presentation: 'modal',
           headerShown: true,
           title: 'Premium',
+        }}
+      />
+      <Stack.Screen
+        name="squad"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: 'Pod de Ahorro',
         }}
       />
       {/* <Stack.Screen

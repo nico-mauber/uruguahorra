@@ -1,0 +1,397 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useTheme } from '@theme';
+import {
+  Card,
+  Button,
+  ProgressBar,
+  CreateSquadModal,
+  JoinSquadModal,
+} from '@components';
+import { useSquadsStore } from '@/store/useSquadsStore';
+import { useAuth } from '@/contexts';
+import { logger, LogModule } from '@/utils/logger';
+
+import { ViewStyle } from 'react-native';
+
+interface PodsListProps {
+  style?: ViewStyle;
+}
+
+export const PodsList: React.FC<PodsListProps> = ({ style }) => {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { userSquads, isLoading, fetchUserSquads } = useSquadsStore();
+
+  // Estados para modales
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+
+  // Cargar squads del usuario al montar el componente
+  useEffect(() => {
+    if (user?.id) {
+      logger.debug(LogModule.UI, 'Cargando squads del usuario desde PodsList');
+      fetchUserSquads(user.id);
+    }
+  }, [user?.id, fetchUserSquads]);
+
+  const handleSquadCreated = () => {
+    // Refrescar la lista después de crear un squad
+    if (user?.id) {
+      fetchUserSquads(user.id, true);
+    }
+  };
+
+  const handleSquadJoined = () => {
+    // Refrescar la lista después de unirse a un squad
+    if (user?.id) {
+      fetchUserSquads(user.id, true);
+    }
+  };
+
+  const handleViewSquadDetail = (squadId: string) => {
+    router.push(`/squad/${squadId}`);
+  };
+
+  // Si está cargando, mostrar skeleton
+  if (isLoading) {
+    return (
+      <View style={[styles.container, style]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            🏛️ Pods de Ahorro
+          </Text>
+          <Text
+            style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
+          >
+            Ahorra junto a otros usuarios
+          </Text>
+        </View>
+        <Card style={styles.loadingCard}>
+          <View style={styles.loadingContent}>
+            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+              Cargando tus pods...
+            </Text>
+          </View>
+        </Card>
+      </View>
+    );
+  }
+
+  // Si no hay squads, mostrar invitación a crear/unirse
+  if (userSquads.length === 0) {
+    return (
+      <View style={[styles.container, style]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            🏛️ Pods de Ahorro
+          </Text>
+          <Text
+            style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
+          >
+            Ahorra junto a otros usuarios
+          </Text>
+        </View>
+
+        <Card style={styles.emptyCard}>
+          <View style={styles.emptyContent}>
+            <Ionicons
+              name="people-outline"
+              size={48}
+              color={theme.textSecondary}
+            />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              ¡Únete a un Pod de Ahorro!
+            </Text>
+            <Text
+              style={[styles.emptySubtitle, { color: theme.textSecondary }]}
+            >
+              Ahorra junto a tus amigos y motívense mutuamente para alcanzar sus
+              metas.
+            </Text>
+
+            <View style={styles.actionButtons}>
+              <Button
+                title="Crear Pod"
+                variant="primary"
+                onPress={() => setShowCreateModal(true)}
+                style={styles.actionButton}
+              />
+              <Button
+                title="Unirse con Código"
+                variant="outline"
+                onPress={() => setShowJoinModal(true)}
+                style={styles.actionButton}
+              />
+            </View>
+          </View>
+        </Card>
+
+        {/* Modales */}
+        <CreateSquadModal
+          visible={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSquadCreated={handleSquadCreated}
+        />
+        <JoinSquadModal
+          visible={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+          onSquadJoined={handleSquadJoined}
+        />
+      </View>
+    );
+  }
+
+  // Mostrar lista de squads
+  return (
+    <View style={[styles.container, style]}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          🏛️ Pods de Ahorro ({userSquads.length})
+        </Text>
+        <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+          <Ionicons name="add-circle-outline" size={24} color={theme.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.squadsList}
+      >
+        {userSquads.map((squad) => (
+          <Card key={squad.id} style={styles.squadCard}>
+            <View style={styles.squadHeader}>
+              <Text style={[styles.squadName, { color: theme.text }]}>
+                {squad.name}
+              </Text>
+              <View style={styles.roleIndicator}>
+                <Text style={[styles.roleText, { color: theme.primary }]}>
+                  {squad.memberRole === 'owner'
+                    ? '👑'
+                    : squad.memberRole === 'admin'
+                      ? '⭐'
+                      : '👤'}
+                </Text>
+              </View>
+            </View>
+
+            {squad.description && (
+              <Text
+                style={[
+                  styles.squadDescription,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                {squad.description}
+              </Text>
+            )}
+
+            <View style={styles.squadStats}>
+              <Text
+                style={[styles.memberCount, { color: theme.textSecondary }]}
+              >
+                👥 {squad.memberCount}/{squad.maxMembers} miembros
+              </Text>
+            </View>
+
+            {/* Progreso simulado - en el futuro será real */}
+            <View style={styles.progressSection}>
+              <ProgressBar
+                progress={0.65}
+                height={8}
+                color={theme.primary}
+                backgroundColor={theme.border}
+              />
+              <Text
+                style={[styles.progressText, { color: theme.textSecondary }]}
+              >
+                65% de la meta grupal
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() => handleViewSquadDetail(squad.id)}
+            >
+              <Text style={[styles.viewButtonText, { color: theme.primary }]}>
+                Ver Detalle →
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        ))}
+
+        {/* Botón para unirse a más pods */}
+        <Card style={[styles.squadCard, styles.addCard]}>
+          <View style={styles.addCardContent}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowJoinModal(true)}
+            >
+              <Ionicons name="add" size={32} color={theme.primary} />
+              <Text style={[styles.addButtonText, { color: theme.primary }]}>
+                Unirse con Código
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </ScrollView>
+
+      {/* Modales */}
+      <CreateSquadModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSquadCreated={handleSquadCreated}
+      />
+      <JoinSquadModal
+        visible={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        onSquadJoined={handleSquadJoined}
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+
+  // Loading state
+  loadingCard: {
+    padding: 20,
+  },
+  loadingContent: {
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+  },
+
+  // Empty state
+  emptyCard: {
+    padding: 24,
+  },
+  emptyContent: {
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  actionButton: {
+    flex: 1,
+  },
+
+  // Squads list
+  squadsList: {
+    paddingHorizontal: 4,
+  },
+  squadCard: {
+    width: 280,
+    marginRight: 16,
+    padding: 16,
+  },
+  squadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  squadName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  roleIndicator: {
+    marginLeft: 8,
+  },
+  roleText: {
+    fontSize: 16,
+  },
+  squadDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  squadStats: {
+    marginBottom: 12,
+  },
+  memberCount: {
+    fontSize: 12,
+  },
+  progressSection: {
+    marginBottom: 16,
+  },
+  progressText: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  viewButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  viewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Add card
+  addCard: {
+    width: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
+    borderWidth: 2,
+  },
+  addCardContent: {
+    height: '100%',
+    justifyContent: 'center',
+  },
+  addButton: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});

@@ -68,20 +68,17 @@ export class SquadsService {
         userId,
       });
 
+      // Primero obtener los squads del usuario
       const { data, error } = await supabase
         .from('squad_members')
         .select(
           `
           role,
-          squad:squads(*),
-          squads!inner(
-            *,
-            squad_members(count)
-          )
+          squad:squads(*)
         `
         )
         .eq('user_id', userId)
-        .eq('squads.is_active', true);
+        .eq('squad.is_active', true);
 
       if (error) {
         logger.error(
@@ -92,17 +89,32 @@ export class SquadsService {
         throw error;
       }
 
-      const squads = (data || []).map((item: unknown) => ({
-        ...item.squad,
-        memberRole: item.role,
-        memberCount: item.squad.squad_members?.[0]?.count || 0,
-      }));
+      // Ahora obtener el count de miembros para cada squad
+      const squadsWithCount = await Promise.all(
+        (data || []).map(async (item: any) => {
+          // Contar miembros del squad
+          const { count, error: countError } = await supabase
+            .from('squad_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('squad_id', item.squad.id);
+
+          if (countError) {
+            logger.warn(LogModule.DB, 'Error contando miembros', countError);
+          }
+
+          return {
+            ...item.squad,
+            memberRole: item.role,
+            memberCount: count || 0,
+          };
+        })
+      );
 
       logger.success(
         LogModule.DB,
-        `${squads.length} squads del usuario obtenidos`
+        `${squadsWithCount.length} squads del usuario obtenidos`
       );
-      return squads;
+      return squadsWithCount;
     } catch (error) {
       logger.error(
         LogModule.DB,

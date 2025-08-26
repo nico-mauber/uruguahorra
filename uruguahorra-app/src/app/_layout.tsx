@@ -83,7 +83,7 @@ function RootLayoutNav() {
     const currentRoute = segments[0];
     const inAuthGroup = currentRoute === '(auth)';
     const inTabsGroup = currentRoute === '(tabs)';
-    const modalRoutes = ['create-goal', 'paywall', 'transactions', 'squad'];
+    const modalRoutes = ['create-goal', 'paywall', 'transactions'];
     const isModalRoute = modalRoutes.includes(currentRoute);
 
     // Solo navegar si no estamos ya en la ruta correcta

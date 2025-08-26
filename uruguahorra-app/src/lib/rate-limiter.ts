@@ -5,7 +5,6 @@
 
 import { logger, LogModule } from '@/utils/logger';
 import { RateLimiterStorage } from './rate-limiter-storage';
-import { getDeviceFingerprint } from '@/utils/device-fingerprint';
 
 /**
  * Configuración de rate limiting por tipo de acción
@@ -134,16 +133,12 @@ export class RateLimiter {
       // Generar identificador compuesto si se usa fingerprint
       let compositeIdentifier = identifier;
       if (config.enableFingerprint) {
-        try {
-          const fingerprint = await getDeviceFingerprint();
-          compositeIdentifier = `${identifier}:${fingerprint}`;
-        } catch {
-          // Si falla el fingerprint, usar solo el identificador
-          logger.warn(
-            LogModule.AUTH,
-            'Failed to get device fingerprint for rate limiting'
-          );
-        }
+        // Por ahora, usar un fingerprint simple basado en el user agent
+        // En el futuro se puede mejorar con una implementación más robusta
+        const simpleFingerprint = typeof window !== 'undefined' 
+          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+          : 'server';
+        compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 
       // Obtener intentos recientes
@@ -253,12 +248,11 @@ export class RateLimiter {
       // Generar identificador compuesto si se usa fingerprint
       let compositeIdentifier = identifier;
       if (config?.enableFingerprint) {
-        try {
-          const fingerprint = await getDeviceFingerprint();
-          compositeIdentifier = `${identifier}:${fingerprint}`;
-        } catch {
-          // Usar solo el identificador si falla
-        }
+        // Usar un fingerprint simple basado en el user agent
+        const simpleFingerprint = typeof window !== 'undefined' 
+          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+          : 'server';
+        compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 
       const attempt: AttemptRecord = {
@@ -300,12 +294,11 @@ export class RateLimiter {
       // Generar identificador compuesto si se usa fingerprint
       let compositeIdentifier = identifier;
       if (config?.enableFingerprint) {
-        try {
-          const fingerprint = await getDeviceFingerprint();
-          compositeIdentifier = `${identifier}:${fingerprint}`;
-        } catch {
-          // Usar solo el identificador si falla
-        }
+        // Usar un fingerprint simple basado en el user agent
+        const simpleFingerprint = typeof window !== 'undefined' 
+          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+          : 'server';
+        compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 
       await this.storage.clearAttempts(action, compositeIdentifier);

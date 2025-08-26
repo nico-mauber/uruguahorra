@@ -64,17 +64,6 @@ function TabLayoutContent() {
           title: 'Notificaciones',
         }}
       />
-      {__DEV__ && (
-        <Tabs.Screen
-          name="test-notifications"
-          options={{
-            title: '🧪 Test',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="flask" size={size} color={color} />
-            ),
-          }}
-        />
-      )}
     </Tabs>
   );
 }

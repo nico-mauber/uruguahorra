@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { createSecureWebStorage } from './secure-web-storage';
 
 // Obtener las variables de entorno
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
@@ -40,37 +39,9 @@ const AsyncStorageAdapter = {
   },
 };
 
-// Función para obtener el adaptador de almacenamiento seguro para web
-function getWebStorageAdapter() {
-  try {
-    // Intentar usar almacenamiento cifrado si está disponible
-    if (
-      typeof window !== 'undefined' &&
-      window.crypto &&
-      window.crypto.subtle
-    ) {
-      const secureStorage = createSecureWebStorage();
-      return {
-        getItem: (key: string) => secureStorage.getItem(key),
-        setItem: (key: string, value: string) =>
-          secureStorage.setItem(key, value),
-        removeItem: (key: string) => secureStorage.removeItem(key),
-      };
-    }
-  } catch (error) {
-    console.warn(
-      'Secure web storage not available, falling back to AsyncStorage',
-      error
-    );
-  }
-
-  // Fallback a AsyncStorage si el almacenamiento seguro no está disponible
-  return AsyncStorageAdapter;
-}
-
 // Seleccionar el adapter según la plataforma
 const storageAdapter = Platform.select({
-  web: getWebStorageAdapter(),
+  web: AsyncStorageAdapter,
   default: ExpoSecureStoreAdapter,
 });
 

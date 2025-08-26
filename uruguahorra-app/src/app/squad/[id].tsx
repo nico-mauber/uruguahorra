@@ -531,29 +531,29 @@ export default function SquadDetailScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View
-                style={[
-                  styles.modalContent,
-                  { backgroundColor: theme.surface },
-                ]}
-              >
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>
-                    Contribuir al Pod
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowContributionModal(false)}
-                    style={styles.modalCloseButton}
-                  >
-                    <Ionicons
-                      name="close"
-                      size={24}
-                      color={theme.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.surface },
+              ]}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Contribuir al Pod
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowContributionModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={theme.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
 
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
                   <Text style={[styles.inputLabel, { color: theme.text }]}>
                     Monto *
@@ -572,6 +572,8 @@ export default function SquadDetailScreen() {
                     placeholder="Ej: 100"
                     placeholderTextColor={theme.textSecondary}
                     keyboardType="numeric"
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
                   />
 
                   <Text style={[styles.inputLabel, { color: theme.text }]}>
@@ -592,42 +594,45 @@ export default function SquadDetailScreen() {
                     placeholderTextColor={theme.textSecondary}
                     multiline
                     numberOfLines={2}
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    onSubmitEditing={Keyboard.dismiss}
                   />
                 </View>
+              </TouchableWithoutFeedback>
 
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setShowContributionModal(false)}
-                  >
-                    <Text
-                      style={[
-                        styles.buttonText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      Cancelar
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowContributionModal(false)}
+                >
+                  <Text
                     style={[
-                      styles.modalButton,
-                      { backgroundColor: theme.primary },
+                      styles.buttonText,
+                      { color: theme.textSecondary },
                     ]}
-                    onPress={handleAddContribution}
-                    disabled={isAddingContribution}
                   >
-                    {isAddingContribution ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text style={[styles.buttonText, { color: 'white' }]}>
-                        Contribuir
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                    Cancelar
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={handleAddContribution}
+                  disabled={isAddingContribution}
+                >
+                  {isAddingContribution ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={[styles.buttonText, { color: 'white' }]}>
+                      Contribuir
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
+            </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -641,29 +646,29 @@ export default function SquadDetailScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View
-                style={[
-                  styles.modalContent,
-                  { backgroundColor: theme.surface },
-                ]}
-              >
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>
-                    Editar Meta del Pod
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowGoalModal(false)}
-                    style={styles.modalCloseButton}
-                  >
-                    <Ionicons
-                      name="close"
-                      size={24}
-                      color={theme.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.surface },
+              ]}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Editar Meta del Pod
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowGoalModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={theme.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
 
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
                   <Text style={[styles.inputLabel, { color: theme.text }]}>
                     Meta de Ahorro *
@@ -682,42 +687,44 @@ export default function SquadDetailScreen() {
                     placeholder="Ej: 10000"
                     placeholderTextColor={theme.textSecondary}
                     keyboardType="numeric"
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
                   />
                 </View>
+              </TouchableWithoutFeedback>
 
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setShowGoalModal(false)}
-                  >
-                    <Text
-                      style={[
-                        styles.buttonText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      Cancelar
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowGoalModal(false)}
+                >
+                  <Text
                     style={[
-                      styles.modalButton,
-                      { backgroundColor: theme.primary },
+                      styles.buttonText,
+                      { color: theme.textSecondary },
                     ]}
-                    onPress={handleUpdateGoal}
-                    disabled={isUpdatingGoal}
                   >
-                    {isUpdatingGoal ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text style={[styles.buttonText, { color: 'white' }]}>
-                        Actualizar
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                    Cancelar
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={handleUpdateGoal}
+                  disabled={isUpdatingGoal}
+                >
+                  {isUpdatingGoal ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={[styles.buttonText, { color: 'white' }]}>
+                      Actualizar
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
+            </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>

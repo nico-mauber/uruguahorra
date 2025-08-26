@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
   },
   squadCard: {
     width: 280,
+    maxHeight: 200,
     marginRight: 16,
     padding: 16,
   },
@@ -379,6 +380,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     marginBottom: 12,
+    maxHeight: 36,
+    overflow: 'hidden',
   },
   squadStats: {
     marginBottom: 12,
@@ -387,15 +390,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   progressSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressText: {
     fontSize: 12,
     marginTop: 4,
   },
+  progressAmount: {
+    fontSize: 11,
+    marginTop: 2,
+  },
   viewButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   viewButtonText: {
     fontSize: 14,
@@ -405,14 +412,15 @@ const styles = StyleSheet.create({
   // Add card
   addCard: {
     width: 200,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
     borderStyle: 'dashed',
     borderWidth: 2,
   },
   addCardContent: {
-    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     alignItems: 'center',

@@ -224,32 +224,207 @@ export type GoalUpdate = z.infer<typeof GoalUpdateSchema>;
 // ESQUEMA DE TRANSACCIÓN
 // ============================================
 
-// Schema base de transacción
+// ============================================
+// ESQUEMAS DE CATEGORÍAS DE TRANSACCIONES
+// ============================================
+
+export const TransactionCategorySchema = z.object({
+  id: UUIDSchema,
+  name: z.string().min(1).max(100),
+  emoji: z.string().min(1).max(10),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Color debe ser hexadecimal válido'),
+  type: z.enum(['expense', 'income', 'transfer']),
+  is_default: z.boolean().default(false),
+  sort_order: z.number().int().min(0).default(0),
+  created_at: DateTimeSchema.optional(),
+});
+
+export type TransactionCategory = z.infer<typeof TransactionCategorySchema>;
+
+export const TransactionCategoryInsertSchema = TransactionCategorySchema.omit({
+  id: true,
+  created_at: true,
+});
+
+export type TransactionCategoryInsert = z.infer<
+  typeof TransactionCategoryInsertSchema
+>;
+
+// ============================================
+// ESQUEMAS DE TRANSACCIONES COMPLETAS
+// ============================================
+
+/**
+ * Escala de humor (1-5)
+ */
+export const MoodSchema = z.number().int().min(1).max(5).optional();
+
+/**
+ * Nivel de arrepentimiento (0-10)
+ */
+export const RegretLevelSchema = z.number().int().min(0).max(10).optional();
+
+/**
+ * Nivel de necesidad (1-5)
+ */
+export const NecessityLevelSchema = z.number().int().min(1).max(5).optional();
+
+/**
+ * Tipo de transacción
+ */
+export const TransactionTypeSchema = z.enum(['expense', 'income', 'transfer']);
+
+/**
+ * Método de pago
+ */
+export const PaymentMethodSchema = z
+  .enum([
+    'cash',
+    'debit_card',
+    'credit_card',
+    'bank_transfer',
+    'mobile_payment',
+    'other',
+  ])
+  .optional();
+
+// Schema base de transacción (nueva versión completa)
 const TransactionBaseSchema = z.object({
   id: UUIDSchema,
   user_id: UUIDSchema,
-  transaction_date: DateTimeSchema,
-  description: z
-    .string()
-    .min(1, { message: 'La descripción es requerida' })
-    .max(500, { message: 'La descripción es muy larga' }),
+  goal_id: UUIDSchema.nullable().optional(),
+  squad_id: UUIDSchema.nullable().optional(),
+
+  // Información básica
   amount: MoneyAmountSchema,
-  category: z.string().max(50).nullable(),
-  account: z.string().max(100).nullable(),
-  imported_at: DateTimeSchema,
+  description: z.string().max(500).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  transaction_date: DateSchema.default(
+    () => new Date().toISOString().split('T')[0]
+  ),
+
+  // Categorización
+  category_id: UUIDSchema.nullable().optional(),
+  category_name: z.string().max(100).nullable().optional(), // Backup
+  category_emoji: z.string().max(10).nullable().optional(), // Cache
+
+  // Metadata psicológica
+  type: TransactionTypeSchema,
+  mood_before: MoodSchema,
+  mood_after: MoodSchema,
+  regret_level: RegretLevelSchema,
+  necessity_level: NecessityLevelSchema,
+
+  // Contexto adicional
+  location: z.string().max(200).nullable().optional(),
+  tags: z.array(z.string().max(50)).nullable().optional(),
+  payment_method: PaymentMethodSchema,
+
+  // Gamification
+  xp_earned: z.number().int().min(0).default(0),
+  achievements_unlocked: z.array(z.string()).nullable().optional(),
+
+  // Metadata técnica
   created_at: DateTimeSchema.optional(),
+  updated_at: DateTimeSchema.optional(),
+  deleted_at: DateTimeSchema.nullable().optional(),
 });
 
 export const TransactionSchema = TransactionBaseSchema;
 
 export type Transaction = z.infer<typeof TransactionSchema>;
 
+/**
+ * Schema para crear transacciones (omite campos auto-generados)
+ */
 export const TransactionInsertSchema = TransactionBaseSchema.omit({
   id: true,
   created_at: true,
+  updated_at: true,
+}).partial({
+  category_name: true,
+  category_emoji: true,
+  xp_earned: true,
 });
 
 export type TransactionInsert = z.infer<typeof TransactionInsertSchema>;
+
+/**
+ * Schema para actualizar transacciones
+ */
+export const TransactionUpdateSchema = TransactionBaseSchema.omit({
+  id: true,
+  user_id: true,
+  created_at: true,
+  updated_at: true,
+}).partial();
+
+export type TransactionUpdate = z.infer<typeof TransactionUpdateSchema>;
+
+/**
+ * Schema para entrada rápida de transacciones (3-tap)
+ */
+export const QuickTransactionSchema = z.object({
+  amount: MoneyAmountSchema,
+  category_id: UUIDSchema,
+  description: z.string().max(500).optional(),
+  type: TransactionTypeSchema.optional(), // Se puede inferir de la categoría
+});
+
+export type QuickTransaction = z.infer<typeof QuickTransactionSchema>;
+
+// ============================================
+// ESQUEMAS DE ANALYTICS E INSIGHTS
+// ============================================
+
+export const SpendingInsightSchema = z.object({
+  period_days: z.number().int().positive(),
+  total_spent: z.number(),
+  avg_daily_spend: z.number(),
+  avg_transaction_amount: z.number(),
+  most_expensive_category: z.string().nullable(),
+  most_frequent_category: z.string().nullable(),
+  top_categories: z
+    .array(
+      z.object({
+        category_id: UUIDSchema.nullable(),
+        category_name: z.string().nullable(),
+        category_color: z.string().nullable(),
+        total_amount: z.number(),
+        transaction_count: z.number().int(),
+      })
+    )
+    .optional(),
+  psychology: z.object({
+    avg_regret_level: z.number().min(0).max(10),
+    avg_necessity_level: z.number().min(1).max(5),
+    mood_impact: z.number().min(-4).max(4), // cambio de humor
+  }),
+});
+
+export type SpendingInsight = z.infer<typeof SpendingInsightSchema>;
+
+/**
+ * Schema para filtros de transacciones
+ */
+export const TransactionFiltersSchema = z.object({
+  user_id: UUIDSchema,
+  start_date: DateSchema.optional(),
+  end_date: DateSchema.optional(),
+  category_ids: z.array(UUIDSchema).optional(),
+  types: z.array(TransactionTypeSchema).optional(),
+  min_amount: z.number().min(0).optional(),
+  max_amount: z.number().min(0).optional(),
+  search: z.string().max(200).optional(),
+  goal_id: UUIDSchema.nullable().optional(),
+  squad_id: UUIDSchema.nullable().optional(),
+  limit: z.number().int().min(1).max(1000).default(50),
+  offset: z.number().int().min(0).default(0),
+});
+
+export type TransactionFilters = z.infer<typeof TransactionFiltersSchema>;
 
 // ============================================
 // ESQUEMA DE CONTRIBUCIÓN

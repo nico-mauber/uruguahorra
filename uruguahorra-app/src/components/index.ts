@@ -10,3 +10,10 @@ export { CreateSquadModal } from './CreateSquadModal';
 export { JoinSquadModal } from './JoinSquadModal';
 export { PodsList } from './PodsList';
 export { SquadStatsCard } from './SquadStatsCard';
+
+// Transacciones
+export { TransactionFAB } from './TransactionFAB-Simple';
+export { QuickTransactionModal } from './QuickTransactionModal';
+export { SpendingAnalytics } from './SpendingAnalytics';
+export { SimpleTransactionItem } from './SimpleTransactionItem';
+export { GamificationStats } from './GamificationStats';

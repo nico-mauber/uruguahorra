@@ -16,6 +16,7 @@ export enum LogLevel {
 export enum LogModule {
   AUTH = 'AUTH',
   GOALS = 'GOALS',
+  TRANSACTIONS = 'TRANSACTIONS',
   STORE = 'STORE',
   NAV = 'NAV',
   API = 'API',
@@ -90,6 +91,8 @@ class Logger {
         return colors.magenta;
       case LogModule.GOALS:
         return colors.cyan;
+      case LogModule.TRANSACTIONS:
+        return colors.yellow;
       case LogModule.STORE:
         return colors.blue;
       case LogModule.NAV:

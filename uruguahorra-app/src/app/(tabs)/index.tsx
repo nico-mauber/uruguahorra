@@ -9,11 +9,16 @@ import {
   RefreshControl,
   TextInput,
   Keyboard,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Button, Card, ProgressBar, PodsList } from '@components';
+import {
+  Button,
+  Card,
+  ProgressBar,
+  PodsList,
+  TransactionFAB,
+} from '@components';
 import { GoalSelectionModal } from '@/components/GoalSelectionModal';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
@@ -53,40 +58,24 @@ export default function DashboardScreen() {
   const [pendingSaveAmount, setPendingSaveAmount] = React.useState(0);
   const [manualAmount, setManualAmount] = React.useState('');
   const [showManualInput, setShowManualInput] = React.useState(false);
-  const [fabExpanded, setFabExpanded] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
   const initializingRef = useRef(false);
 
-  // Funciones para animar el FAB
-  const toggleFab = () => {
-    const toValue = fabExpanded ? 0 : 1;
+  // Handler para nueva transacción
+  const handleTransactionCreated = (transaction: unknown) => {
+    logger.success(LogModule.UI, 'Nueva transacción creada', { transaction });
+    ToastService.quickSuccess('Transacción registrada exitosamente');
 
-    Animated.parallel([
-      Animated.spring(fadeAnim, {
-        toValue,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }),
-      Animated.spring(rotateAnim, {
-        toValue,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }),
-    ]).start();
-
-    setFabExpanded(!fabExpanded);
-  };
-
-  const handleFabAction = () => {
-    toggleFab();
-    router.push('/create-goal');
+    // Refrescar datos si es necesario
+    if (user?.id) {
+      // Pequeño delay para que la transacción se procese
+      setTimeout(() => {
+        onRefresh();
+      }, 500);
+    }
   };
 
   // Función optimizada para cargar estadísticas de gamificación (SOLO cuando sea necesario)
@@ -165,7 +154,7 @@ export default function DashboardScreen() {
         router.replace('/(auth)/simple-onboarding');
       }, 200);
     }
-  }, [initializing, authLoading, user]);
+  }, [initializing, authLoading, user, router]);
 
   // Cargar metas cuando el usuario cambia (comentado para evitar duplicación)
   // Este efecto ya no es necesario porque la carga inicial se hace en el primer useEffect
@@ -550,71 +539,6 @@ export default function DashboardScreen() {
       flexDirection: 'row',
       gap: 12,
     },
-    addButton: {
-      position: 'absolute',
-      bottom: 24,
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: theme.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 10,
-      shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      zIndex: 100,
-    },
-    addButtonExpanded: {
-      backgroundColor: theme.error,
-    },
-    fabOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      zIndex: 98,
-    },
-    fabOption: {
-      position: 'absolute',
-      bottom: 24,
-      right: 20,
-      flexDirection: 'row',
-      alignItems: 'center',
-      zIndex: 99,
-    },
-    fabOptionButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: theme.secondary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 8,
-      shadowColor: theme.secondary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-    },
-    fabOptionLabel: {
-      marginRight: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: theme.surface,
-      borderRadius: 16,
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.text,
-      elevation: 4,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.15,
-      shadowRadius: 2,
-    },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -691,6 +615,50 @@ export default function DashboardScreen() {
       fontStyle: 'italic',
       textAlign: 'center',
       marginTop: 8,
+    },
+    // Estilos para el botón de transacciones
+    transactionsSection: {
+      marginBottom: 24,
+    },
+    transactionsButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 16,
+      padding: 16,
+      shadowColor: theme.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    transactionButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    transactionButtonIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+    },
+    transactionButtonText: {
+      flex: 1,
+    },
+    transactionButtonTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#FFFFFF',
+      marginBottom: 2,
+    },
+    transactionButtonSubtitle: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.8)',
     },
   });
 
@@ -784,6 +752,30 @@ export default function DashboardScreen() {
             <Text style={styles.statLabel}>Ahorrado</Text>
             <Text style={styles.statValue}>${getTotalSaved().toFixed(0)}</Text>
           </Card>
+        </View>
+
+        {/* Botón de Transacciones */}
+        <View style={styles.transactionsSection}>
+          <TouchableOpacity
+            style={styles.transactionsButton}
+            onPress={() => router.push('/transactions')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.transactionButtonContent}>
+              <View style={styles.transactionButtonIcon}>
+                <Ionicons name="receipt" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.transactionButtonText}>
+                <Text style={styles.transactionButtonTitle}>
+                  Ver Transacciones
+                </Text>
+                <Text style={styles.transactionButtonSubtitle}>
+                  Ingresos y gastos detallados
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {goals.length > 0 && (
@@ -958,63 +950,13 @@ export default function DashboardScreen() {
         {isPodsAhorroEnabled && <PodsList />}
       </ScrollView>
 
-      {/* FAB Expandible con Opciones */}
-      {fabExpanded && (
-        <TouchableOpacity
-          style={styles.fabOverlay}
-          onPress={toggleFab}
-          activeOpacity={1}
+      {/* TransactionFAB - Sistema completo de transacciones */}
+      {user && (
+        <TransactionFAB
+          userId={user.id}
+          onTransactionCreated={handleTransactionCreated}
         />
       )}
-
-      {/* Opciones del FAB */}
-      <Animated.View
-        style={[
-          styles.fabOption,
-          {
-            opacity: fadeAnim,
-            transform: [
-              {
-                translateY: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -140],
-                }),
-              },
-            ],
-            pointerEvents: fabExpanded ? 'auto' : 'none',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.fabOptionButton}
-          onPress={handleFabAction}
-        >
-          <Ionicons name="flag" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.fabOptionLabel}>Nueva Meta</Text>
-      </Animated.View>
-
-      {/* Botón FAB Principal */}
-      <TouchableOpacity
-        style={[styles.addButton, fabExpanded && styles.addButtonExpanded]}
-        onPress={toggleFab}
-        activeOpacity={0.9}
-      >
-        <Animated.View
-          style={{
-            transform: [
-              {
-                rotate: rotateAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '45deg'],
-                }),
-              },
-            ],
-          }}
-        >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
-        </Animated.View>
-      </TouchableOpacity>
 
       <GoalSelectionModal
         visible={showGoalSelection}

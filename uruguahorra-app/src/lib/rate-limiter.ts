@@ -135,9 +135,10 @@ export class RateLimiter {
       if (config.enableFingerprint) {
         // Por ahora, usar un fingerprint simple basado en el user agent
         // En el futuro se puede mejorar con una implementación más robusta
-        const simpleFingerprint = typeof window !== 'undefined' 
-          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
-          : 'server';
+        const simpleFingerprint =
+          typeof window !== 'undefined'
+            ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+            : 'server';
         compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 
@@ -249,9 +250,10 @@ export class RateLimiter {
       let compositeIdentifier = identifier;
       if (config?.enableFingerprint) {
         // Usar un fingerprint simple basado en el user agent
-        const simpleFingerprint = typeof window !== 'undefined' 
-          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
-          : 'server';
+        const simpleFingerprint =
+          typeof window !== 'undefined'
+            ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+            : 'server';
         compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 
@@ -295,9 +297,10 @@ export class RateLimiter {
       let compositeIdentifier = identifier;
       if (config?.enableFingerprint) {
         // Usar un fingerprint simple basado en el user agent
-        const simpleFingerprint = typeof window !== 'undefined' 
-          ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
-          : 'server';
+        const simpleFingerprint =
+          typeof window !== 'undefined'
+            ? btoa(window.navigator.userAgent || 'unknown').substring(0, 16)
+            : 'server';
         compositeIdentifier = `${identifier}:${simpleFingerprint}`;
       }
 

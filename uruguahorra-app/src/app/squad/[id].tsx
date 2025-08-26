@@ -25,7 +25,7 @@ import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
 
 export default function SquadDetailScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -255,11 +255,11 @@ export default function SquadDetailScreen() {
   if (!currentSquad) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.text }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text.primary }]}>
             Cargando grupo...
           </Text>
         </View>
@@ -273,7 +273,7 @@ export default function SquadDetailScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView
         style={styles.scrollView}
@@ -281,8 +281,8 @@ export default function SquadDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
@@ -292,9 +292,9 @@ export default function SquadDetailScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="chevron-back" size={24} color={theme.text} />
+            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
+          <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
             Detalle del Grupo
           </Text>
           <View style={styles.headerSpacer} />
@@ -304,14 +304,14 @@ export default function SquadDetailScreen() {
         <Card style={styles.squadCard}>
           <View style={styles.squadHeader}>
             <View style={styles.squadInfo}>
-              <Text style={[styles.squadName, { color: theme.text }]}>
+              <Text style={[styles.squadName, { color: colors.text.primary }]}>
                 {currentSquad.name}
               </Text>
               {currentSquad.description && (
                 <Text
                   style={[
                     styles.squadDescription,
-                    { color: theme.textSecondary },
+                    { color: colors.text.secondary },
                   ]}
                 >
                   {currentSquad.description}
@@ -322,10 +322,10 @@ export default function SquadDetailScreen() {
                   <Ionicons
                     name="people"
                     size={16}
-                    color={theme.textSecondary}
+                    color={colors.text.secondary}
                   />
                   <Text
-                    style={[styles.metaText, { color: theme.textSecondary }]}
+                    style={[styles.metaText, { color: colors.text.secondary }]}
                   >
                     {members.length}/{currentSquad.maxMembers} miembros
                   </Text>
@@ -333,7 +333,7 @@ export default function SquadDetailScreen() {
                 <View style={styles.metaItem}>
                   <Ionicons name="shield-checkmark" size={16} color="#4A90E2" />
                   <Text
-                    style={[styles.metaText, { color: theme.textSecondary }]}
+                    style={[styles.metaText, { color: colors.text.secondary }]}
                   >
                     {userRole === 'owner'
                       ? 'Creador'
@@ -353,9 +353,9 @@ export default function SquadDetailScreen() {
                 style={styles.actionButton}
                 onPress={handleInviteMembers}
               >
-                <Ionicons name="person-add" size={16} color={theme.primary} />
+                <Ionicons name="person-add" size={16} color={colors.primary} />
                 <Text
-                  style={[styles.actionButtonText, { color: theme.primary }]}
+                  style={[styles.actionButtonText, { color: colors.primary }]}
                 >
                   Invitar
                 </Text>
@@ -366,9 +366,9 @@ export default function SquadDetailScreen() {
               style={styles.actionButton}
               onPress={() => setShowContributionModal(true)}
             >
-              <Ionicons name="wallet" size={16} color={theme.secondary} />
+              <Ionicons name="wallet" size={16} color={colors.primary} />
               <Text
-                style={[styles.actionButtonText, { color: theme.secondary }]}
+                style={[styles.actionButtonText, { color: colors.primary }]}
               >
                 Contribuir
               </Text>
@@ -382,8 +382,8 @@ export default function SquadDetailScreen() {
                   setShowGoalModal(true);
                 }}
               >
-                <Ionicons name="flag" size={16} color={theme.info} />
-                <Text style={[styles.actionButtonText, { color: theme.info }]}>
+                <Ionicons name="flag" size={16} color={colors.info} />
+                <Text style={[styles.actionButtonText, { color: colors.info }]}>
                   Meta
                 </Text>
               </TouchableOpacity>
@@ -394,11 +394,11 @@ export default function SquadDetailScreen() {
               disabled={isLeavingSquad}
             >
               {isLeavingSquad ? (
-                <ActivityIndicator size={16} color={theme.error} />
+                <ActivityIndicator size={16} color={colors.error} />
               ) : (
-                <Ionicons name="exit-outline" size={16} color={theme.error} />
+                <Ionicons name="exit-outline" size={16} color={colors.error} />
               )}
-              <Text style={[styles.actionButtonText, { color: theme.error }]}>
+              <Text style={[styles.actionButtonText, { color: colors.error }]}>
                 Salir
               </Text>
             </TouchableOpacity>
@@ -411,17 +411,17 @@ export default function SquadDetailScreen() {
         {/* Members Ranking */}
         <Card style={styles.rankingCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="trophy" size={20} color={theme.primary} />
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            <Ionicons name="trophy" size={20} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               Ranking de Ahorros
             </Text>
           </View>
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text
-                style={[styles.loadingText, { color: theme.textSecondary }]}
+                style={[styles.loadingText, { color: colors.text.secondary }]}
               >
                 Cargando ranking...
               </Text>
@@ -455,7 +455,7 @@ export default function SquadDetailScreen() {
                         <Text
                           style={[
                             styles.rankNumber,
-                            { color: theme.textSecondary },
+                            { color: colors.text.secondary },
                           ]}
                         >
                           #{index + 1}
@@ -463,13 +463,13 @@ export default function SquadDetailScreen() {
                       )}
                     </View>
                     <View style={styles.memberInfo}>
-                      <Text style={[styles.memberEmail, { color: theme.text }]}>
+                      <Text style={[styles.memberEmail, { color: colors.text.primary }]}>
                         {member.user?.email
                           ? member.user.email.split('@')[0]
                           : `Usuario ${member.userId.slice(-4)}`}
                         {member.userId === user?.id && (
                           <Text
-                            style={[styles.youLabel, { color: theme.primary }]}
+                            style={[styles.youLabel, { color: colors.primary }]}
                           >
                             {' '}
                             (Tú)
@@ -479,7 +479,7 @@ export default function SquadDetailScreen() {
                       <Text
                         style={[
                           styles.memberRole,
-                          { color: theme.textSecondary },
+                          { color: colors.text.secondary },
                         ]}
                       >
                         {member.role === 'owner'
@@ -491,14 +491,14 @@ export default function SquadDetailScreen() {
                     </View>
                     <View style={styles.memberStats}>
                       <Text
-                        style={[styles.memberAmount, { color: theme.text }]}
+                        style={[styles.memberAmount, { color: colors.text.primary }]}
                       >
                         ${member.totalSaved.toFixed(0)}
                       </Text>
                       <Text
                         style={[
                           styles.memberMonthly,
-                          { color: theme.textSecondary },
+                          { color: colors.text.secondary },
                         ]}
                       >
                         ${member.monthlySaved.toFixed(0)} este mes
@@ -512,9 +512,9 @@ export default function SquadDetailScreen() {
               <Ionicons
                 name="people-outline"
                 size={48}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
                 No hay miembros para mostrar
               </Text>
             </View>
@@ -532,10 +532,10 @@ export default function SquadDetailScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalContent, { backgroundColor: theme.surface }]}
+              style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
                   Contribuir al Pod
                 </Text>
                 <TouchableOpacity
@@ -545,50 +545,50 @@ export default function SquadDetailScreen() {
                   <Ionicons
                     name="close"
                     size={24}
-                    color={theme.textSecondary}
+                    color={colors.text.secondary}
                   />
                 </TouchableOpacity>
               </View>
 
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
-                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
                     Monto *
                   </Text>
                   <TextInput
                     style={[
                       styles.input,
                       {
-                        borderColor: theme.border,
-                        color: theme.text,
-                        backgroundColor: theme.background,
+                        borderColor: colors.border.primary,
+                        color: colors.text.primary,
+                        backgroundColor: colors.background,
                       },
                     ]}
                     value={contributionAmount}
                     onChangeText={setContributionAmount}
                     placeholder="Ej: 100"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor={colors.text.secondary}
                     keyboardType="numeric"
                     returnKeyType="done"
                     onSubmitEditing={Keyboard.dismiss}
                   />
 
-                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
                     Descripción (opcional)
                   </Text>
                   <TextInput
                     style={[
                       styles.input,
                       {
-                        borderColor: theme.border,
-                        color: theme.text,
-                        backgroundColor: theme.background,
+                        borderColor: colors.border.primary,
+                        color: colors.text.primary,
+                        backgroundColor: colors.background,
                       },
                     ]}
                     value={contributionDescription}
                     onChangeText={setContributionDescription}
                     placeholder="Ej: Ahorro semanal"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor={colors.text.secondary}
                     multiline
                     numberOfLines={2}
                     returnKeyType="done"
@@ -604,7 +604,7 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowContributionModal(false)}
                 >
                   <Text
-                    style={[styles.buttonText, { color: theme.textSecondary }]}
+                    style={[styles.buttonText, { color: colors.text.secondary }]}
                   >
                     Cancelar
                   </Text>
@@ -612,7 +612,7 @@ export default function SquadDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
-                    { backgroundColor: theme.primary },
+                    { backgroundColor: colors.primary },
                   ]}
                   onPress={handleAddContribution}
                   disabled={isAddingContribution}
@@ -641,10 +641,10 @@ export default function SquadDetailScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalContent, { backgroundColor: theme.surface }]}
+              style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
                   Editar Meta del Pod
                 </Text>
                 <TouchableOpacity
@@ -654,29 +654,29 @@ export default function SquadDetailScreen() {
                   <Ionicons
                     name="close"
                     size={24}
-                    color={theme.textSecondary}
+                    color={colors.text.secondary}
                   />
                 </TouchableOpacity>
               </View>
 
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
-                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
                     Meta de Ahorro *
                   </Text>
                   <TextInput
                     style={[
                       styles.input,
                       {
-                        borderColor: theme.border,
-                        color: theme.text,
-                        backgroundColor: theme.background,
+                        borderColor: colors.border.primary,
+                        color: colors.text.primary,
+                        backgroundColor: colors.background,
                       },
                     ]}
                     value={goalAmount}
                     onChangeText={setGoalAmount}
                     placeholder="Ej: 10000"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor={colors.text.secondary}
                     keyboardType="numeric"
                     returnKeyType="done"
                     onSubmitEditing={Keyboard.dismiss}
@@ -690,7 +690,7 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowGoalModal(false)}
                 >
                   <Text
-                    style={[styles.buttonText, { color: theme.textSecondary }]}
+                    style={[styles.buttonText, { color: colors.text.secondary }]}
                   >
                     Cancelar
                   </Text>
@@ -698,7 +698,7 @@ export default function SquadDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
-                    { backgroundColor: theme.primary },
+                    { backgroundColor: colors.primary },
                   ]}
                   onPress={handleUpdateGoal}
                   disabled={isUpdatingGoal}

@@ -42,7 +42,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
   onSelectGoal,
   pendingAmount,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const screenHeight = Dimensions.get('window').height;
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -157,7 +157,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
       justifyContent: 'flex-end',
     },
     content: {
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       maxHeight: screenHeight * 0.8,
@@ -169,18 +169,18 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
       alignItems: 'center',
       padding: 20,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     headerTitle: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
     },
     closeButton: {
       padding: 8,
     },
     amountContainer: {
-      backgroundColor: theme.primary + '20',
+      backgroundColor: colors.primary + '20',
       padding: 16,
       margin: 20,
       marginTop: 0,
@@ -189,13 +189,13 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     },
     amountLabel: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginBottom: 4,
     },
     amountValue: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.primary,
+      color: colors.primary,
     },
     scrollContent: {
       padding: 20,
@@ -219,15 +219,15 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     goalName: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     goalAmount: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     selectButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 20,
@@ -243,7 +243,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     },
     daysLeft: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginTop: 8,
     },
     emptyContainer: {
@@ -252,11 +252,11 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     },
     emptyText: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
     },
     editContainer: {
-      backgroundColor: theme.warning + '20',
+      backgroundColor: colors.warning + '20',
       padding: 16,
       borderRadius: 8,
       marginTop: 8,
@@ -264,18 +264,18 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     editTitle: {
       fontSize: 14,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 8,
     },
     editInput: {
       height: 48,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
       borderRadius: 8,
       paddingHorizontal: 16,
       fontSize: 16,
-      color: theme.text,
-      backgroundColor: theme.surface,
+      color: colors.text.primary,
+      backgroundColor: colors.surface,
       marginBottom: 12,
     },
     editButtons: {
@@ -283,7 +283,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
       gap: 8,
     },
     warningBadge: {
-      backgroundColor: theme.warning + '20',
+      backgroundColor: colors.warning + '20',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
@@ -291,7 +291,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
     },
     warningText: {
       fontSize: 12,
-      color: theme.warning,
+      color: colors.warning,
       fontWeight: '600',
     },
   });
@@ -324,7 +324,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Selecciona una meta</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color={theme.text} />
+              <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
@@ -385,7 +385,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
                               goal.targetAmount
                             )}
                             showLabel
-                            color={theme.primary}
+                            color={colors.primary}
                           />
                         </View>
 
@@ -401,7 +401,7 @@ export const GoalSelectionModal: React.FC<GoalSelectionModalProps> = ({
                             <TextInput
                               style={styles.editInput}
                               placeholder="Nuevo objetivo"
-                              placeholderTextColor={theme.textSecondary}
+                              placeholderTextColor={colors.text.secondary}
                               value={newTargetAmount}
                               onChangeText={setNewTargetAmount}
                               keyboardType="numeric"

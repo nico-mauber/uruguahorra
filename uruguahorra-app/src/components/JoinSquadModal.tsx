@@ -30,7 +30,7 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
   onClose,
   onSquadJoined,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const { joinSquad, isJoining } = useSquadsStore();
   const screenHeight = Dimensions.get('window').height;
@@ -145,21 +145,21 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
           style={[
             styles.modalContent,
             {
-              backgroundColor: theme.background,
+              backgroundColor: colors.background,
               maxHeight: screenHeight * 0.8,
             },
           ]}
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
+            <Text style={[styles.title, { color: colors.text.primary }]}>
               🔗 Unirse a Pod
             </Text>
             <TouchableOpacity onPress={handleClose} disabled={isJoining}>
               <Ionicons
                 name="close"
                 size={24}
-                color={isJoining ? theme.textSecondary : theme.text}
+                color={isJoining ? colors.text.secondary : colors.text.primary}
               />
             </TouchableOpacity>
           </View>
@@ -167,29 +167,29 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
           {/* Formulario */}
           <Card style={styles.formCard}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.text }]}>
+              <Text style={[styles.label, { color: colors.text.primary }]}>
                 Código de Invitación *
               </Text>
               <TextInput
                 style={[
                   styles.codeInput,
                   {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
                   },
                 ]}
                 value={inviteCode}
                 onChangeText={handleCodeChange}
                 placeholder="ABC123"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 maxLength={10}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 editable={!isJoining}
                 textAlign="center"
               />
-              <Text style={[styles.inputInfo, { color: theme.textSecondary }]}>
+              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
                 Ingresa el código que te compartió tu amigo
               </Text>
             </View>
@@ -197,17 +197,17 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
 
           {/* Info adicional */}
           <View style={styles.infoSection}>
-            <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
-              <Ionicons name="people-outline" size={20} color={theme.primary} />
-              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+              <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                 Al unirte podrás ver el progreso del grupo y competir de forma
                 amigable con tus compañeros de ahorro.
               </Text>
             </View>
 
-            <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
-              <Ionicons name="trophy-outline" size={20} color={theme.success} />
-              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+              <Ionicons name="trophy-outline" size={20} color={colors.success} />
+              <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                 ¡Ahorrar en grupo es más motivador! Verás rankings y podrás
                 celebrar logros juntos.
               </Text>

@@ -16,7 +16,7 @@ import { Card, Button } from '@components';
 import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 
 export default function NotificationsScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -168,7 +168,7 @@ export default function NotificationsScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     header: {
       flexDirection: 'row',
@@ -176,7 +176,7 @@ export default function NotificationsScreen() {
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     backButton: {
       padding: 8,
@@ -185,7 +185,7 @@ export default function NotificationsScreen() {
     title: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       flex: 1,
     },
     content: {
@@ -198,7 +198,7 @@ export default function NotificationsScreen() {
     },
     notInitializedText: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
       marginTop: 16,
     },
@@ -216,7 +216,7 @@ export default function NotificationsScreen() {
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     settingCard: {
       marginBottom: 16,
@@ -234,12 +234,12 @@ export default function NotificationsScreen() {
     settingTitle: {
       fontSize: 16,
       fontWeight: '500',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     settingDescription: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       lineHeight: 20,
     },
     warningContainer: {
@@ -261,17 +261,17 @@ export default function NotificationsScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       padding: 16,
       borderRadius: 12,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
     },
     timeText: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.primary,
+      color: colors.primary,
     },
     warningHoursContainer: {
       flexDirection: 'row',
@@ -282,27 +282,27 @@ export default function NotificationsScreen() {
     hourOption: {
       paddingHorizontal: 16,
       paddingVertical: 8,
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
       minWidth: 50,
       alignItems: 'center',
     },
     hourOptionSelected: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary,
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     hourOptionText: {
       fontSize: 14,
       fontWeight: '500',
-      color: theme.text,
+      color: colors.text.primary,
     },
     hourOptionTextSelected: {
       color: '#FFFFFF',
     },
     statusContainer: {
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       padding: 20,
       borderRadius: 12,
       alignItems: 'center',
@@ -310,12 +310,12 @@ export default function NotificationsScreen() {
     statusValue: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.primary,
+      color: colors.primary,
       marginBottom: 4,
     },
     statusLabel: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
     },
     actions: {
@@ -362,7 +362,7 @@ export default function NotificationsScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>Notificaciones</Text>
         </View>
@@ -372,7 +372,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name="notifications-outline"
               size={48}
-              color={theme.textSecondary}
+              color={colors.text.secondary}
             />
             <Text style={styles.notInitializedText}>
               Iniciando sistema de notificaciones...
@@ -390,7 +390,7 @@ export default function NotificationsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Notificaciones</Text>
       </View>
@@ -432,7 +432,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name="notifications"
               size={24}
-              color={theme.primary}
+              color={colors.primary}
               style={styles.sectionIcon}
             />
             <Text style={styles.sectionTitle}>Recordatorios de Racha</Text>
@@ -452,15 +452,15 @@ export default function NotificationsScreen() {
                 onValueChange={handleToggleNotifications}
                 disabled={isLoading}
                 trackColor={{
-                  false: theme.border,
-                  true: theme.primary + '80',
+                  false: colors.border.primary,
+                  true: colors.primary + '80',
                 }}
                 thumbColor={
                   settings.enabled && permissionsGranted
-                    ? theme.primary
+                    ? colors.primary
                     : '#f4f3f4'
                 }
-                ios_backgroundColor={theme.border}
+                ios_backgroundColor={colors.border.primary}
               />
             </View>
 
@@ -485,7 +485,7 @@ export default function NotificationsScreen() {
                 <Ionicons
                   name="time"
                   size={24}
-                  color={theme.primary}
+                  color={colors.primary}
                   style={styles.sectionIcon}
                 />
                 <Text style={styles.sectionTitle}>Hora del recordatorio</Text>
@@ -501,7 +501,7 @@ export default function NotificationsScreen() {
                   <Ionicons
                     name="chevron-forward"
                     size={20}
-                    color={theme.textSecondary}
+                    color={colors.text.secondary}
                   />
                 </TouchableOpacity>
 
@@ -563,7 +563,7 @@ export default function NotificationsScreen() {
                 <Ionicons
                   name="bar-chart"
                   size={24}
-                  color={theme.primary}
+                  color={colors.primary}
                   style={styles.sectionIcon}
                 />
                 <Text style={styles.sectionTitle}>Estado actual</Text>

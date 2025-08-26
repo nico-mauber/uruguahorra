@@ -1,5 +1,6 @@
 /**
- * Componente para mostrar el estado de la PWA (conexión, actualizaciones, etc.)
+ * PWA Status Component - Psychologically Optimized
+ * Shows connection status, app installation, and updates with psychological colors
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -10,18 +11,19 @@ import {
   Platform,
 } from 'react-native';
 import { usePWA } from '../hooks/usePWA';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '@theme';
+import { textStyles } from '@theme';
 
 export const PWAStatus: React.FC = () => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
 
-  // Esperar a que el componente esté montado para evitar problemas de hidratación
+  // Wait for component to mount to avoid hydration issues
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Solo obtener el estado PWA después de que el componente esté montado
+  // Only get PWA state after component is mounted
   const pwaHookResult = usePWA();
   const { isOnline, hasUpdate, updateApp, isStandalone } = isMounted
     ? pwaHookResult
@@ -32,45 +34,59 @@ export const PWAStatus: React.FC = () => {
         isStandalone: false,
       };
 
-  // Solo mostrar en web y después del montaje
+  // Only show on web and after mounting
   if (Platform.OS !== 'web' || !isMounted) {
     return null;
   }
 
   return (
     <View style={styles.container}>
-      {/* Indicador de conexión */}
+      {/* Connection indicator */}
       <View style={styles.statusItem}>
         <View
           style={[
             styles.indicator,
-            { backgroundColor: isOnline ? theme.success : theme.error },
+            {
+              backgroundColor: isOnline ? colors.success : colors.error,
+            },
           ]}
         />
-        <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+        <Text
+          style={[
+            styles.statusText,
+            { color: colors.text.secondary },
+            textStyles.metadata,
+          ]}
+        >
           {isOnline ? 'Conectado' : 'Sin conexión'}
         </Text>
       </View>
 
-      {/* Indicador de instalación */}
+      {/* Installation indicator */}
       {isStandalone && (
         <View style={styles.statusItem}>
           <View
-            style={[styles.indicator, { backgroundColor: theme.primary }]}
+            style={[styles.indicator, { backgroundColor: colors.primary }]}
           />
-          <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+          <Text
+            style={[
+              styles.statusText,
+              { color: colors.text.secondary },
+              textStyles.metadata,
+            ]}
+          >
             📱 App instalada
           </Text>
         </View>
       )}
 
-      {/* Notificación de actualización */}
+      {/* Update notification */}
       {hasUpdate && (
         <TouchableOpacity
-          style={[styles.updateBanner, { backgroundColor: theme.warning }]}
+          style={[styles.updateBanner, { backgroundColor: colors.warning }]}
           onPress={updateApp}
         >
-          <Text style={styles.updateText}>
+          <Text style={[styles.updateText, { color: colors.text.inverse }]}>
             📱 Nueva versión disponible - Toca para actualizar
           </Text>
         </TouchableOpacity>
@@ -109,7 +125,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   updateText: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',

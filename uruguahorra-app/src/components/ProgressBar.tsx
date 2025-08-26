@@ -17,7 +17,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   color,
   backgroundColor,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <View style={styles.container}>
       {showLabel && (
-        <Text style={[styles.label, { color: theme.textSecondary }]}>
+        <Text style={[styles.label, { color: colors.text.secondary }]}>
           {Math.round(progress)}%
         </Text>
       )}
@@ -45,7 +45,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           styles.progressBackground,
           {
             height,
-            backgroundColor: backgroundColor || theme.border,
+            backgroundColor: backgroundColor || colors.border.primary,
           },
         ]}
       >
@@ -54,7 +54,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             styles.progressFill,
             {
               width: widthPercentage,
-              backgroundColor: color || theme.primary,
+              backgroundColor: color || colors.primary,
             },
           ]}
         />

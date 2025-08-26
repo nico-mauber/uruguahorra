@@ -45,7 +45,7 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
   squad,
   members,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
 
   // Calcular estadísticas
   const totalSaved = members.reduce(
@@ -71,24 +71,24 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
   return (
     <Card style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="stats-chart" size={20} color={theme.primary} />
-        <Text style={[styles.title, { color: theme.text }]}>
+        <Ionicons name="stats-chart" size={20} color={colors.primary} />
+        <Text style={[styles.title, { color: colors.text.primary }]}>
           Estadísticas del Grupo
         </Text>
       </View>
 
       {/* Progreso grupal */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
           Progreso Grupal
         </Text>
         <View style={styles.progressSection}>
           <ProgressBar progress={groupProgress} />
           <View style={styles.progressInfo}>
-            <Text style={[styles.progressAmount, { color: theme.text }]}>
+            <Text style={[styles.progressAmount, { color: colors.text.primary }]}>
               ${squadContributions.toFixed(0)} / ${groupGoal.toFixed(0)}
             </Text>
-            <Text style={[styles.progressPercent, { color: theme.primary }]}>
+            <Text style={[styles.progressPercent, { color: colors.primary }]}>
               {groupProgress.toFixed(1)}%
             </Text>
           </View>
@@ -97,47 +97,47 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
 
       {/* Estadísticas generales */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
           Estadísticas Generales
         </Text>
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
-            <Ionicons name="people" size={16} color={theme.primary} />
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            <Ionicons name="people" size={16} color={colors.primary} />
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
               Miembros Activos
             </Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {members.length}/{squad.maxMembers}
             </Text>
           </View>
 
           <View style={styles.statItem}>
-            <Ionicons name="trending-up" size={16} color={theme.success} />
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            <Ionicons name="trending-up" size={16} color={colors.success} />
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
               Promedio por Miembro
             </Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>
               ${avgPerMember.toFixed(0)}
             </Text>
           </View>
 
           <View style={styles.statItem}>
-            <Ionicons name="calendar" size={16} color={theme.warning} />
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            <Ionicons name="calendar" size={16} color={colors.warning} />
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
               Este Mes
             </Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>
               ${monthlyTotal.toFixed(0)}
             </Text>
           </View>
 
           <View style={styles.statItem}>
             <Ionicons name="trophy" size={16} color="#FFD700" />
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
               Top Ahorrador
             </Text>
             <Text
-              style={[styles.statValue, { color: theme.text }]}
+              style={[styles.statValue, { color: colors.text.primary }]}
               numberOfLines={1}
             >
               {topSaver?.user?.email?.split('@')[0] || 'N/A'}
@@ -148,15 +148,15 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
 
       {/* Resumen de actividad reciente */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
           Actividad Reciente
         </Text>
         <View style={styles.activitySummary}>
-          <Text style={[styles.activityText, { color: theme.textSecondary }]}>
+          <Text style={[styles.activityText, { color: colors.text.secondary }]}>
             El grupo ha ahorrado ${monthlyTotal.toFixed(0)} este mes
           </Text>
           {topSaver && (
-            <Text style={[styles.activityText, { color: theme.textSecondary }]}>
+            <Text style={[styles.activityText, { color: colors.text.secondary }]}>
               {topSaver.user?.email?.split('@')[0]} lidera con $
               {topSaver.totalSaved.toFixed(0)}
             </Text>

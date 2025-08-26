@@ -39,7 +39,7 @@ import { GamificationService } from '@/features/gamification';
 // import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function DashboardScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const { goals, isLoading, error, fetchGoals, getTotalSaved } =
@@ -396,7 +396,7 @@ export default function DashboardScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     content: {
       padding: 20,
@@ -407,12 +407,12 @@ export default function DashboardScreen() {
     greeting: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     subtitle: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     gamificationSection: {
       marginBottom: 24,
@@ -444,22 +444,22 @@ export default function DashboardScreen() {
     },
     statLabel: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginBottom: 4,
     },
     statValue: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
     },
     statUnit: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 16,
     },
     quickSaveSection: {
@@ -487,12 +487,12 @@ export default function DashboardScreen() {
     goalName: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       flex: 1,
     },
     goalAmount: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     goalProgress: {
       marginTop: 8,
@@ -502,11 +502,11 @@ export default function DashboardScreen() {
     },
     manualInputContainer: {
       marginTop: 12,
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       borderRadius: 12,
       padding: 16,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
     },
     manualInputHeader: {
       flexDirection: 'row',
@@ -517,7 +517,7 @@ export default function DashboardScreen() {
     manualInputTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     manualInputClose: {
       padding: 4,
@@ -525,13 +525,13 @@ export default function DashboardScreen() {
     manualInput: {
       height: 56,
       borderWidth: 2,
-      borderColor: theme.primary,
+      borderColor: colors.primary,
       borderRadius: 12,
       paddingHorizontal: 16,
       fontSize: 20,
       fontWeight: '600',
-      color: theme.text,
-      backgroundColor: theme.background,
+      color: colors.text.primary,
+      backgroundColor: colors.background,
       textAlign: 'center',
       marginBottom: 12,
     },
@@ -548,16 +548,16 @@ export default function DashboardScreen() {
     loadingText: {
       marginTop: 16,
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     errorContainer: {
       padding: 16,
-      backgroundColor: theme.error + '20',
+      backgroundColor: colors.error + '20',
       borderRadius: 8,
       marginBottom: 16,
     },
     errorText: {
-      color: theme.error,
+      color: colors.error,
       textAlign: 'center',
     },
     // Pods Section Styles
@@ -621,10 +621,10 @@ export default function DashboardScreen() {
       marginBottom: 24,
     },
     transactionsButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       borderRadius: 16,
       padding: 16,
-      shadowColor: theme.primary,
+      shadowColor: colors.primary,
       shadowOffset: {
         width: 0,
         height: 4,
@@ -667,7 +667,7 @@ export default function DashboardScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>
             {initializing ? 'Verificando sesión...' : 'Cargando tus metas...'}
           </Text>
@@ -689,8 +689,8 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
@@ -833,7 +833,7 @@ export default function DashboardScreen() {
                     <Ionicons
                       name="close"
                       size={24}
-                      color={theme.textSecondary}
+                      color={colors.text.secondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -846,7 +846,9 @@ export default function DashboardScreen() {
                       top: 16,
                       fontSize: 20,
                       fontWeight: '600',
-                      color: manualAmount ? theme.text : theme.textSecondary,
+                      color: manualAmount
+                        ? colors.text.primary
+                        : colors.text.secondary,
                       zIndex: 1,
                     }}
                   >
@@ -855,7 +857,7 @@ export default function DashboardScreen() {
                   <TextInput
                     style={[styles.manualInput, { paddingLeft: 36 }]}
                     placeholder="0"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor={colors.text.secondary}
                     value={manualAmount}
                     onChangeText={(text) => {
                       // Solo permitir números
@@ -899,7 +901,7 @@ export default function DashboardScreen() {
             <View style={styles.goalHeader}>
               <Text style={styles.sectionTitle}>Mis metas activas</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
-                <Text style={{ color: theme.primary, fontSize: 14 }}>
+                <Text style={{ color: colors.primary, fontSize: 14 }}>
                   Ver todas →
                 </Text>
               </TouchableOpacity>
@@ -922,7 +924,9 @@ export default function DashboardScreen() {
                       <ProgressBar
                         progress={progress}
                         showLabel
-                        color={progress >= 100 ? theme.success : theme.primary}
+                        color={
+                          progress >= 100 ? colors.success : colors.primary
+                        }
                       />
                     </View>
                   </View>

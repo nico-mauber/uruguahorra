@@ -27,7 +27,7 @@ interface PodsListProps {
 }
 
 export const PodsList: React.FC<PodsListProps> = ({ style }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { userSquads, isLoading, fetchUserSquads } = useSquadsStore();
@@ -67,18 +67,20 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
     return (
       <View style={[styles.container, style]}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             🏛️ Pods de Ahorro
           </Text>
           <Text
-            style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
+            style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
           >
             Ahorra junto a otros usuarios
           </Text>
         </View>
         <Card style={styles.loadingCard}>
           <View style={styles.loadingContent}>
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            <Text
+              style={[styles.loadingText, { color: colors.text.secondary }]}
+            >
               Cargando tus pods...
             </Text>
           </View>
@@ -92,11 +94,11 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
     return (
       <View style={[styles.container, style]}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             🏛️ Pods de Ahorro
           </Text>
           <Text
-            style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
+            style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
           >
             Ahorra junto a otros usuarios
           </Text>
@@ -107,13 +109,13 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
             <Ionicons
               name="people-outline"
               size={48}
-              color={theme.textSecondary}
+              color={colors.text.secondary}
             />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
               ¡Únete a un Pod de Ahorro!
             </Text>
             <Text
-              style={[styles.emptySubtitle, { color: theme.textSecondary }]}
+              style={[styles.emptySubtitle, { color: colors.text.secondary }]}
             >
               Ahorra junto a tus amigos y motívense mutuamente para alcanzar sus
               metas.
@@ -155,11 +157,15 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
   return (
     <View style={[styles.container, style]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
           🏛️ Pods de Ahorro ({userSquads.length})
         </Text>
         <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add-circle-outline" size={24} color={theme.primary} />
+          <Ionicons
+            name="add-circle-outline"
+            size={24}
+            color={colors.primary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -171,11 +177,11 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
         {userSquads.map((squad) => (
           <Card key={squad.id} style={styles.squadCard}>
             <View style={styles.squadHeader}>
-              <Text style={[styles.squadName, { color: theme.text }]}>
+              <Text style={[styles.squadName, { color: colors.text.primary }]}>
                 {squad.name}
               </Text>
               <View style={styles.roleIndicator}>
-                <Text style={[styles.roleText, { color: theme.primary }]}>
+                <Text style={[styles.roleText, { color: colors.primary }]}>
                   {squad.memberRole === 'owner'
                     ? '👑'
                     : squad.memberRole === 'admin'
@@ -189,7 +195,7 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
               <Text
                 style={[
                   styles.squadDescription,
-                  { color: theme.textSecondary },
+                  { color: colors.text.secondary },
                 ]}
               >
                 {squad.description}
@@ -198,7 +204,7 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
 
             <View style={styles.squadStats}>
               <Text
-                style={[styles.memberCount, { color: theme.textSecondary }]}
+                style={[styles.memberCount, { color: colors.text.secondary }]}
               >
                 👥 {squad.memberCount}/{squad.maxMembers} miembros
               </Text>
@@ -214,13 +220,13 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
                       100
                     )}
                     height={8}
-                    color={theme.primary}
-                    backgroundColor={theme.border}
+                    color={colors.primary}
+                    backgroundColor={colors.border.primary}
                   />
                   <Text
                     style={[
                       styles.progressText,
-                      { color: theme.textSecondary },
+                      { color: colors.text.secondary },
                     ]}
                   >
                     {Math.round(
@@ -231,7 +237,7 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
                   <Text
                     style={[
                       styles.progressAmount,
-                      { color: theme.textTertiary, fontSize: 11 },
+                      { color: colors.text.tertiary, fontSize: 11 },
                     ]}
                   >
                     ${squad.totalSquadSaved?.toFixed(0) || 0} / $
@@ -240,7 +246,10 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
                 </>
               ) : (
                 <Text
-                  style={[styles.progressText, { color: theme.textSecondary }]}
+                  style={[
+                    styles.progressText,
+                    { color: colors.text.secondary },
+                  ]}
                 >
                   Sin meta definida
                 </Text>
@@ -251,7 +260,7 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
               style={styles.viewButton}
               onPress={() => handleViewSquadDetail(squad.id)}
             >
-              <Text style={[styles.viewButtonText, { color: theme.primary }]}>
+              <Text style={[styles.viewButtonText, { color: colors.primary }]}>
                 Ver Detalle →
               </Text>
             </TouchableOpacity>
@@ -265,8 +274,8 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
               style={styles.addButton}
               onPress={() => setShowJoinModal(true)}
             >
-              <Ionicons name="add" size={32} color={theme.primary} />
-              <Text style={[styles.addButtonText, { color: theme.primary }]}>
+              <Ionicons name="add" size={32} color={colors.primary} />
+              <Text style={[styles.addButtonText, { color: colors.primary }]}>
                 Unirse con Código
               </Text>
             </TouchableOpacity>

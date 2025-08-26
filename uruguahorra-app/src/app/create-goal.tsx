@@ -21,7 +21,7 @@ import { GoalsService } from '@/services/goals.service';
 import { logger, LogModule } from '@/utils/logger';
 
 export default function CreateGoalScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { fetchGoals } = useGoalsStore();
@@ -237,7 +237,7 @@ export default function CreateGoalScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     content: {
       flexGrow: 1,
@@ -251,22 +251,22 @@ export default function CreateGoalScreen() {
     title: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       lineHeight: 22,
     },
     input: {
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
-      color: theme.text,
-      backgroundColor: theme.surface,
+      color: colors.text.primary,
+      backgroundColor: colors.surface,
       marginBottom: 16,
     },
     goalOption: {
@@ -275,8 +275,8 @@ export default function CreateGoalScreen() {
     goalOptionCard: {
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.surface,
+      borderColor: colors.border.primary,
+      backgroundColor: colors.surface,
       marginBottom: 12,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
@@ -291,11 +291,11 @@ export default function CreateGoalScreen() {
     },
     goalOptionText: {
       fontSize: 18,
-      color: theme.text,
+      color: colors.text.primary,
       marginLeft: 12,
     },
     selectedGoal: {
-      borderColor: theme.primary,
+      borderColor: colors.primary,
       borderWidth: 2,
     },
     stepIndicator: {
@@ -307,11 +307,11 @@ export default function CreateGoalScreen() {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: theme.border,
+      backgroundColor: colors.border.primary,
       marginHorizontal: 4,
     },
     stepDotActive: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       width: 24,
     },
     loadingContainer: {
@@ -325,18 +325,18 @@ export default function CreateGoalScreen() {
     },
     monthsLabel: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
       marginRight: 10,
     },
     monthsInput: {
       flex: 1,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
-      color: theme.text,
-      backgroundColor: theme.surface,
+      color: colors.text.primary,
+      backgroundColor: colors.surface,
     },
     buttonContainer: {
       marginTop: 32,
@@ -347,41 +347,41 @@ export default function CreateGoalScreen() {
     },
     tipCard: {
       marginBottom: 20,
-      backgroundColor: theme.primary + '10',
-      borderColor: theme.primary + '30',
+      backgroundColor: colors.primary + '10',
+      borderColor: colors.primary + '30',
     },
     tipTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.primary,
+      color: colors.primary,
       marginBottom: 8,
     },
     tipText: {
       fontSize: 14,
-      color: theme.text,
+      color: colors.text.primary,
       lineHeight: 20,
     },
     calculatorCard: {
       marginTop: 16,
-      backgroundColor: theme.success + '10',
-      borderColor: theme.success + '30',
+      backgroundColor: colors.success + '10',
+      borderColor: colors.success + '30',
       borderWidth: 1,
     },
     calculatorTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.success,
+      color: colors.success,
       marginBottom: 8,
     },
     calculatorText: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
       fontWeight: '600',
       marginBottom: 4,
     },
     calculatorSubtext: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
   });
 
@@ -503,7 +503,7 @@ export default function CreateGoalScreen() {
                         ? 'Ej: Eliminar deuda tarjeta de crédito'
                         : 'Ej: Auto nuevo'
                 }
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 value={goalName}
                 onChangeText={setGoalName}
                 editable={!isLoading}
@@ -514,7 +514,7 @@ export default function CreateGoalScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Destino (opcional)"
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={travelDestination}
                   onChangeText={setTravelDestination}
                   editable={!isLoading}
@@ -525,7 +525,7 @@ export default function CreateGoalScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Tasa de interés actual (%) - opcional"
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={debtInterestRate}
                   onChangeText={setDebtInterestRate}
                   keyboardType="numeric"
@@ -537,7 +537,7 @@ export default function CreateGoalScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Descripción del producto (opcional)"
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={purchaseDescription}
                   onChangeText={setPurchaseDescription}
                   editable={!isLoading}
@@ -556,7 +556,7 @@ export default function CreateGoalScreen() {
                         ? 'Total de la deuda a pagar'
                         : 'Precio estimado de la compra'
                 }
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 value={goalAmount}
                 onChangeText={setGoalAmount}
                 keyboardType="numeric"
@@ -568,7 +568,7 @@ export default function CreateGoalScreen() {
                 <TextInput
                   style={styles.monthsInput}
                   placeholder={targetMonths}
-                  placeholderTextColor={theme.textSecondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={targetMonths}
                   onChangeText={setTargetMonths}
                   keyboardType="numeric"
@@ -607,7 +607,7 @@ export default function CreateGoalScreen() {
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.subtitle, { marginTop: 16 }]}>
                 Guardando tu meta...
               </Text>

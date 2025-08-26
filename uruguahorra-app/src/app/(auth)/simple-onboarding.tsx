@@ -24,7 +24,7 @@ import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
 
 export default function SimpleOnboardingScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { signup, login } = useAuth();
 

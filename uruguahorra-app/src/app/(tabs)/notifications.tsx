@@ -16,7 +16,7 @@ import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Card, Button } from '@components';
 
 export default function NotificationsScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const {
@@ -139,14 +139,14 @@ export default function NotificationsScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       padding: 16,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     backButton: {
       marginRight: 16,
@@ -154,14 +154,14 @@ export default function NotificationsScreen() {
     headerTitle: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
     },
     content: {
       flex: 1,
       padding: 16,
     },
     statusCard: {
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
@@ -180,12 +180,12 @@ export default function NotificationsScreen() {
     statusTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       flex: 1,
     },
     statusSubtitle: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginBottom: 8,
     },
     toggleContainer: {
@@ -196,7 +196,7 @@ export default function NotificationsScreen() {
     },
     toggleLabel: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
     },
     configSection: {
       marginTop: 16,
@@ -204,7 +204,7 @@ export default function NotificationsScreen() {
     configTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 12,
     },
     configItem: {
@@ -213,15 +213,15 @@ export default function NotificationsScreen() {
       justifyContent: 'space-between',
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     configLabel: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
     },
     configValue: {
       fontSize: 16,
-      color: theme.primary,
+      color: colors.primary,
       fontWeight: '500',
     },
     timeOptionsContainer: {
@@ -230,19 +230,19 @@ export default function NotificationsScreen() {
     timeOption: {
       paddingVertical: 12,
       paddingHorizontal: 16,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
       borderRadius: 8,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
     },
     timeOptionSelected: {
-      backgroundColor: theme.primary + '20',
-      borderColor: theme.primary,
+      backgroundColor: colors.primary + '20',
+      borderColor: colors.primary,
     },
     timeOptionText: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
       textAlign: 'center',
     },
     testSection: {
@@ -251,14 +251,14 @@ export default function NotificationsScreen() {
     testTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 12,
     },
     testButtons: {
       gap: 12,
     },
     testButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       borderRadius: 8,
       padding: 12,
       alignItems: 'center',
@@ -269,7 +269,7 @@ export default function NotificationsScreen() {
       fontWeight: '500',
     },
     actionButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       borderRadius: 8,
       padding: 12,
       alignItems: 'center',
@@ -277,7 +277,7 @@ export default function NotificationsScreen() {
     },
     infoText: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
       marginTop: 16,
       lineHeight: 20,
@@ -292,7 +292,7 @@ export default function NotificationsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notificaciones</Text>
       </View>
@@ -327,10 +327,10 @@ export default function NotificationsScreen() {
               value={permissionsGranted && settings.enabled}
               onValueChange={handleToggleNotifications}
               disabled={isLoading}
-              trackColor={{ false: theme.border, true: theme.primary + '40' }}
+              trackColor={{ false: colors.border.primary, true: colors.primary + '40' }}
               thumbColor={
                 permissionsGranted && settings.enabled
-                  ? theme.primary
+                  ? colors.primary
                   : '#f4f3f4'
               }
             />
@@ -351,7 +351,7 @@ export default function NotificationsScreen() {
                 <Text
                   style={[
                     styles.configLabel,
-                    !settings.enabled && { color: theme.textSecondary },
+                    !settings.enabled && { color: colors.text.secondary },
                   ]}
                 >
                   Horario de Recordatorio
@@ -359,7 +359,7 @@ export default function NotificationsScreen() {
                 <Text
                   style={[
                     styles.configValue,
-                    !settings.enabled && { color: theme.textSecondary },
+                    !settings.enabled && { color: colors.text.secondary },
                   ]}
                 >
                   {String(settings.reminderTime.hour).padStart(2, '0')}:
@@ -407,7 +407,7 @@ export default function NotificationsScreen() {
                       <Text
                         style={[
                           styles.timeOptionText,
-                          !settings.enabled && { color: theme.textSecondary },
+                          !settings.enabled && { color: colors.text.secondary },
                         ]}
                       >
                         {option.label}

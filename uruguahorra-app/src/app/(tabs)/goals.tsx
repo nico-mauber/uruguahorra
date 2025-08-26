@@ -21,7 +21,7 @@ import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
 
 export default function GoalsScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { goals, isLoading, fetchGoals, getGoalProgress, getTotalSaved } =
@@ -112,16 +112,16 @@ export default function GoalsScreen() {
   };
 
   const getGoalColor = (progress: number) => {
-    if (progress >= 100) return theme.success;
-    if (progress >= 75) return theme.primary;
-    if (progress >= 50) return theme.warning;
-    return theme.textSecondary;
+    if (progress >= 100) return colors.success;
+    if (progress >= 75) return colors.primary;
+    if (progress >= 50) return colors.warning;
+    return colors.text.secondary;
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     header: {
       padding: 20,
@@ -130,12 +130,12 @@ export default function GoalsScreen() {
     headerTitle: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 8,
     },
     headerSubtitle: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     statsContainer: {
       flexDirection: 'row',
@@ -153,12 +153,12 @@ export default function GoalsScreen() {
     statValue: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     scrollContent: {
       padding: 20,
@@ -184,19 +184,19 @@ export default function GoalsScreen() {
     goalName: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     goalCategory: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textTransform: 'capitalize',
     },
     goalIcon: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.primary + '20',
+      backgroundColor: colors.primary + '20',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -210,13 +210,13 @@ export default function GoalsScreen() {
     },
     amountLabel: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginBottom: 2,
     },
     amountValue: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     progressSection: {
       marginBottom: 12,
@@ -228,17 +228,17 @@ export default function GoalsScreen() {
     },
     daysLeft: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     completedBadge: {
-      backgroundColor: theme.success + '20',
+      backgroundColor: colors.success + '20',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
     },
     completedText: {
       fontSize: 12,
-      color: theme.success,
+      color: colors.success,
       fontWeight: '600',
     },
     emptyContainer: {
@@ -253,13 +253,13 @@ export default function GoalsScreen() {
     emptyTitle: {
       fontSize: 20,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 8,
       textAlign: 'center',
     },
     emptyText: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
       marginBottom: 24,
     },
@@ -275,7 +275,7 @@ export default function GoalsScreen() {
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
       elevation: 8,
@@ -290,7 +290,7 @@ export default function GoalsScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -339,8 +339,8 @@ export default function GoalsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
@@ -349,7 +349,7 @@ export default function GoalsScreen() {
             <Ionicons
               name="flag-outline"
               size={64}
-              color={theme.textSecondary}
+              color={colors.text.secondary}
               style={styles.emptyIcon}
             />
             <Text style={styles.emptyTitle}>No tienes metas activas</Text>
@@ -467,7 +467,7 @@ export default function GoalsScreen() {
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color={theme.textSecondary}
+                          color={colors.text.secondary}
                         />
                       </View>
                     </View>

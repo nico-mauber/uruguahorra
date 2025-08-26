@@ -22,7 +22,7 @@ import type {
 import { logger, LogModule } from '@/utils/logger';
 
 export default function ChallengesScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
 
   // Estados
@@ -162,9 +162,9 @@ export default function ChallengesScreen() {
   if (!user) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
-        <Text style={[styles.errorText, { color: theme.text }]}>
+        <Text style={[styles.errorText, { color: colors.text.primary }]}>
           Debes iniciar sesión para ver los retos
         </Text>
       </SafeAreaView>
@@ -173,16 +173,16 @@ export default function ChallengesScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView style={styles.scrollContainer}>
         {/* Header con sesiones activas */}
-        <View style={[styles.activeHeader, { backgroundColor: theme.surface }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <View style={[styles.activeHeader, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Retos Activos ({activeSessions.length}/5)
           </Text>
           {activeSessions.length === 0 ? (
-            <Text style={[styles.noActiveText, { color: theme.textSecondary }]}>
+            <Text style={[styles.noActiveText, { color: colors.text.secondary }]}>
               No tienes retos activos. ¡Selecciona uno para comenzar!
             </Text>
           ) : (
@@ -192,11 +192,11 @@ export default function ChallengesScreen() {
                   key={session.id}
                   style={[
                     styles.activeSessionCard,
-                    { backgroundColor: theme.background },
+                    { backgroundColor: colors.background },
                   ]}
                 >
                   <Text
-                    style={[styles.activeSessionTitle, { color: theme.text }]}
+                    style={[styles.activeSessionTitle, { color: colors.text.primary }]}
                     numberOfLines={2}
                   >
                     {session.challenge?.title || 'Reto'}
@@ -204,7 +204,7 @@ export default function ChallengesScreen() {
                   <Text
                     style={[
                       styles.activeSessionProgress,
-                      { color: theme.primary },
+                      { color: colors.primary },
                     ]}
                   >
                     {session.progress}% completado
@@ -217,7 +217,7 @@ export default function ChallengesScreen() {
 
         {/* Categorías */}
         <View style={styles.categoriesSection}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Categorías
           </Text>
           <ScrollView
@@ -233,8 +233,8 @@ export default function ChallengesScreen() {
                   {
                     backgroundColor:
                       selectedCategory === category.id
-                        ? theme.primary
-                        : theme.surface,
+                        ? colors.primary
+                        : colors.surface,
                   },
                 ]}
                 onPress={() => handleCategorySelect(category.id)}
@@ -247,8 +247,8 @@ export default function ChallengesScreen() {
                   size={24}
                   color={
                     selectedCategory === category.id
-                      ? theme.surface
-                      : theme.text
+                      ? colors.surface
+                      : colors.text.primary
                   }
                 />
                 <Text
@@ -257,8 +257,8 @@ export default function ChallengesScreen() {
                     {
                       color:
                         selectedCategory === category.id
-                          ? theme.surface
-                          : theme.text,
+                          ? colors.surface
+                          : colors.text.primary,
                     },
                   ]}
                   numberOfLines={2}
@@ -272,16 +272,16 @@ export default function ChallengesScreen() {
 
         {/* Retos disponibles */}
         <View style={styles.challengesSection}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Retos Disponibles
           </Text>
           {loading ? (
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
               Cargando retos...
             </Text>
           ) : challenges.length === 0 ? (
             <Text
-              style={[styles.noChallengesText, { color: theme.textSecondary }]}
+              style={[styles.noChallengesText, { color: colors.text.secondary }]}
             >
               No hay retos disponibles en esta categoría
             </Text>
@@ -296,7 +296,7 @@ export default function ChallengesScreen() {
                   key={challenge.id}
                   style={[
                     styles.challengeCard,
-                    { backgroundColor: theme.surface },
+                    { backgroundColor: colors.surface },
                     isActive && { opacity: 0.6 },
                   ]}
                   onPress={() => {
@@ -320,7 +320,7 @@ export default function ChallengesScreen() {
                 >
                   <View style={styles.challengeHeader}>
                     <Text
-                      style={[styles.challengeTitle, { color: theme.text }]}
+                      style={[styles.challengeTitle, { color: colors.text.primary }]}
                     >
                       {challenge.title}
                     </Text>
@@ -337,7 +337,7 @@ export default function ChallengesScreen() {
                       <Text
                         style={[
                           styles.difficultyText,
-                          { color: theme.surface },
+                          { color: colors.surface },
                         ]}
                       >
                         {challenge.difficulty}
@@ -348,19 +348,19 @@ export default function ChallengesScreen() {
                   <Text
                     style={[
                       styles.challengeDescription,
-                      { color: theme.textSecondary },
+                      { color: colors.text.secondary },
                     ]}
                   >
                     {challenge.description}
                   </Text>
 
                   <View style={styles.challengeFooter}>
-                    <Text style={[styles.xpReward, { color: theme.primary }]}>
+                    <Text style={[styles.xpReward, { color: colors.primary }]}>
                       +{challenge.xp_reward} XP
                     </Text>
                     {isActive ? (
                       <Text
-                        style={[styles.activeStatus, { color: theme.success }]}
+                        style={[styles.activeStatus, { color: colors.success }]}
                       >
                         ✓ Activo
                       </Text>
@@ -368,7 +368,7 @@ export default function ChallengesScreen() {
                       <Text
                         style={[
                           styles.disabledStatus,
-                          { color: theme.textSecondary },
+                          { color: colors.text.secondary },
                         ]}
                       >
                         Límite alcanzado
@@ -377,7 +377,7 @@ export default function ChallengesScreen() {
                       <Ionicons
                         name="add-circle"
                         size={24}
-                        color={theme.primary}
+                        color={colors.primary}
                       />
                     )}
                   </View>

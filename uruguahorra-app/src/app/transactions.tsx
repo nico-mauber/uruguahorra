@@ -20,7 +20,7 @@ import { logger, LogModule } from '@/utils/logger';
 import { ToastService } from '@/utils/toast';
 
 export default function TransactionsScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -173,7 +173,7 @@ export default function TransactionsScreen() {
     return (
       <Card style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
-          <Text style={[styles.balanceTitle, { color: theme.text }]}>
+          <Text style={[styles.balanceTitle, { color: colors.text.primary }]}>
             Balance del{' '}
             {selectedPeriod === 'week'
               ? 'período'
@@ -187,9 +187,9 @@ export default function TransactionsScreen() {
                 key={period}
                 style={[
                   styles.periodButton,
-                  { borderColor: theme.primary },
+                  { borderColor: colors.primary },
                   selectedPeriod === period && {
-                    backgroundColor: theme.primary,
+                    backgroundColor: colors.primary,
                   },
                 ]}
                 onPress={() => setSelectedPeriod(period)}
@@ -199,7 +199,7 @@ export default function TransactionsScreen() {
                     styles.periodButtonText,
                     {
                       color:
-                        selectedPeriod === period ? '#FFFFFF' : theme.primary,
+                        selectedPeriod === period ? '#FFFFFF' : colors.primary,
                     },
                   ]}
                 >
@@ -212,7 +212,7 @@ export default function TransactionsScreen() {
 
         <View style={styles.balanceRow}>
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>
+            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
               Ingresos
             </Text>
             <Text style={[styles.balanceValue, { color: '#51CF66' }]}>
@@ -221,7 +221,7 @@ export default function TransactionsScreen() {
           </View>
 
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>
+            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
               Gastos
             </Text>
             <Text style={[styles.balanceValue, { color: '#FF6B6B' }]}>
@@ -230,7 +230,7 @@ export default function TransactionsScreen() {
           </View>
 
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>
+            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
               Balance
             </Text>
             <Text
@@ -259,7 +259,7 @@ export default function TransactionsScreen() {
             <View
               style={[
                 styles.categoryIcon,
-                { backgroundColor: category?.color || theme.primary },
+                { backgroundColor: category?.color || colors.primary },
               ]}
             >
               <Text style={styles.categoryEmoji}>
@@ -269,14 +269,14 @@ export default function TransactionsScreen() {
 
             <View style={styles.transactionInfo}>
               <Text
-                style={[styles.transactionDescription, { color: theme.text }]}
+                style={[styles.transactionDescription, { color: colors.text.primary }]}
               >
                 {transaction.description || category?.name || 'Sin descripción'}
               </Text>
               <Text
                 style={[
                   styles.transactionCategory,
-                  { color: theme.textSecondary },
+                  { color: colors.text.secondary },
                 ]}
               >
                 {category?.name} • {formatDate(transaction.created_at)}
@@ -301,7 +301,7 @@ export default function TransactionsScreen() {
               <Ionicons
                 name="trash-outline"
                 size={16}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
           </View>
@@ -313,11 +313,11 @@ export default function TransactionsScreen() {
   if (isLoading && transactions.length === 0) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
             Cargando transacciones...
           </Text>
         </View>
@@ -328,10 +328,10 @@ export default function TransactionsScreen() {
   if (!user) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
             Inicia sesión para ver tus transacciones
           </Text>
         </View>
@@ -343,7 +343,7 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -351,10 +351,10 @@ export default function TransactionsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
+        <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
           Transacciones
         </Text>
 
@@ -367,8 +367,8 @@ export default function TransactionsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
@@ -378,7 +378,7 @@ export default function TransactionsScreen() {
         {/* Error State */}
         {error && (
           <Card style={styles.errorCard}>
-            <Text style={[styles.errorText, { color: theme.error }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>
               {error}
             </Text>
           </Card>
@@ -391,12 +391,12 @@ export default function TransactionsScreen() {
               <Ionicons
                 name="receipt-outline"
                 size={64}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
                 No hay transacciones
               </Text>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
                 Usa el botón + para registrar tu primera transacción
               </Text>
             </View>
@@ -404,7 +404,7 @@ export default function TransactionsScreen() {
         ) : (
           groupedTransactions.map(([dateStr, dayTransactions]) => (
             <View key={dateStr} style={styles.dayGroup}>
-              <Text style={[styles.dayHeader, { color: theme.textSecondary }]}>
+              <Text style={[styles.dayHeader, { color: colors.text.secondary }]}>
                 {formatDate(dayTransactions[0].created_at)}
               </Text>
 

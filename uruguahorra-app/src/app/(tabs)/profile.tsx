@@ -35,7 +35,7 @@ export default function ProfileScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     content: {
       padding: 20,
@@ -48,7 +48,7 @@ export default function ProfileScreen() {
       width: 100,
       height: 100,
       borderRadius: 50,
-      backgroundColor: theme.primary + '20',
+      backgroundColor: colors.primary + '20',
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 16,
@@ -56,12 +56,12 @@ export default function ProfileScreen() {
     name: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     email: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     levelCard: {
       marginBottom: 24,
@@ -75,11 +75,11 @@ export default function ProfileScreen() {
     levelText: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     xpText: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     statsGrid: {
       flexDirection: 'row',
@@ -98,12 +98,12 @@ export default function ProfileScreen() {
     statValue: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     section: {
       marginBottom: 24,
@@ -111,7 +111,7 @@ export default function ProfileScreen() {
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 16,
     },
     settingRow: {
@@ -122,14 +122,14 @@ export default function ProfileScreen() {
     },
     settingLabel: {
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     menuIcon: {
       marginRight: 16,
@@ -138,10 +138,10 @@ export default function ProfileScreen() {
     menuText: {
       flex: 1,
       fontSize: 16,
-      color: theme.text,
+      color: colors.text.primary,
     },
     badge: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 12,
@@ -161,7 +161,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={48} color={theme.primary} />
+            <Ionicons name="person" size={48} color={colors.primary} />
           </View>
           <Text style={styles.name}>
             {user?.email?.split('@')[0] || 'Usuario'}
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
           <ProgressBar
             progress={progressToNextLevel}
             showLabel={false}
-            color={theme.primary}
+            color={colors.primary}
           />
         </Card>
 
@@ -226,8 +226,8 @@ export default function ProfileScreen() {
               <Switch
                 value={isDark}
                 onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={isDark ? theme.primary : '#f4f3f4'}
+                trackColor={{ false: colors.border.primary, true: colors.primary }}
+                thumbColor={isDark ? colors.primary : '#f4f3f4'}
               />
             </View>
           </Card>
@@ -243,7 +243,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="diamond"
                 size={24}
-                color={theme.warning}
+                color={colors.warning}
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Premium</Text>
@@ -255,7 +255,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
 
@@ -266,7 +266,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="notifications"
                 size={24}
-                color={theme.text}
+                color={colors.text.primary}
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Notificaciones</Text>
@@ -274,7 +274,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
 
@@ -282,14 +282,14 @@ export default function ProfileScreen() {
               <Ionicons
                 name="shield-checkmark"
                 size={24}
-                color={theme.text}
+                color={colors.text.primary}
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Privacidad</Text>
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
 
@@ -297,14 +297,14 @@ export default function ProfileScreen() {
               <Ionicons
                 name="help-circle"
                 size={24}
-                color={theme.text}
+                color={colors.text.primary}
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Ayuda</Text>
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={theme.textSecondary}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
           </Card>

@@ -4,21 +4,21 @@ import { useTheme } from '@theme';
 import { Ionicons } from '@expo/vector-icons';
 
 function TabLayoutContent() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.text.secondary,
         tabBarStyle: {
-          backgroundColor: theme.surface,
-          borderTopColor: theme.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border.primary,
         },
         headerStyle: {
-          backgroundColor: theme.surface,
+          backgroundColor: colors.surface,
         },
-        headerTintColor: theme.text,
+        headerTintColor: colors.text.primary,
       }}
     >
       <Tabs.Screen

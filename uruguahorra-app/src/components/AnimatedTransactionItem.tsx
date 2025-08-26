@@ -32,7 +32,7 @@ interface AnimatedTransactionItemProps {
 export const AnimatedTransactionItem: React.FC<
   AnimatedTransactionItemProps
 > = ({ transaction, onDelete, onEdit, index }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const haptics = useHapticFeedback();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -199,8 +199,8 @@ export const AnimatedTransactionItem: React.FC<
         style={[
           styles.container,
           {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
+            backgroundColor: colors.card,
+            borderColor: colors.border.primary,
             opacity,
             transform: [{ translateX }, { translateY: slideIn }, { scale }],
           },
@@ -229,12 +229,12 @@ export const AnimatedTransactionItem: React.FC<
 
           {/* Contenido principal */}
           <View style={styles.mainContent}>
-            <Text style={[styles.description, { color: theme.text }]}>
+            <Text style={[styles.description, { color: colors.text.primary }]}>
               {transaction.description}
             </Text>
 
             <View style={styles.metadata}>
-              <Text style={[styles.category, { color: theme.textSecondary }]}>
+              <Text style={[styles.category, { color: colors.text.secondary }]}>
                 {transaction.category?.name || 'Sin categoría'}
               </Text>
 
@@ -254,7 +254,7 @@ export const AnimatedTransactionItem: React.FC<
               {Math.abs(transaction.amount).toFixed(0)}
             </Text>
 
-            <Text style={[styles.date, { color: theme.textSecondary }]}>
+            <Text style={[styles.date, { color: colors.text.secondary }]}>
               {new Date(transaction.created_at).toLocaleDateString('es-UY', {
                 day: '2-digit',
                 month: '2-digit',
@@ -271,7 +271,7 @@ export const AnimatedTransactionItem: React.FC<
                       styles.necessityDot,
                       i < transaction.necessity_level
                         ? { backgroundColor: '#51CF66' }
-                        : { backgroundColor: theme.border },
+                        : { backgroundColor: colors.border.primary },
                     ]}
                   />
                 ))}

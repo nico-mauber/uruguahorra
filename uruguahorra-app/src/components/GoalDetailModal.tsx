@@ -52,7 +52,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   onClose,
   onGoalUpdate,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const screenHeight = Dimensions.get('window').height;
 
@@ -322,7 +322,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       justifyContent: 'flex-end',
     },
     content: {
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       maxHeight: screenHeight * 0.9,
@@ -334,12 +334,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       alignItems: 'center',
       padding: 20,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     headerTitle: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       flex: 1,
       marginRight: 12,
     },
@@ -351,7 +351,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       paddingHorizontal: 20,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     tab: {
       flex: 1,
@@ -360,15 +360,15 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       borderRadius: 20,
     },
     activeTab: {
-      backgroundColor: theme.primary + '20',
+      backgroundColor: colors.primary + '20',
     },
     tabText: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       fontWeight: '500',
     },
     activeTabText: {
-      color: theme.primary,
+      color: colors.primary,
       fontWeight: '600',
     },
     scrollContent: {
@@ -383,12 +383,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     progressValue: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     progressLabel: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     statsGrid: {
       flexDirection: 'row',
@@ -409,12 +409,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     statValue: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 2,
     },
     statLabel: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     historyContainer: {
       marginBottom: 16,
@@ -424,13 +424,13 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       alignItems: 'center',
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: colors.border.primary,
     },
     historyIcon: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -441,15 +441,15 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     historyAmount: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     historySource: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     historyDate: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     emptyHistory: {
       padding: 40,
@@ -457,7 +457,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     },
     emptyHistoryText: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
     },
     actionButtons: {
@@ -489,17 +489,17 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
     editTargetLabel: {
       fontSize: 14,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     editTargetInput: {
       height: 44,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
       borderRadius: 8,
       paddingHorizontal: 12,
       fontSize: 16,
-      color: theme.text,
-      backgroundColor: theme.surface,
+      color: colors.text.primary,
+      backgroundColor: colors.surface,
     },
     editTargetButtons: {
       flexDirection: 'row',
@@ -513,17 +513,17 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
       alignItems: 'center',
     },
     cancelButton: {
-      backgroundColor: theme.surface,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: colors.border.primary,
     },
     saveButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: colors.primary,
     },
     cancelButtonText: {
       fontSize: 14,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
     },
     saveButtonText: {
       fontSize: 14,
@@ -555,7 +555,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
               {goal.name}
             </Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color={theme.text} />
+              <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
@@ -610,7 +610,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                             name="pencil"
                             size={16}
                             color={
-                              isCompleted ? theme.textSecondary : theme.primary
+                              isCompleted ? colors.text.secondary : colors.primary
                             }
                           />
                         </TouchableOpacity>
@@ -623,7 +623,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                         <TextInput
                           style={styles.editTargetInput}
                           placeholder="Ingresa el nuevo monto"
-                          placeholderTextColor={theme.textSecondary}
+                          placeholderTextColor={colors.text.secondary}
                           value={newTargetAmount}
                           onChangeText={setNewTargetAmount}
                           keyboardType="numeric"
@@ -656,7 +656,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                     <ProgressBar
                       progress={progress}
                       showLabel
-                      color={isCompleted ? theme.success : theme.primary}
+                      color={isCompleted ? colors.success : colors.primary}
                     />
                   )}
                 </Card>
@@ -667,7 +667,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                       <Ionicons
                         name="calendar"
                         size={24}
-                        color={theme.primary}
+                        color={colors.primary}
                         style={styles.statIcon}
                       />
                       <Text style={styles.statValue}>
@@ -682,7 +682,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                       <Ionicons
                         name="trending-up"
                         size={24}
-                        color={theme.primary}
+                        color={colors.primary}
                         style={styles.statIcon}
                       />
                       <Text style={styles.statValue}>
@@ -697,7 +697,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                       <Ionicons
                         name="flag"
                         size={24}
-                        color={theme.primary}
+                        color={colors.primary}
                         style={styles.statIcon}
                       />
                       <Text style={styles.statValue}>
@@ -712,7 +712,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                       <Ionicons
                         name="cash"
                         size={24}
-                        color={theme.primary}
+                        color={colors.primary}
                         style={styles.statIcon}
                       />
                       <Text style={styles.statValue}>
@@ -737,14 +737,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
               <View style={styles.historyContainer}>
                 {isLoadingContributions ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={theme.primary} />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   </View>
                 ) : contributions.length === 0 ? (
                   <View style={styles.emptyHistory}>
                     <Ionicons
                       name="time-outline"
                       size={48}
-                      color={theme.textSecondary}
+                      color={colors.text.secondary}
                     />
                     <Text style={styles.emptyHistoryText}>
                       No hay contribuciones aún.{'\n'}
@@ -762,7 +762,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                             ) as keyof typeof Ionicons.glyphMap
                           }
                           size={20}
-                          color={theme.primary}
+                          color={colors.primary}
                         />
                       </View>
                       <View style={styles.historyInfo}>

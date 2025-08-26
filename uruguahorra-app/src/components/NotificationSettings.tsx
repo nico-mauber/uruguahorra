@@ -21,7 +21,7 @@ export interface NotificationSettingsProps {
 export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   onClose,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const {
     isInitialized,
     permissionsGranted,

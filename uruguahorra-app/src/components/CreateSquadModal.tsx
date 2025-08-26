@@ -35,7 +35,7 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
   onClose,
   onSquadCreated,
 }) => {
-  const { theme } = useTheme();
+  const { colors  } = useTheme();
   const { user } = useAuth();
   const { createSquad, isCreating } = useSquadsStore();
   const screenHeight = Dimensions.get('window').height;
@@ -144,21 +144,21 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
           style={[
             styles.modalContent,
             {
-              backgroundColor: theme.background,
+              backgroundColor: colors.background,
               maxHeight: screenHeight * 0.85,
             },
           ]}
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
+            <Text style={[styles.title, { color: colors.text.primary }]}>
               🏛️ Crear Pod de Ahorro
             </Text>
             <TouchableOpacity onPress={handleClose} disabled={isCreating}>
               <Ionicons
                 name="close"
                 size={24}
-                color={isCreating ? theme.textSecondary : theme.text}
+                color={isCreating ? colors.text.secondary : colors.text.primary}
               />
             </TouchableOpacity>
           </View>
@@ -167,33 +167,33 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
           <Card style={styles.formCard}>
             {/* Nombre del squad */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.text }]}>
+              <Text style={[styles.label, { color: colors.text.primary }]}>
                 Nombre del Pod *
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
                   },
                 ]}
                 value={squadName}
                 onChangeText={setSquadName}
                 placeholder="Ej: Vacaciones 2025"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 maxLength={50}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: theme.textSecondary }]}>
+              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
                 {squadName.length}/50 caracteres
               </Text>
             </View>
 
             {/* Descripción (opcional) */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.text }]}>
+              <Text style={[styles.label, { color: colors.text.primary }]}>
                 Descripción (opcional)
               </Text>
               <TextInput
@@ -201,48 +201,48 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
                   styles.input,
                   styles.textArea,
                   {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
                   },
                 ]}
                 value={squadDescription}
                 onChangeText={setSquadDescription}
                 placeholder="¿Para qué van a ahorrar juntos?"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 maxLength={200}
                 multiline
                 numberOfLines={3}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: theme.textSecondary }]}>
+              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
                 {squadDescription.length}/200 caracteres
               </Text>
             </View>
 
             {/* Máximo de miembros */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.text }]}>
+              <Text style={[styles.label, { color: colors.text.primary }]}>
                 Máximo de miembros
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border.primary,
+                    color: colors.text.primary,
                   },
                 ]}
                 value={maxMembers}
                 onChangeText={setMaxMembers}
                 placeholder="10"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={colors.text.secondary}
                 keyboardType="numeric"
                 maxLength={2}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: theme.textSecondary }]}>
+              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
                 Entre 2 y 50 miembros
               </Text>
             </View>
@@ -250,13 +250,13 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
 
           {/* Info adicional */}
           <View style={styles.infoSection}>
-            <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
+            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
               <Ionicons
                 name="information-circle"
                 size={20}
-                color={theme.primary}
+                color={colors.primary}
               />
-              <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+              <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                 Una vez creado, recibirás un código de invitación para compartir
                 con tus amigos.
               </Text>

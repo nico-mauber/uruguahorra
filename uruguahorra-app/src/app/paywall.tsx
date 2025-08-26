@@ -21,7 +21,7 @@ import { SubscriptionsService } from '@/services/subscriptions.service';
 import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 export default function PaywallScreen() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const analytics = useAnalytics();
@@ -191,7 +191,7 @@ export default function PaywallScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: colors.background,
     },
     content: {
       padding: 20,
@@ -201,27 +201,27 @@ export default function PaywallScreen() {
       marginBottom: 32,
     },
     premiumBadge: {
-      backgroundColor: theme.warning + '20',
+      backgroundColor: colors.warning + '20',
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 20,
       marginBottom: 16,
     },
     premiumText: {
-      color: theme.warning,
+      color: colors.warning,
       fontWeight: '600',
       fontSize: 14,
     },
     title: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 8,
       textAlign: 'center',
     },
     subtitle: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
       lineHeight: 22,
     },
@@ -234,7 +234,7 @@ export default function PaywallScreen() {
       borderColor: 'transparent',
     },
     selectedPlan: {
-      borderColor: theme.primary,
+      borderColor: colors.primary,
     },
     planHeader: {
       flexDirection: 'row',
@@ -248,31 +248,31 @@ export default function PaywallScreen() {
     planName: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 4,
     },
     planPrice: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: theme.primary,
+      color: colors.primary,
     },
     planPeriod: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     planDescription: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       marginTop: 4,
     },
     savingBadge: {
-      backgroundColor: theme.success + '20',
+      backgroundColor: colors.success + '20',
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 12,
     },
     savingText: {
-      color: theme.success,
+      color: colors.success,
       fontSize: 12,
       fontWeight: '600',
     },
@@ -282,7 +282,7 @@ export default function PaywallScreen() {
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 16,
     },
     featureItem: {
@@ -294,7 +294,7 @@ export default function PaywallScreen() {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.primary + '10',
+      backgroundColor: colors.primary + '10',
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -305,12 +305,12 @@ export default function PaywallScreen() {
     featureTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: colors.text.primary,
       marginBottom: 2,
     },
     featureDescription: {
       fontSize: 14,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
     },
     footer: {
       marginTop: 16,
@@ -318,12 +318,12 @@ export default function PaywallScreen() {
     },
     footerText: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: colors.text.secondary,
       textAlign: 'center',
       lineHeight: 18,
     },
     currentPlanBadge: {
-      backgroundColor: theme.info + '20',
+      backgroundColor: colors.info + '20',
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 12,
@@ -331,7 +331,7 @@ export default function PaywallScreen() {
       marginBottom: 16,
     },
     currentPlanText: {
-      color: theme.info,
+      color: colors.info,
       fontSize: 12,
       fontWeight: '600',
     },
@@ -419,7 +419,7 @@ export default function PaywallScreen() {
                 <Ionicons
                   name={feature.icon as keyof typeof Ionicons.glyphMap}
                   size={20}
-                  color={theme.primary}
+                  color={colors.primary}
                 />
               </View>
               <View style={styles.featureContent}>

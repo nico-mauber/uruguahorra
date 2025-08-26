@@ -36,7 +36,7 @@ const XPBar: React.FC<XPBarProps> = ({
   level,
   animated = true,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const animatedWidth = useRef(new Animated.Value(0)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
 
@@ -74,15 +74,15 @@ const XPBar: React.FC<XPBarProps> = ({
   return (
     <View style={styles.xpBarContainer}>
       <View style={styles.xpBarHeader}>
-        <Text style={[styles.levelText, { color: theme.text }]}>
+        <Text style={[styles.levelText, { color: colors.text.primary }]}>
           Nivel {level}
         </Text>
-        <Text style={[styles.xpText, { color: theme.textSecondary }]}>
+        <Text style={[styles.xpText, { color: colors.text.secondary }]}>
           {currentXP} / {maxXP} XP
         </Text>
       </View>
 
-      <View style={[styles.xpBarBackground, { backgroundColor: theme.border }]}>
+      <View style={[styles.xpBarBackground, { backgroundColor: colors.border.primary }]}>
         <Animated.View
           style={[
             styles.xpBarFill,
@@ -118,7 +118,7 @@ const StreakCounter: React.FC<StreakCounterProps> = ({
   days,
   animated = true,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fireOpacity = useRef(new Animated.Value(0)).current;
 
@@ -181,14 +181,14 @@ const StreakCounter: React.FC<StreakCounterProps> = ({
           {days}
         </Text>
 
-        <Text style={[styles.streakLabel, { color: theme.textSecondary }]}>
+        <Text style={[styles.streakLabel, { color: colors.text.secondary }]}>
           días consecutivos
         </Text>
       </View>
 
       {days > 0 && (
         <View style={styles.streakMotivation}>
-          <Text style={[styles.motivationText, { color: theme.text }]}>
+          <Text style={[styles.motivationText, { color: colors.text.primary }]}>
             {days >= 30 && '¡Eres una máquina de ahorrar! 🚀'}
             {days >= 14 && days < 30 && '¡Excelente disciplina! 💪'}
             {days >= 7 && days < 14 && '¡Vas por buen camino! 🎯'}
@@ -217,7 +217,7 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
   rarity,
   delay = 0,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const haptics = useHapticFeedback();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -292,8 +292,8 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
         style={[
           styles.achievementBadge,
           {
-            backgroundColor: unlocked ? theme.card : theme.surface,
-            borderColor: unlocked ? getRarityColor() : theme.border,
+            backgroundColor: unlocked ? colors.card : colors.surface,
+            borderColor: unlocked ? getRarityColor() : colors.border.primary,
             transform: [{ scale: scaleAnim }],
           },
           unlocked && {
@@ -325,7 +325,7 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
           style={[
             styles.achievementTitle,
             {
-              color: unlocked ? theme.text : theme.textSecondary,
+              color: unlocked ? colors.text.primary : colors.text.secondary,
               opacity: unlocked ? 1 : 0.6,
             },
           ]}
@@ -337,7 +337,7 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
           style={[
             styles.achievementDescription,
             {
-              color: theme.textSecondary,
+              color: colors.text.secondary,
               opacity: unlocked ? 1 : 0.5,
             },
           ]}
@@ -357,7 +357,7 @@ export const GamificationStats: React.FC<GamificationStatsProps> = ({
   achievementsCount,
   isLoading = false,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const [showAchievements, setShowAchievements] = useState(false);
 
   // XP necesario para el siguiente nivel (fórmula progresiva)
@@ -369,7 +369,7 @@ export const GamificationStats: React.FC<GamificationStatsProps> = ({
     return (
       <Card style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
             Cargando estadísticas...
           </Text>
         </View>
@@ -381,7 +381,7 @@ export const GamificationStats: React.FC<GamificationStatsProps> = ({
     <Card style={styles.container}>
       <View style={styles.header}>
         <Ionicons name="trophy" size={24} color="#FFD700" />
-        <Text style={[styles.title, { color: theme.text }]}>
+        <Text style={[styles.title, { color: colors.text.primary }]}>
           Tu Progreso de Ahorro
         </Text>
       </View>
@@ -403,14 +403,14 @@ export const GamificationStats: React.FC<GamificationStatsProps> = ({
       >
         <View style={styles.achievementsTitle}>
           <Ionicons name="medal" size={20} color="#FFD700" />
-          <Text style={[styles.achievementsText, { color: theme.text }]}>
+          <Text style={[styles.achievementsText, { color: colors.text.primary }]}>
             Logros Desbloqueados ({achievementsCount}/12)
           </Text>
         </View>
         <Ionicons
           name={showAchievements ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={theme.textSecondary}
+          color={colors.text.secondary}
         />
       </TouchableOpacity>
 

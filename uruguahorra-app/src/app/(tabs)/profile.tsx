@@ -270,21 +270,7 @@ export default function ProfileScreen() {
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Notificaciones</Text>
-              <View style={styles.notificationStatus}>
-                <Ionicons
-                  name={
-                    permissionsGranted && settings.enabled
-                      ? 'checkmark-circle'
-                      : 'close-circle'
-                  }
-                  size={16}
-                  color={
-                    permissionsGranted && settings.enabled
-                      ? '#10B981'
-                      : '#6B7280'
-                  }
-                />
-              </View>
+             
               <Ionicons
                 name="chevron-forward"
                 size={20}

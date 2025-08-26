@@ -21,8 +21,8 @@ interface Squad {
   // Campos calculados
   memberRole?: 'owner' | 'admin' | 'member';
   memberCount?: number;
-  totalSquadSaved?: number;  // Total ahorrado por el squad
-  goalAmount?: number;       // Meta de ahorro del squad
+  totalSquadSaved?: number; // Total ahorrado por el squad
+  goalAmount?: number; // Meta de ahorro del squad
 }
 
 interface SquadMember {
@@ -33,13 +33,32 @@ interface SquadMember {
   joinedAt: string;
   totalSaved: number;
   monthlySaved: number;
-  // Información del usuario (opcional, si se carga)
+  // Info del usuario
   user?: {
     id: string;
-    email: string | null;
+    email: string;
     country: string | null;
     premium: boolean;
   };
+}
+
+// Tipos para contribuciones de squad
+interface SquadContribution {
+  id: string;
+  squadId: string;
+  userId: string;
+  amount: number;
+  description?: string;
+  source: string;
+  createdAt: string;
+}
+
+interface SquadContributionInsert {
+  squadId: string;
+  userId: string;
+  amount: number;
+  description?: string;
+  source?: string;
 }
 
 // Estado de la store
@@ -49,6 +68,9 @@ interface SquadsStore {
   currentSquad: Squad | null;
   squadMembers: Record<string, SquadMember[] | undefined>; // squadId -> members
 
+  // Estado de contribuciones
+  squadContributions: Record<string, SquadContribution[] | undefined>; // squadId -> contributions
+
   // Estados de búsqueda
   searchResults: Squad[];
 
@@ -56,6 +78,7 @@ interface SquadsStore {
   isLoading: boolean;
   isCreating: boolean;
   isJoining: boolean;
+  isAddingContribution: boolean;
   error: string | null;
   lastFetchUserId: string | null;
 
@@ -79,6 +102,23 @@ interface SquadsStore {
   fetchSquadMembers: (squadId: string, force?: boolean) => Promise<void>;
   updateSquadMemberStats: (userId: string, squadId: string) => Promise<void>;
   refreshAllSquadStats: (userId: string) => Promise<void>;
+
+  // Gestión de contribuciones
+  addSquadContribution: (
+    contribution: SquadContributionInsert
+  ) => Promise<SquadContribution | null>;
+  fetchSquadContributions: (squadId: string, force?: boolean) => Promise<void>;
+  getUserSquadContributions: (
+    squadId: string,
+    userId: string
+  ) => Promise<SquadContribution[]>;
+
+  // Configuración del squad
+  updateSquadGoal: (
+    squadId: string,
+    goalAmount: number,
+    userId: string
+  ) => Promise<boolean>;
 
   // Búsqueda de squads
   searchSquads: (query: string, limit?: number) => Promise<void>;
@@ -116,7 +156,14 @@ const convertDBSquadToLocal = (
 });
 
 const convertDBSquadMemberToLocal = (
-  dbMember: DBSquadMember & { user?: unknown }
+  dbMember: DBSquadMember & {
+    user?: {
+      id: string;
+      email: string;
+      country: string | null;
+      premium: boolean;
+    };
+  }
 ): SquadMember => ({
   id: dbMember.id,
   squadId: dbMember.squad_id,
@@ -125,7 +172,7 @@ const convertDBSquadMemberToLocal = (
   joinedAt: dbMember.joined_at,
   totalSaved: dbMember.total_saved,
   monthlySaved: dbMember.monthly_saved,
-  user: dbMember.user as SquadMember['user'],
+  user: dbMember.user,
 });
 
 // ========== STORE ==========
@@ -135,10 +182,12 @@ export const useSquadsStore = create<SquadsStore>((set, get) => ({
   userSquads: [],
   currentSquad: null,
   squadMembers: {},
+  squadContributions: {},
   searchResults: [],
   isLoading: false,
   isCreating: false,
   isJoining: false,
+  isAddingContribution: false,
   error: null,
   lastFetchUserId: null,
 
@@ -308,7 +357,18 @@ export const useSquadsStore = create<SquadsStore>((set, get) => ({
     try {
       const membersData = await SquadsService.getSquadMembers(squadId);
 
-      const members = membersData.map(convertDBSquadMemberToLocal);
+      const members = membersData.map((member) =>
+        convertDBSquadMemberToLocal(
+          member as DBSquadMember & {
+            user?: {
+              id: string;
+              email: string;
+              country: string | null;
+              premium: boolean;
+            };
+          }
+        )
+      );
 
       set((state) => ({
         squadMembers: {
@@ -451,12 +511,225 @@ export const useSquadsStore = create<SquadsStore>((set, get) => ({
       userSquads: [],
       currentSquad: null,
       squadMembers: {},
+      squadContributions: {},
       searchResults: [],
       isLoading: false,
       isCreating: false,
       isJoining: false,
+      isAddingContribution: false,
       error: null,
       lastFetchUserId: null,
     });
+  },
+
+  // ========== MÉTODOS PARA CONTRIBUCIONES ==========
+
+  addSquadContribution: async (
+    contribution: SquadContributionInsert
+  ): Promise<SquadContribution | null> => {
+    try {
+      set({ isAddingContribution: true, error: null });
+
+      logger.start(LogModule.STORE, 'Agregando contribución al squad', {
+        squadId: contribution.squadId,
+        amount: contribution.amount,
+      });
+
+      // Convertir formato local a DB
+      const dbContribution = {
+        squad_id: contribution.squadId,
+        user_id: contribution.userId,
+        amount: contribution.amount,
+        description: contribution.description,
+        source: contribution.source,
+      };
+
+      const result = await SquadsService.addSquadContribution(dbContribution);
+
+      // Convertir resultado a formato local
+      const localContribution: SquadContribution = {
+        id: result.id,
+        squadId: result.squad_id,
+        userId: result.user_id,
+        amount: result.amount,
+        description: result.description || undefined,
+        source: result.source,
+        createdAt: result.created_at,
+      };
+
+      // Actualizar contribuciones en cache
+      const currentContributions =
+        get().squadContributions[contribution.squadId] || [];
+      set({
+        squadContributions: {
+          ...get().squadContributions,
+          [contribution.squadId]: [localContribution, ...currentContributions],
+        },
+      });
+
+      // Refrescar datos del squad (los totales se actualizan automáticamente via triggers)
+      await get().fetchSquadMembers(contribution.squadId, true);
+
+      // CRÍTICO: Refrescar la lista de squads del usuario para actualizar totalSquadSaved
+      if (contribution.userId) {
+        await get().fetchUserSquads(contribution.userId, true);
+      }
+
+      logger.success(LogModule.STORE, 'Contribución agregada exitosamente');
+      return localContribution;
+    } catch (error) {
+      logger.error(
+        LogModule.STORE,
+        'Error agregando contribución al squad',
+        error
+      );
+      set({ error: 'Error al agregar contribución' });
+      return null;
+    } finally {
+      set({ isAddingContribution: false });
+    }
+  },
+
+  fetchSquadContributions: async (
+    squadId: string,
+    force = false
+  ): Promise<void> => {
+    try {
+      // Si ya tenemos contribuciones y no es forzado, no hacer nada
+      const currentContributions = get().squadContributions[squadId];
+      if (currentContributions && !force) return;
+
+      set({ isLoading: true, error: null });
+
+      logger.start(LogModule.STORE, 'Obteniendo contribuciones del squad', {
+        squadId,
+      });
+
+      const contributions = await SquadsService.getSquadContributions(squadId);
+
+      // Convertir a formato local
+      const localContributions: SquadContribution[] = contributions.map(
+        (c) => ({
+          id: c.id,
+          squadId: c.squad_id,
+          userId: c.user_id,
+          amount: c.amount,
+          description: c.description || undefined,
+          source: c.source,
+          createdAt: c.created_at,
+        })
+      );
+
+      set({
+        squadContributions: {
+          ...get().squadContributions,
+          [squadId]: localContributions,
+        },
+      });
+
+      logger.success(LogModule.STORE, 'Contribuciones obtenidas exitosamente', {
+        count: localContributions.length,
+      });
+    } catch (error) {
+      logger.error(
+        LogModule.STORE,
+        'Error obteniendo contribuciones del squad',
+        error
+      );
+      set({ error: 'Error al cargar contribuciones' });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  getUserSquadContributions: async (
+    squadId: string,
+    userId: string
+  ): Promise<SquadContribution[]> => {
+    try {
+      logger.start(
+        LogModule.STORE,
+        'Obteniendo contribuciones del usuario en el squad',
+        {
+          squadId,
+          userId,
+        }
+      );
+
+      const contributions = await SquadsService.getUserSquadContributions(
+        squadId,
+        userId
+      );
+
+      // Convertir a formato local
+      const localContributions: SquadContribution[] = contributions.map(
+        (c) => ({
+          id: c.id,
+          squadId: c.squad_id,
+          userId: c.user_id,
+          amount: c.amount,
+          description: c.description || undefined,
+          source: c.source,
+          createdAt: c.created_at,
+        })
+      );
+
+      logger.success(
+        LogModule.STORE,
+        'Contribuciones del usuario obtenidas exitosamente',
+        {
+          count: localContributions.length,
+        }
+      );
+
+      return localContributions;
+    } catch (error) {
+      logger.error(
+        LogModule.STORE,
+        'Error obteniendo contribuciones del usuario',
+        error
+      );
+      return [];
+    }
+  },
+
+  // ========== CONFIGURACIÓN DEL SQUAD ==========
+
+  updateSquadGoal: async (
+    squadId: string,
+    goalAmount: number,
+    userId: string
+  ): Promise<boolean> => {
+    try {
+      logger.start(LogModule.STORE, 'Actualizando meta del squad', {
+        squadId,
+        goalAmount,
+      });
+
+      await SquadsService.updateSquadGoal(squadId, goalAmount, userId);
+
+      // Actualizar el squad en cache
+      const currentSquads = get().userSquads;
+      const updatedSquads = currentSquads.map((squad) =>
+        squad.id === squadId ? { ...squad, goalAmount } : squad
+      );
+      set({ userSquads: updatedSquads });
+
+      // Actualizar currentSquad si es el que se está editando
+      const currentSquad = get().currentSquad;
+      if (currentSquad?.id === squadId) {
+        set({ currentSquad: { ...currentSquad, goalAmount } });
+      }
+
+      logger.success(
+        LogModule.STORE,
+        'Meta del squad actualizada exitosamente'
+      );
+      return true;
+    } catch (error) {
+      logger.error(LogModule.STORE, 'Error actualizando meta del squad', error);
+      set({ error: 'Error actualizando la meta del pod' });
+      return false;
+    }
   },
 }));

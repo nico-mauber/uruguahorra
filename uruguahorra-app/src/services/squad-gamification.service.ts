@@ -68,11 +68,7 @@ export class SquadGamificationService {
 
       return totalXp;
     } catch (error) {
-      logger.error(
-        LogModule.DB,
-        'Error calculando XP de squad',
-        error
-      );
+      logger.error(LogModule.DB, 'Error calculando XP de squad', error);
       return baseXp; // Devolver XP base si hay error
     }
   }
@@ -96,8 +92,9 @@ export class SquadGamificationService {
       const { error } = await supabase.from('user_xp_log').insert({
         user_id: userId,
         event_type: eventType,
-        xp_earned: xpEarned,  // Cambiado de xp_amount a xp_earned
-        event_data: {  // Cambiado de metadata a event_data
+        xp_earned: xpEarned, // Cambiado de xp_amount a xp_earned
+        event_data: {
+          // Cambiado de metadata a event_data
           squad_id: squadId,
           source: 'squad_gamification',
           ...metadata,
@@ -117,11 +114,7 @@ export class SquadGamificationService {
         squadId,
       });
     } catch (error) {
-      logger.error(
-        LogModule.DB,
-        'Error en log de XP de squad',
-        error
-      );
+      logger.error(LogModule.DB, 'Error en log de XP de squad', error);
     }
   }
 
@@ -174,11 +167,7 @@ export class SquadGamificationService {
 
       await this.evaluateSquadBadges(userId, squadId, memberData, squadMembers);
     } catch (error) {
-      logger.error(
-        LogModule.DB,
-        'Error verificando badges de squad',
-        error
-      );
+      logger.error(LogModule.DB, 'Error verificando badges de squad', error);
     }
   }
 
@@ -274,11 +263,7 @@ export class SquadGamificationService {
         .single();
 
       if (existingBadge) {
-        logger.debug(
-          LogModule.DB,
-          'Badge ya otorgado anteriormente',
-          badge
-        );
+        logger.debug(LogModule.DB, 'Badge ya otorgado anteriormente', badge);
         return;
       }
 
@@ -321,11 +306,7 @@ export class SquadGamificationService {
         .eq('squad_id', squadId);
 
       if (membersError || !squadMembers) {
-        logger.error(
-          LogModule.DB,
-          'Error obteniendo miembros',
-          membersError
-        );
+        logger.error(LogModule.DB, 'Error obteniendo miembros', membersError);
         return {
           totalXpGenerated: 0,
           topXpEarners: [],
@@ -344,11 +325,7 @@ export class SquadGamificationService {
         .order('created_at', { ascending: false });
 
       if (logsError) {
-        logger.error(
-          LogModule.DB,
-          'Error obteniendo logs XP',
-          logsError
-        );
+        logger.error(LogModule.DB, 'Error obteniendo logs XP', logsError);
         return {
           totalXpGenerated: 0,
           topXpEarners: [],

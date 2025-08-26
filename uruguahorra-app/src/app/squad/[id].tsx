@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Modal,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
-import { Card, SquadStatsCard, SquadBadges } from '@components';
+import { Card, SquadStatsCard } from '@components';
 import { useAuth } from '@/contexts';
 import { useSquadsStore } from '@/store/useSquadsStore';
 import { useClipboard } from '@/hooks/useClipboard';
@@ -31,14 +35,42 @@ export default function SquadDetailScreen() {
     currentSquad,
     squadMembers,
     isLoading,
+    isAddingContribution,
     setCurrentSquad,
     fetchSquadMembers,
     leaveSquad,
     getUserRoleInSquad,
+    addSquadContribution,
+    updateSquadGoal,
   } = useSquadsStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [isLeavingSquad, setIsLeavingSquad] = useState(false);
+  const [showContributionModal, setShowContributionModal] = useState(false);
+  const [contributionAmount, setContributionAmount] = useState('');
+  const [contributionDescription, setContributionDescription] = useState('');
+
+  // Estados para editar meta
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [goalAmount, setGoalAmount] = useState('');
+  const [isUpdatingGoal, setIsUpdatingGoal] = useState(false);
+
+  // Obtener miembros activos (debe estar antes de cualquier return condicional)
+  const members = useMemo(() => squadMembers[id] || [], [squadMembers, id]);
+
+  // Debug: Log de miembros para diagnosticar
+  useEffect(() => {
+    if (members.length > 0) {
+      console.log(
+        'Squad members debug:',
+        members.map((m) => ({
+          userId: m.userId,
+          email: m.user?.email,
+          hasUser: !!m.user,
+        }))
+      );
+    }
+  }, [members]);
 
   // Función para cargar datos del squad
   const loadSquadDetail = useCallback(async () => {
@@ -145,6 +177,81 @@ export default function SquadDetailScreen() {
     );
   };
 
+  // Función para agregar contribución
+  const handleAddContribution = async () => {
+    if (!currentSquad || !user?.id) return;
+
+    const amount = parseFloat(contributionAmount);
+    if (!amount || amount <= 0) {
+      Alert.alert('Error', 'Ingresa un monto válido');
+      return;
+    }
+
+    try {
+      const contribution = await addSquadContribution({
+        squadId: currentSquad.id,
+        userId: user.id,
+        amount,
+        description: contributionDescription.trim() || undefined,
+        source: 'manual',
+      });
+
+      if (contribution) {
+        ToastService.success(
+          `¡Contribución agregada!`,
+          `$${amount} agregados al pod`
+        );
+        // Limpiar formulario y cerrar modal
+        setContributionAmount('');
+        setContributionDescription('');
+        setShowContributionModal(false);
+
+        // Refrescar datos
+        await loadSquadDetail();
+      }
+    } catch (error) {
+      logger.error(LogModule.UI, 'Error agregando contribución', error);
+      ToastService.error('Error al agregar contribución');
+    }
+  };
+
+  const handleUpdateGoal = async () => {
+    if (!currentSquad) return;
+
+    const amount = parseFloat(goalAmount);
+
+    if (!amount || amount <= 0) {
+      Alert.alert('Error', 'Ingresa una meta válida');
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert('Error', 'Usuario no autenticado');
+      return;
+    }
+
+    try {
+      setIsUpdatingGoal(true);
+      const success = await updateSquadGoal(currentSquad.id, amount, user.id);
+
+      if (success) {
+        ToastService.success(
+          '¡Meta actualizada!',
+          `Nueva meta: $${amount.toFixed(0)}`
+        );
+        setGoalAmount('');
+        setShowGoalModal(false);
+        // Refrescar datos para mostrar la nueva meta
+        await loadSquadDetail();
+      }
+    } catch (error) {
+      logger.error(LogModule.UI, 'Error actualizando meta', error);
+      ToastService.error('Error al actualizar la meta');
+    } finally {
+      setIsUpdatingGoal(false);
+    }
+  };
+
   if (!currentSquad) {
     return (
       <SafeAreaView
@@ -160,7 +267,6 @@ export default function SquadDetailScreen() {
     );
   }
 
-  const members = squadMembers[currentSquad.id] || [];
   const userRole = getUserRoleInSquad(currentSquad.id);
   // Todos pueden invitar ahora
   const canInvite = true;
@@ -225,11 +331,7 @@ export default function SquadDetailScreen() {
                   </Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <Ionicons
-                    name="shield-checkmark"
-                    size={16}
-                    color="#4A90E2"
-                  />
+                  <Ionicons name="shield-checkmark" size={16} color="#4A90E2" />
                   <Text
                     style={[styles.metaText, { color: theme.textSecondary }]}
                   >
@@ -259,6 +361,33 @@ export default function SquadDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+            {/* Botón Contribuir */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setShowContributionModal(true)}
+            >
+              <Ionicons name="wallet" size={16} color={theme.secondary} />
+              <Text
+                style={[styles.actionButtonText, { color: theme.secondary }]}
+              >
+                Contribuir
+              </Text>
+            </TouchableOpacity>
+            {/* Botón Editar Meta */}
+            {(canInvite || getUserRoleInSquad(currentSquad.id) === 'owner') && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  setGoalAmount((currentSquad.goalAmount || 0).toString());
+                  setShowGoalModal(true);
+                }}
+              >
+                <Ionicons name="flag" size={16} color={theme.info} />
+                <Text style={[styles.actionButtonText, { color: theme.info }]}>
+                  Meta
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.actionButton, styles.leaveButton]}
               onPress={handleLeaveSquad}
@@ -278,9 +407,6 @@ export default function SquadDetailScreen() {
 
         {/* Squad Stats Card */}
         <SquadStatsCard squad={currentSquad} members={members} />
-
-        {/* Squad Badges & Achievements */}
-        <SquadBadges squad={currentSquad} />
 
         {/* Members Ranking */}
         <Card style={styles.rankingCard}>
@@ -338,7 +464,9 @@ export default function SquadDetailScreen() {
                     </View>
                     <View style={styles.memberInfo}>
                       <Text style={[styles.memberEmail, { color: theme.text }]}>
-                        {member.user?.email || 'Usuario'}
+                        {member.user?.email
+                          ? member.user.email.split('@')[0]
+                          : `Usuario ${member.userId.slice(-4)}`}
                         {member.userId === user?.id && (
                           <Text
                             style={[styles.youLabel, { color: theme.primary }]}
@@ -393,6 +521,206 @@ export default function SquadDetailScreen() {
           )}
         </Card>
       </ScrollView>
+
+      {/* Modal de Contribución */}
+      <Modal
+        visible={showContributionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowContributionModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View
+                style={[
+                  styles.modalContent,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    Contribuir al Pod
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowContributionModal(false)}
+                    style={styles.modalCloseButton}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={theme.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalBody}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Monto *
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        borderColor: theme.border,
+                        color: theme.text,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                    value={contributionAmount}
+                    onChangeText={setContributionAmount}
+                    placeholder="Ej: 100"
+                    placeholderTextColor={theme.textSecondary}
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Descripción (opcional)
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        borderColor: theme.border,
+                        color: theme.text,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                    value={contributionDescription}
+                    onChangeText={setContributionDescription}
+                    placeholder="Ej: Ahorro semanal"
+                    placeholderTextColor={theme.textSecondary}
+                    multiline
+                    numberOfLines={2}
+                  />
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setShowContributionModal(false)}
+                  >
+                    <Text
+                      style={[
+                        styles.buttonText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      { backgroundColor: theme.primary },
+                    ]}
+                    onPress={handleAddContribution}
+                    disabled={isAddingContribution}
+                  >
+                    {isAddingContribution ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={[styles.buttonText, { color: 'white' }]}>
+                        Contribuir
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Modal de Editar Meta */}
+      <Modal
+        visible={showGoalModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowGoalModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View
+                style={[
+                  styles.modalContent,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    Editar Meta del Pod
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowGoalModal(false)}
+                    style={styles.modalCloseButton}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={theme.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalBody}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Meta de Ahorro *
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        borderColor: theme.border,
+                        color: theme.text,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                    value={goalAmount}
+                    onChangeText={setGoalAmount}
+                    placeholder="Ej: 10000"
+                    placeholderTextColor={theme.textSecondary}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setShowGoalModal(false)}
+                  >
+                    <Text
+                      style={[
+                        styles.buttonText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      { backgroundColor: theme.primary },
+                    ]}
+                    onPress={handleUpdateGoal}
+                    disabled={isUpdatingGoal}
+                  >
+                    {isUpdatingGoal ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={[styles.buttonText, { color: 'white' }]}>
+                        Actualizar
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -473,8 +801,9 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     flexWrap: 'wrap',
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
@@ -482,11 +811,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginBottom: 8,
+    flex: 1,
     minWidth: 100,
+    maxWidth: 120,
     borderWidth: 1,
     borderRadius: 8,
     borderColor: 'rgba(0,0,0,0.2)',
     backgroundColor: 'transparent',
+    justifyContent: 'center',
   },
   actionButtonText: {
     fontSize: 14,
@@ -562,5 +894,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
     textAlign: 'center',
+  },
+  // Estilos del modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 12,
+    padding: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+  },
+  modalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'white', // Para el botón primario
   },
 });

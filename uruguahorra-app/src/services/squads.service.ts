@@ -9,6 +9,25 @@ type SquadMember = Database['public']['Tables']['squad_members']['Row'];
 type SquadMemberInsert =
   Database['public']['Tables']['squad_members']['Insert'];
 
+// Tipos para contribuciones de squad (añadir cuando se generen los tipos)
+type SquadContribution = {
+  id: string;
+  squad_id: string;
+  user_id: string;
+  amount: number;
+  description?: string;
+  source: string;
+  created_at: string;
+};
+
+type SquadContributionInsert = {
+  squad_id: string;
+  user_id: string;
+  amount: number;
+  description?: string;
+  source?: string;
+};
+
 export class SquadsService {
   /**
    * Crear un nuevo squad
@@ -60,9 +79,14 @@ export class SquadsService {
   /**
    * Obtener squads del usuario
    */
-  static async getUserSquads(
-    userId: string
-  ): Promise<(Squad & { memberRole: string; memberCount: number })[]> {
+  static async getUserSquads(userId: string): Promise<
+    (Squad & {
+      memberRole: string;
+      memberCount: number;
+      totalSquadSaved: number;
+      goalAmount: number;
+    })[]
+  > {
     try {
       logger.database(LogModule.DB, 'Obteniendo squads del usuario', {
         userId,
@@ -102,25 +126,46 @@ export class SquadsService {
             logger.warn(LogModule.DB, 'Error contando miembros', countError);
           }
 
-          // Obtener suma total de ahorros del squad
-          const { data: membersData, error: sumError } = await supabase
-            .from('squad_members')
-            .select('total_saved')
-            .eq('squad_id', item.squad.id);
+          // Obtener suma total de contribuciones del squad (no ahorros individuales)
+          const { data: contributionsData, error: contributionsError } =
+            await supabase
+              .from('squad_contributions')
+              .select('amount')
+              .eq('squad_id', item.squad.id);
 
           let totalSquadSaved = 0;
-          if (!sumError && membersData) {
-            totalSquadSaved = membersData.reduce((sum, member) => 
-              sum + (parseFloat(member.total_saved) || 0), 0
+          if (!contributionsError && contributionsData) {
+            totalSquadSaved = contributionsData.reduce(
+              (sum, contribution) =>
+                sum + (parseFloat(contribution.amount.toString()) || 0),
+              0
             );
+          } else if (contributionsError) {
+            logger.warn(
+              LogModule.DB,
+              'Error calculando contribuciones del squad',
+              contributionsError
+            );
+            // Fallback: usar suma de ahorros individuales de los miembros
+            const { data: membersData, error: sumError } = await supabase
+              .from('squad_members')
+              .select('total_saved')
+              .eq('squad_id', item.squad.id);
+
+            if (!sumError && membersData) {
+              totalSquadSaved = membersData.reduce(
+                (sum, member) => sum + (parseFloat(member.total_saved) || 0),
+                0
+              );
+            }
           }
 
           return {
             ...item.squad,
             memberRole: item.role,
             memberCount: count || 0,
-            totalSquadSaved,  // Total ahorrado por todos los miembros
-            goalAmount: item.squad.goal_amount || 1000,  // Meta del squad
+            totalSquadSaved, // Total ahorrado por todos los miembros
+            goalAmount: item.squad.goal_amount || 10000, // Usar el valor real de BD o fallback
           };
         })
       );
@@ -275,11 +320,21 @@ export class SquadsService {
         throw error;
       }
 
+      // Log para diagnosticar datos de usuarios
+      logger.debug(LogModule.DB, 'Datos de miembros obtenidos:', {
+        squadId,
+        members: data?.map((m) => ({
+          userId: m.user_id,
+          hasUser: !!m.user,
+          userEmail: m.user?.email || 'NO_EMAIL',
+        })),
+      });
+
       logger.success(
         LogModule.DB,
         `${data?.length || 0} miembros del squad obtenidos`
       );
-      return (data as unknown) || [];
+      return (data as (SquadMember & { user: unknown })[]) || [];
     } catch (error) {
       logger.error(
         LogModule.DB,
@@ -647,6 +702,256 @@ export class SquadsService {
       return newInviteCode;
     } catch (error) {
       logger.error(LogModule.DB, 'Error fatal regenerando código', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // MÉTODOS PARA CONTRIBUCIONES DE SQUAD
+  // ============================================
+
+  /**
+   * Agregar contribución al squad
+   */
+  static async addSquadContribution(
+    contribution: SquadContributionInsert
+  ): Promise<SquadContribution> {
+    try {
+      logger.start(LogModule.DB, 'Agregando contribución al squad', {
+        squadId: contribution.squad_id,
+        userId: contribution.user_id,
+        amount: contribution.amount,
+      });
+
+      // Verificar que el usuario es miembro del squad
+      const { data: membership, error: memberError } = await supabase
+        .from('squad_members')
+        .select('id')
+        .eq('squad_id', contribution.squad_id)
+        .eq('user_id', contribution.user_id)
+        .single();
+
+      if (memberError || !membership) {
+        logger.error(LogModule.DB, 'Usuario no es miembro del squad', {
+          squadId: contribution.squad_id,
+          userId: contribution.user_id,
+        });
+        throw new Error('Solo los miembros del squad pueden contribuir');
+      }
+
+      // Insertar la contribución - los triggers actualizarán automáticamente los totales
+      const { data: newContribution, error: contributionError } = await supabase
+        .from('squad_contributions')
+        .insert({
+          ...contribution,
+          source: contribution.source || 'manual',
+        })
+        .select()
+        .single();
+
+      if (contributionError) {
+        logger.error(
+          LogModule.DB,
+          'Error insertando contribución de squad',
+          contributionError
+        );
+        throw contributionError;
+      }
+
+      logger.success(
+        LogModule.DB,
+        'Contribución de squad agregada exitosamente (triggers actualizaron totales)',
+        {
+          contributionId: newContribution.id,
+          amount: newContribution.amount,
+        }
+      );
+
+      return newContribution as SquadContribution;
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error agregando contribución de squad',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener contribuciones de un squad
+   */
+  static async getSquadContributions(
+    squadId: string
+  ): Promise<SquadContribution[]> {
+    try {
+      logger.start(LogModule.DB, 'Obteniendo contribuciones del squad', {
+        squadId,
+      });
+
+      const { data, error } = await supabase
+        .from('squad_contributions')
+        .select('*')
+        .eq('squad_id', squadId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo contribuciones del squad',
+          error
+        );
+        throw error;
+      }
+
+      logger.success(LogModule.DB, 'Contribuciones obtenidas exitosamente', {
+        count: data?.length || 0,
+      });
+
+      return (data || []) as SquadContribution[];
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error obteniendo contribuciones del squad',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener contribuciones detalladas de un squad (con información del usuario)
+   */
+  static async getSquadContributionsDetailed(squadId: string): Promise<any[]> {
+    try {
+      logger.start(
+        LogModule.DB,
+        'Obteniendo contribuciones detalladas del squad',
+        {
+          squadId,
+        }
+      );
+
+      const { data, error } = await supabase
+        .from('squad_contributions_detailed')
+        .select('*')
+        .eq('squad_id', squadId);
+
+      if (error) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo contribuciones detalladas del squad',
+          error
+        );
+        throw error;
+      }
+
+      logger.success(
+        LogModule.DB,
+        'Contribuciones detalladas obtenidas exitosamente',
+        {
+          count: data?.length || 0,
+        }
+      );
+
+      return data || [];
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error obteniendo contribuciones detalladas del squad',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener contribuciones de un usuario en un squad específico
+   */
+  static async getUserSquadContributions(
+    squadId: string,
+    userId: string
+  ): Promise<SquadContribution[]> {
+    try {
+      logger.start(
+        LogModule.DB,
+        'Obteniendo contribuciones del usuario en el squad',
+        {
+          squadId,
+          userId,
+        }
+      );
+
+      const { data, error } = await supabase
+        .from('squad_contributions')
+        .select('*')
+        .eq('squad_id', squadId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logger.error(
+          LogModule.DB,
+          'Error obteniendo contribuciones del usuario en el squad',
+          error
+        );
+        throw error;
+      }
+
+      logger.success(
+        LogModule.DB,
+        'Contribuciones del usuario obtenidas exitosamente',
+        {
+          count: data?.length || 0,
+        }
+      );
+
+      return (data || []) as SquadContribution[];
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error obteniendo contribuciones del usuario en el squad',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Actualizar la meta del squad
+   */
+  static async updateSquadGoal(
+    squadId: string,
+    goalAmount: number,
+    userId: string
+  ): Promise<void> {
+    try {
+      logger.start(LogModule.DB, 'Actualizando meta del squad', {
+        squadId,
+        goalAmount,
+        userId,
+      });
+
+      const { error } = await supabase
+        .from('squads')
+        .update({
+          goal_amount: goalAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', squadId);
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error actualizando meta del squad', error);
+        throw error;
+      }
+
+      logger.success(LogModule.DB, 'Meta del squad actualizada exitosamente');
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error fatal actualizando meta del squad',
+        error
+      );
       throw error;
     }
   }

@@ -32,6 +32,8 @@ interface Squad {
   updatedAt: string;
   memberRole?: 'owner' | 'admin' | 'member';
   memberCount?: number;
+  goalAmount?: number; // Meta de ahorro del squad
+  totalSquadSaved?: number; // Total contribuido al pod
 }
 
 interface SquadStatsCardProps {
@@ -61,9 +63,10 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
     null as SquadMember | null
   );
 
-  // Meta grupal estimada (basada en el promedio de metas individuales)
-  const estimatedGroupGoal = 50000; // Por ahora hardcodeado, luego se puede calcular
-  const groupProgress = Math.min((totalSaved / estimatedGroupGoal) * 100, 100);
+  // Meta grupal real del squad - usar contribuciones al pod
+  const groupGoal = squad.goalAmount || 10000; // Usar meta real o fallback
+  const squadContributions = squad.totalSquadSaved || 0; // Contribuciones al pod
+  const groupProgress = Math.min((squadContributions / groupGoal) * 100, 100);
 
   return (
     <Card style={styles.container}>
@@ -80,10 +83,10 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
           Progreso Grupal
         </Text>
         <View style={styles.progressSection}>
-          <ProgressBar progress={groupProgress / 100} />
+          <ProgressBar progress={groupProgress} />
           <View style={styles.progressInfo}>
             <Text style={[styles.progressAmount, { color: theme.text }]}>
-              ${totalSaved.toFixed(0)} / ${estimatedGroupGoal.toFixed(0)}
+              ${squadContributions.toFixed(0)} / ${groupGoal.toFixed(0)}
             </Text>
             <Text style={[styles.progressPercent, { color: theme.primary }]}>
               {groupProgress.toFixed(1)}%

@@ -88,21 +88,29 @@ function RootLayoutNav() {
 
     // Solo navegar si no estamos ya en la ruta correcta
     if (isAuthenticated && !inTabsGroup && !isModalRoute) {
-      logger.info(LogModule.NAV, 'Usuario autenticado, redirigiendo a tabs desde', currentRoute);
+      logger.info(
+        LogModule.NAV,
+        'Usuario autenticado, redirigiendo a tabs desde',
+        currentRoute
+      );
       setHasInitialNavigation(true);
       // Pequeño delay para asegurar que las rutas estén cargadas en móvil
       setTimeout(() => {
         router.replace('/(tabs)');
       }, 100);
     } else if (!isAuthenticated && !inAuthGroup && !isModalRoute) {
-      logger.info(LogModule.NAV, 'Usuario no autenticado, redirigiendo a onboarding desde', currentRoute);
+      logger.info(
+        LogModule.NAV,
+        'Usuario no autenticado, redirigiendo a onboarding desde',
+        currentRoute
+      );
       setHasInitialNavigation(true);
       setTimeout(() => {
         router.replace('/(auth)/simple-onboarding');
       }, 100);
     }
   }, [isLoading, isAuthenticated]); // Removido segments de las dependencias para evitar loops
-  
+
   // Reset navigation flag cuando cambia el estado de autenticación
   useEffect(() => {
     setHasInitialNavigation(false);

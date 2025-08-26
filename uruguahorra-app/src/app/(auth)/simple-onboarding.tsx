@@ -67,7 +67,9 @@ export default function SimpleOnboardingScreen() {
         });
 
         if (success) {
-          console.log('[Onboarding] Registro exitoso, navegando al dashboard...');
+          console.log(
+            '[Onboarding] Registro exitoso, navegando al dashboard...'
+          );
           // Navegar directamente sin Alert para evitar que el usuario se quede en onboarding
           router.replace('/(tabs)');
         } else {

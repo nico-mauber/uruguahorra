@@ -2,7 +2,7 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 5.4 - Challenge System V2 + Pods System + Igualdad de Permisos + Limpieza Total Opcional
+-- Versión: 5.5 - Challenge System V2 + Pods System + Squad Contributions + Igualdad de Permisos
 -- Fecha: 25 de Agosto, 2025
 -- ============================================
 -- 
@@ -38,6 +38,8 @@
 -- ✅ PODS/SQUADS SYSTEM COMPLETE - Sistema completo de pods de ahorro con invite codes
 -- ✅ FIXED RLS POLICIES - Políticas sin recursión infinita para squad_members
 -- ✅ IGUALDAD DE PERMISOS - Todos los miembros de pods son administradores
+-- ✅ SQUAD CONTRIBUTIONS SYSTEM - Contribuciones directas a pods con actualización automática de totales
+-- ✅ SQUAD GAMIFICATION - Sistema de XP por contribuciones a pods (15 XP por contribución)
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -272,6 +274,17 @@ CREATE TABLE public.squad_members (
     UNIQUE(squad_id, user_id)
 );
 
+-- TABLA SQUAD_CONTRIBUTIONS (NUEVAS - CONTRIBUCIONES DIRECTAS A PODS)
+CREATE TABLE public.squad_contributions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    squad_id UUID NOT NULL REFERENCES public.squads(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
+    description TEXT,
+    source TEXT DEFAULT 'manual',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- TABLA LEARNINGS
 CREATE TABLE public.learnings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -347,7 +360,7 @@ CREATE TABLE public.user_streaks (
 CREATE TABLE public.user_xp_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    event_type TEXT NOT NULL CHECK (event_type IN ('contribution', 'challenge_complete', 'challenge_session_complete', 'daily_streak', 'quest_complete')),
+    event_type TEXT NOT NULL CHECK (event_type IN ('contribution', 'challenge_complete', 'challenge_session_complete', 'daily_streak', 'quest_complete', 'squad_contribution')),
     xp_earned INTEGER NOT NULL,
     event_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -454,6 +467,12 @@ CREATE INDEX idx_squads_active ON public.squads(is_active);
 CREATE INDEX idx_squad_members_squad_id ON public.squad_members(squad_id);
 CREATE INDEX idx_squad_members_user_id ON public.squad_members(user_id);
 
+-- Índices para squad_contributions
+CREATE INDEX idx_squad_contributions_squad_id ON public.squad_contributions(squad_id);
+CREATE INDEX idx_squad_contributions_user_id ON public.squad_contributions(user_id);
+CREATE INDEX idx_squad_contributions_date ON public.squad_contributions(created_at DESC);
+CREATE INDEX idx_squad_contributions_squad_user ON public.squad_contributions(squad_id, user_id);
+
 -- Índices para learnings
 CREATE INDEX idx_learnings_category ON public.learnings(category);
 CREATE INDEX idx_learnings_difficulty ON public.learnings(difficulty_level);
@@ -519,6 +538,7 @@ ALTER TABLE public.user_challenge_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.squads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.squad_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.squad_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.learnings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions_raw ENABLE ROW LEVEL SECURITY;
@@ -680,6 +700,36 @@ CREATE POLICY "squad_members_delete_authorized" ON public.squad_members
             AND (squads.owner_id = auth.uid() OR squads.created_by = auth.uid())
         )
     );
+
+-- Políticas para SQUAD_CONTRIBUTIONS (solo miembros del squad pueden contribuir)
+CREATE POLICY "squad_contributions_select_members" ON public.squad_contributions
+    FOR SELECT USING (
+        -- Puedes ver contribuciones si eres miembro del squad
+        EXISTS (
+            SELECT 1 FROM public.squad_members 
+            WHERE squad_members.squad_id = squad_contributions.squad_id 
+            AND squad_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "squad_contributions_insert_members" ON public.squad_contributions
+    FOR INSERT WITH CHECK (
+        -- Solo miembros del squad pueden contribuir
+        auth.uid() = user_id 
+        AND EXISTS (
+            SELECT 1 FROM public.squad_members 
+            WHERE squad_members.squad_id = squad_contributions.squad_id 
+            AND squad_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "squad_contributions_update_own" ON public.squad_contributions
+    FOR UPDATE 
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "squad_contributions_delete_own" ON public.squad_contributions
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- Políticas para LEARNINGS (lectura pública)
 CREATE POLICY "learnings_read_published" ON public.learnings
@@ -1039,6 +1089,75 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Función para actualizar totales de squad cuando se agreguen contribuciones
+CREATE OR REPLACE FUNCTION public.update_squad_totals()
+RETURNS TRIGGER AS $$
+DECLARE
+    current_month DATE;
+    xp_reward INTEGER := 15; -- XP por contribuir al squad
+BEGIN
+    -- Solo ejecutar para INSERT (nueva contribución)
+    IF TG_OP = 'INSERT' THEN
+        -- Agregar XP al usuario por contribuir al squad
+        INSERT INTO public.user_xp_log (
+            user_id,
+            event_type,
+            xp_earned,
+            event_data
+        ) VALUES (
+            NEW.user_id,
+            'squad_contribution',
+            xp_reward,
+            jsonb_build_object(
+                'squad_id', NEW.squad_id,
+                'contribution_id', NEW.id,
+                'amount', NEW.amount
+            )
+        );
+        
+        -- Actualizar XP total del usuario
+        UPDATE public.users 
+        SET total_xp = total_xp + xp_reward
+        WHERE id = NEW.user_id;
+    END IF;
+    
+    -- Calcular el primer día del mes actual
+    current_month := DATE_TRUNC('month', CURRENT_DATE);
+    
+    -- Actualizar total_saved del squad
+    UPDATE public.squads 
+    SET 
+        total_saved = (
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM public.squad_contributions 
+            WHERE squad_id = COALESCE(NEW.squad_id, OLD.squad_id)
+        ),
+        updated_at = NOW()
+    WHERE id = COALESCE(NEW.squad_id, OLD.squad_id);
+    
+    -- Actualizar total_saved del miembro específico
+    UPDATE public.squad_members 
+    SET 
+        total_saved = (
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM public.squad_contributions 
+            WHERE squad_id = COALESCE(NEW.squad_id, OLD.squad_id)
+            AND user_id = COALESCE(NEW.user_id, OLD.user_id)
+        ),
+        monthly_saved = (
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM public.squad_contributions 
+            WHERE squad_id = COALESCE(NEW.squad_id, OLD.squad_id)
+            AND user_id = COALESCE(NEW.user_id, OLD.user_id)
+            AND created_at >= current_month
+        )
+    WHERE squad_id = COALESCE(NEW.squad_id, OLD.squad_id)
+    AND user_id = COALESCE(NEW.user_id, OLD.user_id);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
 -- Trigger SIMPLIFICADO para nuevos usuarios
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -1088,6 +1207,19 @@ CREATE TRIGGER update_goal_progress_on_contribution_update
 CREATE TRIGGER update_goal_progress_on_contribution_delete
     AFTER DELETE ON public.micro_contributions
     FOR EACH ROW EXECUTE FUNCTION public.update_goal_progress();
+
+-- Triggers para actualizar totales de squad cuando se modifican squad_contributions
+CREATE TRIGGER update_squad_totals_on_contribution_insert
+    AFTER INSERT ON public.squad_contributions
+    FOR EACH ROW EXECUTE FUNCTION public.update_squad_totals();
+
+CREATE TRIGGER update_squad_totals_on_contribution_update
+    AFTER UPDATE ON public.squad_contributions
+    FOR EACH ROW EXECUTE FUNCTION public.update_squad_totals();
+
+CREATE TRIGGER update_squad_totals_on_contribution_delete
+    AFTER DELETE ON public.squad_contributions
+    FOR EACH ROW EXECUTE FUNCTION public.update_squad_totals();
 
 -- ============================================
 -- FUNCIONES PARA CHALLENGE SYSTEM V2
@@ -1482,6 +1614,23 @@ FROM public.goals g
 LEFT JOIN public.micro_contributions mc ON g.id = mc.goal_id
 GROUP BY g.id, g.name, g.target_amount, g.current_amount, g.saved_amount, g.category, g.color, g.icon, g.is_active, g.is_completed, g.created_at, g.deadline, g.target_date;
 
+-- Vista de contribuciones de squad con información del usuario
+CREATE VIEW public.squad_contributions_detailed AS
+SELECT 
+    sc.id,
+    sc.squad_id,
+    sc.user_id,
+    sc.amount,
+    sc.description,
+    sc.source,
+    sc.created_at,
+    s.name as squad_name,
+    SUBSTRING(u.email FROM '^([^@]+)') as username
+FROM public.squad_contributions sc
+LEFT JOIN public.squads s ON sc.squad_id = s.id
+LEFT JOIN public.users u ON sc.user_id = u.id
+ORDER BY sc.created_at DESC;
+
 -- ============================================
 -- PASO 10: CONFIGURACIÓN IMPORTANTE
 -- ============================================
@@ -1778,6 +1927,10 @@ SELECT
 -- ✅ Tracking de ahorros totales y mensuales por miembro
 -- ✅ Políticas RLS simplificadas para igualdad total
 -- ✅ Nombres de usuario visibles (extraídos del email)
+-- ✅ CONTRIBUCIONES DIRECTAS: Tabla squad_contributions para aportes al pod
+-- ✅ ACTUALIZACIÓN AUTOMÁTICA: Triggers que actualizan totales del squad y miembros
+-- ✅ GAMIFICACIÓN: 15 XP por cada contribución al pod
+-- ✅ VISTA DETALLADA: squad_contributions_detailed con información completa
 -- 
 -- FIXES INCLUIDOS:
 -- ✅ Goal progress updates automáticos con triggers

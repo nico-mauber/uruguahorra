@@ -10,5 +10,3 @@ export { CreateSquadModal } from './CreateSquadModal';
 export { JoinSquadModal } from './JoinSquadModal';
 export { PodsList } from './PodsList';
 export { SquadStatsCard } from './SquadStatsCard';
-export { SquadBadges } from './SquadBadges';
-export { XpIndicator } from './XpIndicator';

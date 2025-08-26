@@ -31,7 +31,8 @@
       "WebSearch",
       "Bash(npm ls:*)",
       "Bash(npm uninstall:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

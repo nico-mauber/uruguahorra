@@ -532,10 +532,7 @@ export default function SquadDetailScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
             <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: theme.surface },
-              ]}
+              style={[styles.modalContent, { backgroundColor: theme.surface }]}
             >
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -607,10 +604,7 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowContributionModal(false)}
                 >
                   <Text
-                    style={[
-                      styles.buttonText,
-                      { color: theme.textSecondary },
-                    ]}
+                    style={[styles.buttonText, { color: theme.textSecondary }]}
                   >
                     Cancelar
                   </Text>
@@ -647,10 +641,7 @@ export default function SquadDetailScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
             <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: theme.surface },
-              ]}
+              style={[styles.modalContent, { backgroundColor: theme.surface }]}
             >
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -699,10 +690,7 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowGoalModal(false)}
                 >
                   <Text
-                    style={[
-                      styles.buttonText,
-                      { color: theme.textSecondary },
-                    ]}
+                    style={[styles.buttonText, { color: theme.textSecondary }]}
                   >
                     Cancelar
                   </Text>

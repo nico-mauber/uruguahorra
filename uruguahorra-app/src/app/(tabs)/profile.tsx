@@ -270,7 +270,7 @@ export default function ProfileScreen() {
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Notificaciones</Text>
-             
+
               <Ionicons
                 name="chevron-forward"
                 size={20}

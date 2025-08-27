@@ -15,11 +15,10 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Button, Card } from '@components';
+import { Button } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
 
@@ -101,11 +100,11 @@ export default function SimpleOnboardingScreen() {
     }
   };
 
-  // Definir estilos dentro del componente donde theme está disponible
+  // Definir estilos dentro del componente donde colors está disponible
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme?.colors?.background || '#FFFFFF',
+      backgroundColor: colors.background || '#FFFFFF',
     },
     content: {
       flex: 1,
@@ -122,12 +121,12 @@ export default function SimpleOnboardingScreen() {
     title: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme?.colors?.text || '#000000',
+      color: colors.text.primary || '#000000',
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: theme?.colors?.textSecondary || '#666666',
+      color: colors.text.secondary || '#666666',
       textAlign: 'center',
     },
     form: {
@@ -138,31 +137,31 @@ export default function SimpleOnboardingScreen() {
     },
     label: {
       fontSize: 14,
-      color: theme?.colors?.textSecondary || '#666666',
+      color: colors.text.secondary || '#666666',
       marginBottom: 8,
     },
     input: {
-      backgroundColor: theme?.colors?.surface || '#F5F5F5',
+      backgroundColor: colors.surface || '#F5F5F5',
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
-      color: theme?.colors?.text || '#000000',
+      color: colors.text.primary || '#000000',
       borderWidth: 1,
-      borderColor: theme?.colors?.border || '#E0E0E0',
+      borderColor: colors.border.primary || '#E0E0E0',
     },
     inputFocused: {
-      borderColor: theme?.colors?.primary || '#007AFF',
+      borderColor: colors.primary || '#007AFF',
     },
     switchContainer: {
       marginVertical: 20,
       alignItems: 'center',
     },
     switchText: {
-      color: theme?.colors?.textSecondary || '#666666',
+      color: colors.text.secondary || '#666666',
       fontSize: 14,
     },
     switchLink: {
-      color: theme?.colors?.primary || '#007AFF',
+      color: colors.primary || '#007AFF',
       fontWeight: 'bold',
       textDecorationLine: 'underline',
     },
@@ -175,7 +174,7 @@ export default function SimpleOnboardingScreen() {
     },
     footerText: {
       fontSize: 12,
-      color: theme?.colors?.textSecondary || '#666666',
+      color: colors.text.secondary || '#666666',
       textAlign: 'center',
     },
   });
@@ -211,9 +210,7 @@ export default function SimpleOnboardingScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="tu@email.com"
-                  placeholderTextColor={
-                    theme?.colors?.textTertiary || '#999999'
-                  }
+                  placeholderTextColor={colors.text.tertiary || '#999999'}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -228,9 +225,7 @@ export default function SimpleOnboardingScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor={
-                    theme?.colors?.textTertiary || '#999999'
-                  }
+                  placeholderTextColor={colors.text.tertiary || '#999999'}
                   secureTextEntry
                   editable={!isLoading}
                 />
@@ -244,9 +239,7 @@ export default function SimpleOnboardingScreen() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Repite tu contraseña"
-                    placeholderTextColor={
-                      theme?.colors?.textTertiary || '#999999'
-                    }
+                    placeholderTextColor={colors.text.tertiary || '#999999'}
                     secureTextEntry
                     editable={!isLoading}
                   />
@@ -303,10 +296,7 @@ export default function SimpleOnboardingScreen() {
             alignItems: 'center',
           }}
         >
-          <ActivityIndicator
-            size="large"
-            color={theme?.colors?.primary || '#007AFF'}
-          />
+          <ActivityIndicator size="large" color={colors.primary || '#007AFF'} />
         </View>
       )}
     </SafeAreaView>

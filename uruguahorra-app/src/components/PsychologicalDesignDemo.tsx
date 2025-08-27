@@ -16,11 +16,8 @@ import {
 import {
   useTheme,
   spacing,
-  typography,
   textStyles,
-  PsychologicalIcon,
   categoryIcons,
-  actionIcons,
   gamificationIcons,
 } from '@theme';
 
@@ -29,7 +26,7 @@ import {
  * Showcases all the psychologically optimized components
  */
 export const PsychologicalDesignDemo: React.FC = () => {
-  const { colors, isDark, getExpenseColor, getSavingsColor } = useTheme();
+  const { colors, getExpenseColor, getSavingsColor } = useTheme();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   // Mock transaction data for demonstration
@@ -66,7 +63,7 @@ export const PsychologicalDesignDemo: React.FC = () => {
     },
   ];
 
-  const handleTransactionCreated = (transaction: any) => {
+  const handleTransactionCreated = () => {
     Alert.alert('¡Éxito!', 'Transacción creada con animación de éxito');
   };
 

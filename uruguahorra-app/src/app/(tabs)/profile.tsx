@@ -16,7 +16,7 @@ import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
   const { permissionsGranted, settings } = useStreakNotifications();

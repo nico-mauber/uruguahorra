@@ -10,6 +10,10 @@ import {
   Animated,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
@@ -17,12 +21,33 @@ import { QuickTransaction } from '@/schemas';
 
 const { width } = Dimensions.get('window');
 
+interface Category {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  type: 'expense' | 'income' | 'transfer';
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  description?: string | null;
+  category_id?: string | null;
+  type: 'expense' | 'income' | 'transfer';
+  user_id: string;
+  transaction_date: string;
+  xp_earned: number;
+  goal_id?: string | null;
+  squad_id?: string | null;
+}
+
 interface QuickTransactionModalProps {
   visible: boolean;
   userId: string;
   initialType?: 'expense' | 'income' | null;
   onClose: () => void;
-  onTransactionCreated: (transaction: any) => void;
+  onTransactionCreated: (transaction: Transaction) => void;
 }
 
 /**
@@ -44,7 +69,9 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Cantidad, 2: Categoría, 3: Confirmación
   const [amount, setAmount] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -81,7 +108,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
       slideAnim.setValue(0);
       scaleAnim.setValue(0.9);
     }
-  }, [visible]);
+  }, [visible, fetchCategories, scaleAnim, slideAnim]);
 
   const handleAmountChange = (value: string) => {
     // Solo permitir números y un punto decimal
@@ -105,7 +132,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
     setStep(2);
   };
 
-  const handleCategorySelect = (category: any) => {
+  const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
     setStep(3);
   };
@@ -189,7 +216,6 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
           placeholder="0.00"
           placeholderTextColor="#ADB5BD"
           keyboardType="decimal-pad"
-          autoFocus
           selectTextOnFocus
         />
       </View>
@@ -309,57 +335,73 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.modal,
-            {
-              transform: [
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.overlay}>
+            <Animated.View
+              style={[
+                styles.modal,
                 {
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [300, 0],
-                  }),
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [300, 0],
+                      }),
+                    },
+                    { scale: scaleAnim },
+                  ],
                 },
-                { scale: scaleAnim },
-              ],
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            {step > 1 && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() =>
-                  setStep((prev) => Math.max(1, prev - 1) as 1 | 2 | 3)
-                }
+              ]}
+            >
+              {/* Header */}
+              <View style={styles.header}>
+                {step > 1 && (
+                  <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() =>
+                      setStep((prev) => Math.max(1, prev - 1) as 1 | 2 | 3)
+                    }
+                  >
+                    <Ionicons name="arrow-back" size={24} color="#6C757D" />
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.progressContainer}>
+                  {[1, 2, 3].map((stepNumber) => (
+                    <View
+                      key={stepNumber}
+                      style={[
+                        styles.progressDot,
+                        stepNumber <= step && {
+                          backgroundColor: getStepColor(),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <Ionicons name="close" size={24} color="#6C757D" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Content with ScrollView for keyboard handling */}
+              <ScrollView
+                style={styles.scrollContent}
+                contentContainerStyle={styles.scrollContentContainer}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                <Ionicons name="arrow-back" size={24} color="#6C757D" />
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.progressContainer}>
-              {[1, 2, 3].map((stepNumber) => (
-                <View
-                  key={stepNumber}
-                  style={[
-                    styles.progressDot,
-                    stepNumber <= step && { backgroundColor: getStepColor() },
-                  ]}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color="#6C757D" />
-            </TouchableOpacity>
+                {renderCurrentStep()}
+              </ScrollView>
+            </Animated.View>
           </View>
-
-          {/* Content */}
-          {renderCurrentStep()}
-        </Animated.View>
-      </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -371,12 +413,27 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
 
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+
   modal: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '80%',
-    minHeight: 400,
+    maxHeight: '75%',
+    minHeight: 350,
+    width: '100%',
+  },
+
+  scrollContent: {
+    flex: 1,
+  },
+
+  scrollContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
 
   header: {

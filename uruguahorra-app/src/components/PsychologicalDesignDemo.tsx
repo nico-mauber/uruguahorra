@@ -33,6 +33,7 @@ export const PsychologicalDesignDemo: React.FC = () => {
   const mockTransactions = [
     {
       id: '1',
+      user_id: 'demo-user',
       description: 'Almuerzo saludable',
       amount: -450,
       type: 'expense' as const,
@@ -40,9 +41,11 @@ export const PsychologicalDesignDemo: React.FC = () => {
       category_emoji: '🍔',
       transaction_date: new Date().toISOString(),
       regret_level: 2,
+      xp_earned: 10,
     },
     {
       id: '2',
+      user_id: 'demo-user',
       description: 'Ahorro mensual',
       amount: 2500,
       type: 'income' as const,
@@ -50,9 +53,11 @@ export const PsychologicalDesignDemo: React.FC = () => {
       category_emoji: '💰',
       transaction_date: new Date().toISOString(),
       regret_level: 0,
+      xp_earned: 20,
     },
     {
       id: '3',
+      user_id: 'demo-user',
       description: 'Compra impulsiva online',
       amount: -1200,
       type: 'expense' as const,
@@ -60,6 +65,7 @@ export const PsychologicalDesignDemo: React.FC = () => {
       category_emoji: '🛍️',
       transaction_date: new Date().toISOString(),
       regret_level: 8,
+      xp_earned: 5,
     },
   ];
 

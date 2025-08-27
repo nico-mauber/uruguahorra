@@ -56,7 +56,6 @@ export default function TransactionsScreen() {
           user_id: user.id,
           limit: 50,
           offset: 0,
-          period: selectedPeriod,
         };
 
         await Promise.all([
@@ -212,7 +211,9 @@ export default function TransactionsScreen() {
 
         <View style={styles.balanceRow}>
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.balanceLabel, { color: colors.text.secondary }]}
+            >
               Ingresos
             </Text>
             <Text style={[styles.balanceValue, { color: '#51CF66' }]}>
@@ -221,7 +222,9 @@ export default function TransactionsScreen() {
           </View>
 
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.balanceLabel, { color: colors.text.secondary }]}
+            >
               Gastos
             </Text>
             <Text style={[styles.balanceValue, { color: '#FF6B6B' }]}>
@@ -230,7 +233,10 @@ export default function TransactionsScreen() {
           </View>
 
           <View style={styles.balanceItem}>
-            <Text style={[styles.balanceLabel, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.balanceLabel, { color: colors.text.secondary }]}
+            >
+              {' '}
               Balance
             </Text>
             <Text
@@ -269,7 +275,10 @@ export default function TransactionsScreen() {
 
             <View style={styles.transactionInfo}>
               <Text
-                style={[styles.transactionDescription, { color: colors.text.primary }]}
+                style={[
+                  styles.transactionDescription,
+                  { color: colors.text.primary },
+                ]}
               >
                 {transaction.description || category?.name || 'Sin descripción'}
               </Text>
@@ -396,7 +405,9 @@ export default function TransactionsScreen() {
               <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
                 No hay transacciones
               </Text>
-              <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.emptyText, { color: colors.text.secondary }]}
+              >
                 Usa el botón + para registrar tu primera transacción
               </Text>
             </View>
@@ -404,7 +415,9 @@ export default function TransactionsScreen() {
         ) : (
           groupedTransactions.map(([dateStr, dayTransactions]) => (
             <View key={dateStr} style={styles.dayGroup}>
-              <Text style={[styles.dayHeader, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.dayHeader, { color: colors.text.secondary }]}
+              >
                 {formatDate(dayTransactions[0].created_at)}
               </Text>
 

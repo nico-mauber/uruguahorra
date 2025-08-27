@@ -292,7 +292,11 @@ export default function SquadDetailScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={colors.text.primary}
+            />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
             Detalle del Grupo
@@ -463,7 +467,12 @@ export default function SquadDetailScreen() {
                       )}
                     </View>
                     <View style={styles.memberInfo}>
-                      <Text style={[styles.memberEmail, { color: colors.text.primary }]}>
+                      <Text
+                        style={[
+                          styles.memberEmail,
+                          { color: colors.text.primary },
+                        ]}
+                      >
                         {member.user?.email
                           ? member.user.email.split('@')[0]
                           : `Usuario ${member.userId.slice(-4)}`}
@@ -491,7 +500,10 @@ export default function SquadDetailScreen() {
                     </View>
                     <View style={styles.memberStats}>
                       <Text
-                        style={[styles.memberAmount, { color: colors.text.primary }]}
+                        style={[
+                          styles.memberAmount,
+                          { color: colors.text.primary },
+                        ]}
                       >
                         ${member.totalSaved.toFixed(0)}
                       </Text>
@@ -514,7 +526,9 @@ export default function SquadDetailScreen() {
                 size={48}
                 color={colors.text.secondary}
               />
-              <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.emptyText, { color: colors.text.secondary }]}
+              >
                 No hay miembros para mostrar
               </Text>
             </View>
@@ -535,7 +549,9 @@ export default function SquadDetailScreen() {
               style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                <Text
+                  style={[styles.modalTitle, { color: colors.text.primary }]}
+                >
                   Contribuir al Pod
                 </Text>
                 <TouchableOpacity
@@ -552,7 +568,9 @@ export default function SquadDetailScreen() {
 
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
-                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
+                  <Text
+                    style={[styles.inputLabel, { color: colors.text.primary }]}
+                  >
                     Monto *
                   </Text>
                   <TextInput
@@ -573,7 +591,9 @@ export default function SquadDetailScreen() {
                     onSubmitEditing={Keyboard.dismiss}
                   />
 
-                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
+                  <Text
+                    style={[styles.inputLabel, { color: colors.text.primary }]}
+                  >
                     Descripción (opcional)
                   </Text>
                   <TextInput
@@ -604,7 +624,10 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowContributionModal(false)}
                 >
                   <Text
-                    style={[styles.buttonText, { color: colors.text.secondary }]}
+                    style={[
+                      styles.buttonText,
+                      { color: colors.text.secondary },
+                    ]}
                   >
                     Cancelar
                   </Text>
@@ -644,7 +667,9 @@ export default function SquadDetailScreen() {
               style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                <Text
+                  style={[styles.modalTitle, { color: colors.text.primary }]}
+                >
                   Editar Meta del Pod
                 </Text>
                 <TouchableOpacity
@@ -661,7 +686,9 @@ export default function SquadDetailScreen() {
 
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalBody}>
-                  <Text style={[styles.inputLabel, { color: colors.text.primary }]}>
+                  <Text
+                    style={[styles.inputLabel, { color: colors.text.primary }]}
+                  >
                     Meta de Ahorro *
                   </Text>
                   <TextInput
@@ -690,7 +717,10 @@ export default function SquadDetailScreen() {
                   onPress={() => setShowGoalModal(false)}
                 >
                   <Text
-                    style={[styles.buttonText, { color: colors.text.secondary }]}
+                    style={[
+                      styles.buttonText,
+                      { color: colors.text.secondary },
+                    ]}
                   >
                     Cancelar
                   </Text>

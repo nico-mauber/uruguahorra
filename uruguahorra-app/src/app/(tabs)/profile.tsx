@@ -12,14 +12,12 @@ import { useRouter } from 'expo-router';
 import { Card, Button, ProgressBar } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
-import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { permissionsGranted, settings } = useStreakNotifications();
 
   const handleLogout = () => {
     logout();
@@ -226,7 +224,10 @@ export default function ProfileScreen() {
               <Switch
                 value={isDark}
                 onValueChange={toggleTheme}
-                trackColor={{ false: colors.border.primary, true: colors.primary }}
+                trackColor={{
+                  false: colors.border.primary,
+                  true: colors.primary,
+                }}
                 thumbColor={isDark ? colors.primary : '#f4f3f4'}
               />
             </View>

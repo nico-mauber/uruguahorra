@@ -327,7 +327,10 @@ export default function NotificationsScreen() {
               value={permissionsGranted && settings.enabled}
               onValueChange={handleToggleNotifications}
               disabled={isLoading}
-              trackColor={{ false: colors.border.primary, true: colors.primary + '40' }}
+              trackColor={{
+                false: colors.border.primary,
+                true: colors.primary + '40',
+              }}
               thumbColor={
                 permissionsGranted && settings.enabled
                   ? colors.primary

@@ -85,7 +85,9 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
         <View style={styles.progressSection}>
           <ProgressBar progress={groupProgress} />
           <View style={styles.progressInfo}>
-            <Text style={[styles.progressAmount, { color: colors.text.primary }]}>
+            <Text
+              style={[styles.progressAmount, { color: colors.text.primary }]}
+            >
               ${squadContributions.toFixed(0)} / ${groupGoal.toFixed(0)}
             </Text>
             <Text style={[styles.progressPercent, { color: colors.primary }]}>
@@ -156,7 +158,9 @@ export const SquadStatsCard: React.FC<SquadStatsCardProps> = ({
             El grupo ha ahorrado ${monthlyTotal.toFixed(0)} este mes
           </Text>
           {topSaver && (
-            <Text style={[styles.activityText, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.activityText, { color: colors.text.secondary }]}
+            >
               {topSaver.user?.email?.split('@')[0]} lidera con $
               {topSaver.totalSaved.toFixed(0)}
             </Text>

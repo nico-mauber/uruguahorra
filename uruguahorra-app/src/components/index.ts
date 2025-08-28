@@ -5,6 +5,9 @@ export { Card } from './Card';
 // New Psychological Components
 export { default as PsychologicalFAB } from './PsychologicalFAB';
 
+// Analytics & Insights
+export { AnalyticsDashboard } from './AnalyticsDashboard';
+
 // Progress & Visual Feedback
 export { ProgressBar } from './ProgressBar';
 export { ErrorBoundary, SimpleErrorBoundary } from './ErrorBoundary';
@@ -31,3 +34,12 @@ export { SimpleTransactionItem } from './SimpleTransactionItem';
 // Analytics & Gamification
 export { SpendingAnalytics } from './SpendingAnalytics';
 export { GamificationStats } from './GamificationStats';
+
+// Settings Components
+export {
+  SettingSection,
+  NumberInput,
+  FeatureToggle,
+  PreferencePicker,
+  ToastNotification,
+} from './settings';

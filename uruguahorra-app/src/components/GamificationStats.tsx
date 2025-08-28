@@ -82,7 +82,12 @@ const XPBar: React.FC<XPBarProps> = ({
         </Text>
       </View>
 
-      <View style={[styles.xpBarBackground, { backgroundColor: colors.border.primary }]}>
+      <View
+        style={[
+          styles.xpBarBackground,
+          { backgroundColor: colors.border.primary },
+        ]}
+      >
         <Animated.View
           style={[
             styles.xpBarFill,
@@ -403,7 +408,9 @@ export const GamificationStats: React.FC<GamificationStatsProps> = ({
       >
         <View style={styles.achievementsTitle}>
           <Ionicons name="medal" size={20} color="#FFD700" />
-          <Text style={[styles.achievementsText, { color: colors.text.primary }]}>
+          <Text
+            style={[styles.achievementsText, { color: colors.text.primary }]}
+          >
             Logros Desbloqueados ({achievementsCount}/12)
           </Text>
         </View>

@@ -177,12 +177,16 @@ export default function ChallengesScreen() {
     >
       <ScrollView style={styles.scrollContainer}>
         {/* Header con sesiones activas */}
-        <View style={[styles.activeHeader, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.activeHeader, { backgroundColor: colors.surface }]}
+        >
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Retos Activos ({activeSessions.length}/5)
           </Text>
           {activeSessions.length === 0 ? (
-            <Text style={[styles.noActiveText, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.noActiveText, { color: colors.text.secondary }]}
+            >
               No tienes retos activos. ¡Selecciona uno para comenzar!
             </Text>
           ) : (
@@ -196,7 +200,10 @@ export default function ChallengesScreen() {
                   ]}
                 >
                   <Text
-                    style={[styles.activeSessionTitle, { color: colors.text.primary }]}
+                    style={[
+                      styles.activeSessionTitle,
+                      { color: colors.text.primary },
+                    ]}
                     numberOfLines={2}
                   >
                     {session.challenge?.title || 'Reto'}
@@ -276,12 +283,17 @@ export default function ChallengesScreen() {
             Retos Disponibles
           </Text>
           {loading ? (
-            <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
+            <Text
+              style={[styles.loadingText, { color: colors.text.secondary }]}
+            >
               Cargando retos...
             </Text>
           ) : challenges.length === 0 ? (
             <Text
-              style={[styles.noChallengesText, { color: colors.text.secondary }]}
+              style={[
+                styles.noChallengesText,
+                { color: colors.text.secondary },
+              ]}
             >
               No hay retos disponibles en esta categoría
             </Text>
@@ -320,7 +332,10 @@ export default function ChallengesScreen() {
                 >
                   <View style={styles.challengeHeader}>
                     <Text
-                      style={[styles.challengeTitle, { color: colors.text.primary }]}
+                      style={[
+                        styles.challengeTitle,
+                        { color: colors.text.primary },
+                      ]}
                     >
                       {challenge.title}
                     </Text>

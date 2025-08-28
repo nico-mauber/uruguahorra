@@ -610,7 +610,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
                             name="pencil"
                             size={16}
                             color={
-                              isCompleted ? colors.text.secondary : colors.primary
+                              isCompleted
+                                ? colors.text.secondary
+                                : colors.primary
                             }
                           />
                         </TouchableOpacity>

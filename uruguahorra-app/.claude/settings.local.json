@@ -33,7 +33,8 @@
       "Bash(npm uninstall:*)",
       "Bash(mkdir:*)",
       "Bash(find:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": [],

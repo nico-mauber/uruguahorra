@@ -35,7 +35,7 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
   onClose,
   onSquadCreated,
 }) => {
-  const { colors  } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const { createSquad, isCreating } = useSquadsStore();
   const screenHeight = Dimensions.get('window').height;
@@ -186,7 +186,9 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
                 maxLength={50}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.inputInfo, { color: colors.text.secondary }]}
+              >
                 {squadName.length}/50 caracteres
               </Text>
             </View>
@@ -215,7 +217,9 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
                 numberOfLines={3}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.inputInfo, { color: colors.text.secondary }]}
+              >
                 {squadDescription.length}/200 caracteres
               </Text>
             </View>
@@ -242,7 +246,9 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
                 maxLength={2}
                 editable={!isCreating}
               />
-              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.inputInfo, { color: colors.text.secondary }]}
+              >
                 Entre 2 y 50 miembros
               </Text>
             </View>
@@ -250,7 +256,9 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
 
           {/* Info adicional */}
           <View style={styles.infoSection}>
-            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
               <Ionicons
                 name="information-circle"
                 size={20}

@@ -72,14 +72,21 @@ const AnimatedBar: React.FC<AnimatedBarProps> = ({
             size={16}
             color={color}
           />
-          <Text style={[styles.barLabel, { color: colors.text.primary }]}>{label}</Text>
+          <Text style={[styles.barLabel, { color: colors.text.primary }]}>
+            {label}
+          </Text>
         </View>
         <Text style={[styles.barValue, { color: colors.text.primary }]}>
           ${value.toFixed(0)}
         </Text>
       </View>
 
-      <View style={[styles.barBackground, { backgroundColor: colors.border.primary }]}>
+      <View
+        style={[
+          styles.barBackground,
+          { backgroundColor: colors.border.primary },
+        ]}
+      >
         <Animated.View
           style={[
             styles.barFill,
@@ -153,12 +160,17 @@ const PsychologyMeter: React.FC<PsychologyMeterProps> = ({
           size={20}
           color={color}
         />
-        <Text style={[styles.meterTitle, { color: colors.text.primary }]}>{title}</Text>
+        <Text style={[styles.meterTitle, { color: colors.text.primary }]}>
+          {title}
+        </Text>
       </View>
 
       <View style={styles.meterContent}>
         <View
-          style={[styles.meterBackground, { backgroundColor: colors.border.primary }]}
+          style={[
+            styles.meterBackground,
+            { backgroundColor: colors.border.primary },
+          ]}
         >
           <Animated.View
             style={[
@@ -308,7 +320,10 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text
-                  style={[styles.summaryLabel, { color: colors.text.secondary }]}
+                  style={[
+                    styles.summaryLabel,
+                    { color: colors.text.secondary },
+                  ]}
                 >
                   Total Gastado
                 </Text>
@@ -319,11 +334,16 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
 
               <View style={styles.summaryItem}>
                 <Text
-                  style={[styles.summaryLabel, { color: colors.text.secondary }]}
+                  style={[
+                    styles.summaryLabel,
+                    { color: colors.text.secondary },
+                  ]}
                 >
                   Promedio/Día
                 </Text>
-                <Text style={[styles.summaryValue, { color: colors.text.primary }]}>
+                <Text
+                  style={[styles.summaryValue, { color: colors.text.primary }]}
+                >
                   ${insights.avg_daily_spend?.toFixed(0) || '0'}
                 </Text>
               </View>
@@ -333,7 +353,9 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
           {/* Categorías Top */}
           {categoryData.length > 0 && (
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              <Text
+                style={[styles.sectionTitle, { color: colors.text.primary }]}
+              >
                 🏆 Categorías que más gastas
               </Text>
 
@@ -408,7 +430,12 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
 
             <View style={styles.recommendationCard}>
               <Ionicons name="bulb" size={20} color="#FFD93D" />
-              <Text style={[styles.recommendationText, { color: colors.text.primary }]}>
+              <Text
+                style={[
+                  styles.recommendationText,
+                  { color: colors.text.primary },
+                ]}
+              >
                 {insights.psychology?.avg_regret_level &&
                 insights.psychology.avg_regret_level > 5
                   ? 'Considera esperar 24 horas antes de compras grandes para reducir el arrepentimiento.'
@@ -421,7 +448,10 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
                 <View style={styles.recommendationCard}>
                   <Ionicons name="warning" size={20} color="#FF8C00" />
                   <Text
-                    style={[styles.recommendationText, { color: colors.text.primary }]}
+                    style={[
+                      styles.recommendationText,
+                      { color: colors.text.primary },
+                    ]}
                   >
                     Muchos de tus gastos son por placer. Intenta equilibrar con
                     más necesidades básicas.
@@ -433,7 +463,10 @@ export const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({
               <View style={styles.recommendationCard}>
                 <Ionicons name="trending-up" size={20} color="#FF6B6B" />
                 <Text
-                  style={[styles.recommendationText, { color: colors.text.primary }]}
+                  style={[
+                    styles.recommendationText,
+                    { color: colors.text.primary },
+                  ]}
                 >
                   Tu categoría de mayor gasto: "
                   {insights.most_expensive_category}". ¿Es donde quieres enfocar

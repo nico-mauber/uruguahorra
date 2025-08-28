@@ -2,8 +2,8 @@
 -- URUGUAHORRA - COMPLETE DATABASE SCHEMA
 -- ============================================
 -- ÚNICO archivo necesario para crear toda la base de datos desde cero
--- Versión: 5.5 - Challenge System V2 + Pods System + Squad Contributions + Igualdad de Permisos
--- Fecha: 25 de Agosto, 2025
+-- Versión: 5.6 - Challenge System V2 + Pods System + Squad Contributions + Analytics Preferences
+-- Fecha: 27 de Agosto, 2025
 -- ============================================
 -- 
 -- INSTRUCCIONES DE USO:
@@ -40,6 +40,8 @@
 -- ✅ IGUALDAD DE PERMISOS - Todos los miembros de pods son administradores
 -- ✅ SQUAD CONTRIBUTIONS SYSTEM - Contribuciones directas a pods con actualización automática de totales
 -- ✅ SQUAD GAMIFICATION - Sistema de XP por contribuciones a pods (15 XP por contribución)
+-- ✅ ANALYTICS PREFERENCES SYSTEM - Preferencias personalizables de analytics por usuario
+-- ✅ CONFIGURACIÓN DINÁMICA - Períodos de análisis, idioma, cache, y features configurables por usuario
 -- 
 -- ADVERTENCIA: Este script ELIMINA todos los datos y estructura existente
 -- y los recrea con la estructura correcta y actualizada
@@ -468,6 +470,46 @@ CREATE TABLE public.paywall_events (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- TABLA USER_ANALYTICS_PREFERENCES (Sistema de preferencias de analytics personalizable por usuario)
+CREATE TABLE public.user_analytics_preferences (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- Time period preferences
+    spending_patterns_days INTEGER DEFAULT 30 CHECK (spending_patterns_days >= 7 AND spending_patterns_days <= 365),
+    monthly_insights_months INTEGER DEFAULT 6 CHECK (monthly_insights_months >= 1 AND monthly_insights_months <= 48),
+    forecast_days INTEGER DEFAULT 30 CHECK (forecast_days >= 7 AND forecast_days <= 365),
+    
+    -- UI preferences
+    default_tab TEXT DEFAULT 'insights' CHECK (default_tab IN ('insights', 'patterns', 'forecast')),
+    show_quick_stats BOOLEAN DEFAULT true,
+    max_insights_per_type INTEGER DEFAULT 2 CHECK (max_insights_per_type >= 1 AND max_insights_per_type <= 5),
+    hide_completed_insights BOOLEAN DEFAULT true,
+    prefer_high_impact_insights BOOLEAN DEFAULT true,
+    
+    -- Feature preferences
+    enable_psychological_insights BOOLEAN DEFAULT true,
+    enable_spending_forecast BOOLEAN DEFAULT true,
+    enable_push_notifications BOOLEAN DEFAULT false,
+    enable_export_functionality BOOLEAN DEFAULT false,
+    
+    -- Localization preferences
+    preferred_language TEXT DEFAULT 'es' CHECK (preferred_language IN ('es', 'en')),
+    currency TEXT DEFAULT 'UYU' CHECK (currency IN ('UYU', 'USD', 'EUR')),
+    date_format TEXT DEFAULT 'DD/MM/YYYY' CHECK (date_format IN ('DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD')),
+    
+    -- Cache and performance preferences
+    cache_interval INTEGER DEFAULT 300000 CHECK (cache_interval >= 30000 AND cache_interval <= 1800000), -- 30s to 30min
+    auto_refresh BOOLEAN DEFAULT true,
+    
+    -- Metadata
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Ensure one preference per user
+    UNIQUE(user_id)
+);
+
 -- ============================================
 -- PASO 4: CREACIÓN DE ÍNDICES
 -- ============================================
@@ -585,6 +627,10 @@ CREATE INDEX idx_weekly_quests_created_at ON public.weekly_quests(created_at DES
 -- Índices para user_quest_progress
 CREATE INDEX idx_user_quest_progress_user_id ON public.user_quest_progress(user_id);
 CREATE INDEX idx_user_quest_progress_quest_id ON public.user_quest_progress(quest_id);
+
+-- Índices para user_analytics_preferences
+CREATE INDEX idx_user_analytics_preferences_user_id ON public.user_analytics_preferences(user_id);
+CREATE INDEX idx_user_analytics_preferences_updated_at ON public.user_analytics_preferences(updated_at);
 CREATE INDEX idx_user_quest_progress_completed ON public.user_quest_progress(completed_at);
 CREATE INDEX idx_user_quest_progress_completion ON public.user_quest_progress(completion_percentage);
 CREATE INDEX idx_user_quest_progress_updated ON public.user_quest_progress(updated_at DESC);
@@ -860,6 +906,19 @@ CREATE POLICY "user_quest_progress_insert_own_or_system" ON public.user_quest_pr
 
 CREATE POLICY "user_quest_progress_update_own" ON public.user_quest_progress
     FOR UPDATE USING (auth.uid() = user_id);
+
+-- Políticas para USER_ANALYTICS_PREFERENCES
+CREATE POLICY "user_analytics_preferences_view_own" ON public.user_analytics_preferences
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "user_analytics_preferences_insert_own" ON public.user_analytics_preferences
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_analytics_preferences_update_own" ON public.user_analytics_preferences
+    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_analytics_preferences_delete_own" ON public.user_analytics_preferences
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- Políticas para AUDIT_LOGS (solo lectura propia)
 CREATE POLICY "audit_logs_read_own" ON public.audit_logs
@@ -2434,5 +2493,425 @@ SELECT
 -- ✅ Inserta datos semilla (categorías de transacciones y challenges)
 -- ✅ Sistema listo para usar inmediatamente
 -- 
+
+-- ============================================
+-- ANALYTICS & PSYCHOLOGICAL INSIGHTS SYSTEM
+-- ============================================
+-- Sistema avanzado de análisis financiero con insights psicológicos
+-- Basado en principios de Loss Aversion, Mental Accounting, Present Bias y Social Proof
+
+-- Función para obtener patrones de gasto
+CREATE OR REPLACE FUNCTION get_spending_patterns(
+    user_id UUID,
+    days_back INTEGER DEFAULT 30
+)
+RETURNS TABLE (
+    category TEXT,
+    amount DECIMAL,
+    frequency INTEGER,
+    trend TEXT,
+    average_amount DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH category_stats AS (
+        SELECT 
+            COALESCE(tc.name, 'Sin categoría') as cat_name,
+            SUM(t.amount) as total_amount,
+            COUNT(t.id) as transaction_count,
+            AVG(t.amount) as avg_amount,
+            -- Calcular tendencia comparando últimos 15 días vs 15 días anteriores
+            CASE 
+                WHEN SUM(CASE WHEN t.created_at >= NOW() - INTERVAL '15 days' THEN t.amount ELSE 0 END) >
+                     SUM(CASE WHEN t.created_at < NOW() - INTERVAL '15 days' THEN t.amount ELSE 0 END) * 1.1 
+                THEN 'up'
+                WHEN SUM(CASE WHEN t.created_at >= NOW() - INTERVAL '15 days' THEN t.amount ELSE 0 END) <
+                     SUM(CASE WHEN t.created_at < NOW() - INTERVAL '15 days' THEN t.amount ELSE 0 END) * 0.9 
+                THEN 'down'
+                ELSE 'stable'
+            END as trend_direction
+        FROM transactions t
+        LEFT JOIN transaction_categories tc ON t.category_id = tc.id
+        WHERE t.user_id = get_spending_patterns.user_id
+            AND t.created_at >= NOW() - INTERVAL '1 day' * days_back
+            AND t.amount > 0 -- Solo gastos
+        GROUP BY tc.name
+    )
+    SELECT 
+        cs.cat_name::TEXT,
+        cs.total_amount,
+        cs.transaction_count::INTEGER,
+        cs.trend_direction::TEXT,
+        cs.avg_amount
+    FROM category_stats cs
+    ORDER BY cs.total_amount DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para obtener insights mensuales
+CREATE OR REPLACE FUNCTION get_monthly_insights(
+    user_id UUID,
+    months_back INTEGER DEFAULT 6
+)
+RETURNS TABLE (
+    month TEXT,
+    total_spent DECIMAL,
+    budget_variance DECIMAL,
+    top_categories JSONB,
+    savings_rate DECIMAL,
+    streak_days INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH monthly_data AS (
+        SELECT 
+            TO_CHAR(DATE_TRUNC('month', t.created_at), 'YYYY-MM') as month_key,
+            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as spent,
+            SUM(CASE WHEN t.amount < 0 THEN ABS(t.amount) ELSE 0 END) as saved,
+            DATE_TRUNC('month', t.created_at) as month_date
+        FROM transactions t
+        WHERE t.user_id = get_monthly_insights.user_id
+            AND t.created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' * months_back
+        GROUP BY DATE_TRUNC('month', t.created_at)
+    ),
+    top_cats AS (
+        SELECT 
+            month_key,
+            JSONB_AGG(
+                JSONB_BUILD_OBJECT(
+                    'category', category_name,
+                    'amount', category_amount,
+                    'percentage', category_percentage
+                )
+                ORDER BY category_amount DESC
+            ) as top_3
+        FROM (
+            SELECT 
+                TO_CHAR(DATE_TRUNC('month', t.created_at), 'YYYY-MM') as month_key,
+                COALESCE(tc.name, 'Sin categoría') as category_name,
+                SUM(t.amount) as category_amount,
+                ROUND((SUM(t.amount) * 100.0 / SUM(SUM(t.amount)) OVER (PARTITION BY DATE_TRUNC('month', t.created_at)))::NUMERIC, 2) as category_percentage,
+                ROW_NUMBER() OVER (PARTITION BY DATE_TRUNC('month', t.created_at) ORDER BY SUM(t.amount) DESC) as rn
+            FROM transactions t
+            LEFT JOIN transaction_categories tc ON t.category_id = tc.id
+            WHERE t.user_id = get_monthly_insights.user_id 
+                AND t.amount > 0
+                AND t.created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' * months_back
+            GROUP BY DATE_TRUNC('month', t.created_at), tc.name
+        ) ranked_categories
+        WHERE rn <= 3
+        GROUP BY month_key
+    ),
+    streak_data AS (
+        SELECT 
+            TO_CHAR(DATE_TRUNC('month', NOW()), 'YYYY-MM') as current_month,
+            COALESCE(us.current_streak, 0) as current_streak_days
+        FROM user_streaks us
+        WHERE us.user_id = get_monthly_insights.user_id
+        LIMIT 1
+    )
+    SELECT 
+        md.month_key::TEXT,
+        md.spent,
+        -- Budget variance (asumiendo presupuesto base)
+        CASE WHEN md.spent > 1000 THEN ((md.spent - 1000) / 1000 * 100) ELSE 0 END as variance,
+        COALESCE(tc.top_3, '[]'::jsonb),
+        CASE WHEN (md.spent + md.saved) > 0 
+             THEN ROUND((md.saved / (md.spent + md.saved) * 100)::NUMERIC, 2)
+             ELSE 0 
+        END as savings_percentage,
+        CASE WHEN md.month_key = sd.current_month 
+             THEN sd.current_streak_days 
+             ELSE 0 
+        END as current_streak
+    FROM monthly_data md
+    LEFT JOIN top_cats tc ON md.month_key = tc.month_key
+    CROSS JOIN streak_data sd
+    ORDER BY md.month_date DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para análisis psicológico de usuarios
+CREATE OR REPLACE FUNCTION get_user_spending_analysis(user_id UUID)
+RETURNS TABLE (
+    budget_variance DECIMAL,
+    top_category TEXT,
+    top_category_percentage DECIMAL,
+    daily_average DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH spending_summary AS (
+        SELECT 
+            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as total_spent,
+            COUNT(CASE WHEN t.amount > 0 THEN 1 END) as spending_days,
+            EXTRACT(days FROM (NOW() - MIN(t.created_at)))::INTEGER + 1 as total_days
+        FROM transactions t
+        WHERE t.user_id = get_user_spending_analysis.user_id
+            AND t.created_at >= NOW() - INTERVAL '30 days'
+    ),
+    top_category_data AS (
+        SELECT 
+            COALESCE(tc.name, 'Sin categoría') as category_name,
+            SUM(t.amount) as category_total,
+            ROW_NUMBER() OVER (ORDER BY SUM(t.amount) DESC) as rn
+        FROM transactions t
+        LEFT JOIN transaction_categories tc ON t.category_id = tc.id
+        WHERE t.user_id = get_user_spending_analysis.user_id
+            AND t.amount > 0
+            AND t.created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY tc.name
+    )
+    SELECT 
+        -- Budget variance (usando 1000 como presupuesto base)
+        CASE WHEN ss.total_spent > 1000 
+             THEN ((ss.total_spent - 1000) / 1000 * 100)
+             ELSE 0 
+        END,
+        tcd.category_name::TEXT,
+        CASE WHEN ss.total_spent > 0 
+             THEN ROUND((tcd.category_total / ss.total_spent * 100)::NUMERIC, 2)
+             ELSE 0 
+        END,
+        CASE WHEN ss.total_days > 0 
+             THEN ROUND((ss.total_spent / ss.total_days)::NUMERIC, 2)
+             ELSE 0 
+        END
+    FROM spending_summary ss
+    LEFT JOIN top_category_data tcd ON tcd.rn = 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para obtener datos de racha del usuario
+CREATE OR REPLACE FUNCTION get_user_streak_data(user_id UUID)
+RETURNS TABLE (
+    current_streak INTEGER,
+    longest_streak INTEGER,
+    streak_updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        COALESCE(us.current_streak, 0)::INTEGER,
+        COALESCE(us.longest_streak, 0)::INTEGER,
+        COALESCE(us.updated_at, NOW())
+    FROM user_streaks us
+    WHERE us.user_id = get_user_streak_data.user_id
+    LIMIT 1;
+    
+    -- Si no existe registro de streaks, crear uno
+    IF NOT FOUND THEN
+        INSERT INTO user_streaks (user_id, current_streak, longest_streak)
+        VALUES (get_user_streak_data.user_id, 0, 0)
+        ON CONFLICT (user_id) DO NOTHING;
+        
+        RETURN QUERY
+        SELECT 0::INTEGER, 0::INTEGER, NOW();
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para predicción de gastos futuros
+CREATE OR REPLACE FUNCTION predict_future_spending(
+    user_id UUID,
+    forecast_days INTEGER DEFAULT 30
+)
+RETURNS TABLE (
+    predicted_amount DECIMAL,
+    confidence DECIMAL,
+    trend TEXT,
+    based_on_days INTEGER
+) AS $$
+DECLARE
+    recent_avg DECIMAL;
+    older_avg DECIMAL;
+    variance_coefficient DECIMAL;
+    data_points INTEGER;
+BEGIN
+    -- Obtener promedio de los últimos 15 días
+    SELECT 
+        AVG(daily_spending),
+        COUNT(*)
+    INTO recent_avg, data_points
+    FROM (
+        SELECT 
+            DATE(t.created_at) as spending_date,
+            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
+        FROM transactions t
+        WHERE t.user_id = predict_future_spending.user_id
+            AND t.created_at >= NOW() - INTERVAL '15 days'
+        GROUP BY DATE(t.created_at)
+    ) daily_totals;
+    
+    -- Obtener promedio de 15 días anteriores para comparación
+    SELECT AVG(daily_spending)
+    INTO older_avg
+    FROM (
+        SELECT 
+            DATE(t.created_at) as spending_date,
+            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
+        FROM transactions t
+        WHERE t.user_id = predict_future_spending.user_id
+            AND t.created_at >= NOW() - INTERVAL '30 days'
+            AND t.created_at < NOW() - INTERVAL '15 days'
+        GROUP BY DATE(t.created_at)
+    ) daily_totals;
+    
+    -- Calcular coeficiente de varianza para confianza
+    SELECT STDDEV(daily_spending) / NULLIF(AVG(daily_spending), 0)
+    INTO variance_coefficient
+    FROM (
+        SELECT 
+            DATE(t.created_at) as spending_date,
+            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
+        FROM transactions t
+        WHERE t.user_id = predict_future_spending.user_id
+            AND t.created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(t.created_at)
+    ) daily_totals;
+    
+    RETURN QUERY
+    SELECT 
+        COALESCE(recent_avg * forecast_days, 0)::DECIMAL as prediction,
+        CASE 
+            WHEN data_points >= 10 AND variance_coefficient <= 0.5 THEN 0.8
+            WHEN data_points >= 5 AND variance_coefficient <= 1.0 THEN 0.6
+            WHEN data_points >= 3 THEN 0.4
+            ELSE 0.2
+        END::DECIMAL as conf_level,
+        CASE 
+            WHEN recent_avg > COALESCE(older_avg, recent_avg) * 1.1 THEN 'up'
+            WHEN recent_avg < COALESCE(older_avg, recent_avg) * 0.9 THEN 'down'
+            ELSE 'stable'
+        END::TEXT as trend_direction,
+        COALESCE(data_points, 0)::INTEGER as data_days;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Permisos para las funciones de analytics
+GRANT EXECUTE ON FUNCTION get_spending_patterns(UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_monthly_insights(UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_spending_analysis(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_streak_data(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION predict_future_spending(UUID, INTEGER) TO authenticated;
+
+-- ============================================
+
+-- ==================== FUNCIONES PARA USER ANALYTICS PREFERENCES ====================
+
+-- Función para obtener o crear preferencias de analytics para un usuario
+CREATE OR REPLACE FUNCTION get_or_create_analytics_preferences(p_user_id UUID)
+RETURNS public.user_analytics_preferences AS $$
+DECLARE
+    preferences public.user_analytics_preferences;
+BEGIN
+    -- Try to get existing preferences
+    SELECT * INTO preferences 
+    FROM public.user_analytics_preferences 
+    WHERE user_id = p_user_id;
+    
+    -- If no preferences exist, create default ones
+    IF NOT FOUND THEN
+        INSERT INTO public.user_analytics_preferences (user_id)
+        VALUES (p_user_id)
+        RETURNING * INTO preferences;
+        
+        RAISE NOTICE 'Created default analytics preferences for user %', p_user_id;
+    END IF;
+    
+    RETURN preferences;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para actualizar preferencias de analytics
+CREATE OR REPLACE FUNCTION update_analytics_preferences(
+    p_user_id UUID,
+    p_spending_patterns_days INTEGER DEFAULT NULL,
+    p_monthly_insights_months INTEGER DEFAULT NULL,
+    p_forecast_days INTEGER DEFAULT NULL,
+    p_default_tab TEXT DEFAULT NULL,
+    p_show_quick_stats BOOLEAN DEFAULT NULL,
+    p_max_insights_per_type INTEGER DEFAULT NULL,
+    p_hide_completed_insights BOOLEAN DEFAULT NULL,
+    p_prefer_high_impact_insights BOOLEAN DEFAULT NULL,
+    p_enable_psychological_insights BOOLEAN DEFAULT NULL,
+    p_enable_spending_forecast BOOLEAN DEFAULT NULL,
+    p_enable_push_notifications BOOLEAN DEFAULT NULL,
+    p_preferred_language TEXT DEFAULT NULL,
+    p_currency TEXT DEFAULT NULL,
+    p_date_format TEXT DEFAULT NULL,
+    p_cache_interval INTEGER DEFAULT NULL,
+    p_auto_refresh BOOLEAN DEFAULT NULL
+)
+RETURNS public.user_analytics_preferences AS $$
+DECLARE
+    updated_preferences public.user_analytics_preferences;
+BEGIN
+    -- Ensure preferences exist first
+    PERFORM get_or_create_analytics_preferences(p_user_id);
+    
+    -- Update only provided values
+    UPDATE public.user_analytics_preferences SET
+        spending_patterns_days = COALESCE(p_spending_patterns_days, spending_patterns_days),
+        monthly_insights_months = COALESCE(p_monthly_insights_months, monthly_insights_months),
+        forecast_days = COALESCE(p_forecast_days, forecast_days),
+        default_tab = COALESCE(p_default_tab, default_tab),
+        show_quick_stats = COALESCE(p_show_quick_stats, show_quick_stats),
+        max_insights_per_type = COALESCE(p_max_insights_per_type, max_insights_per_type),
+        hide_completed_insights = COALESCE(p_hide_completed_insights, hide_completed_insights),
+        prefer_high_impact_insights = COALESCE(p_prefer_high_impact_insights, prefer_high_impact_insights),
+        enable_psychological_insights = COALESCE(p_enable_psychological_insights, enable_psychological_insights),
+        enable_spending_forecast = COALESCE(p_enable_spending_forecast, enable_spending_forecast),
+        enable_push_notifications = COALESCE(p_enable_push_notifications, enable_push_notifications),
+        preferred_language = COALESCE(p_preferred_language, preferred_language),
+        currency = COALESCE(p_currency, currency),
+        date_format = COALESCE(p_date_format, date_format),
+        cache_interval = COALESCE(p_cache_interval, cache_interval),
+        auto_refresh = COALESCE(p_auto_refresh, auto_refresh),
+        updated_at = NOW()
+    WHERE user_id = p_user_id
+    RETURNING * INTO updated_preferences;
+    
+    RETURN updated_preferences;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para resetear preferencias de analytics a valores por defecto
+CREATE OR REPLACE FUNCTION reset_analytics_preferences(p_user_id UUID)
+RETURNS public.user_analytics_preferences AS $$
+DECLARE
+    reset_preferences public.user_analytics_preferences;
+BEGIN
+    -- Delete existing preferences
+    DELETE FROM public.user_analytics_preferences WHERE user_id = p_user_id;
+    
+    -- Create new default preferences
+    INSERT INTO public.user_analytics_preferences (user_id)
+    VALUES (p_user_id)
+    RETURNING * INTO reset_preferences;
+    
+    RAISE NOTICE 'Reset analytics preferences to defaults for user %', p_user_id;
+    
+    RETURN reset_preferences;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para actualizar updated_at en user_analytics_preferences
+CREATE OR REPLACE FUNCTION update_user_analytics_preferences_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Permisos para las funciones de analytics preferences
+GRANT EXECUTE ON FUNCTION get_or_create_analytics_preferences(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION update_analytics_preferences(UUID, INTEGER, INTEGER, INTEGER, TEXT, BOOLEAN, INTEGER, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, TEXT, TEXT, TEXT, INTEGER, BOOLEAN) TO authenticated;
+GRANT EXECUTE ON FUNCTION reset_analytics_preferences(UUID) TO authenticated;
+
+-- ============================================
+-- FIN ANALYTICS SYSTEM
+-- ============================================
 
  

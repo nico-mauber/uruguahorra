@@ -49,6 +49,15 @@ function TabLayoutContent() {
         }}
       />
       <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Análisis',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="analytics" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',

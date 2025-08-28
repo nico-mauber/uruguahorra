@@ -189,7 +189,9 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
                 editable={!isJoining}
                 textAlign="center"
               />
-              <Text style={[styles.inputInfo, { color: colors.text.secondary }]}>
+              <Text
+                style={[styles.inputInfo, { color: colors.text.secondary }]}
+              >
                 Ingresa el código que te compartió tu amigo
               </Text>
             </View>
@@ -197,16 +199,28 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
 
           {/* Info adicional */}
           <View style={styles.infoSection}>
-            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={colors.primary}
+              />
               <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                 Al unirte podrás ver el progreso del grupo y competir de forma
                 amigable con tus compañeros de ahorro.
               </Text>
             </View>
 
-            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-              <Ionicons name="trophy-outline" size={20} color={colors.success} />
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
+              <Ionicons
+                name="trophy-outline"
+                size={20}
+                color={colors.success}
+              />
               <Text style={[styles.infoText, { color: colors.text.secondary }]}>
                 ¡Ahorrar en grupo es más motivador! Verás rankings y podrás
                 celebrar logros juntos.

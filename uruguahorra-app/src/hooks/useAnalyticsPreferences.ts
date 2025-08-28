@@ -19,6 +19,7 @@ interface PreferencesState {
   preferences: AnalyticsPreferences | null;
   isLoading: boolean;
   error: string | null;
+  hasUnsavedChanges: boolean;
   lastSaved: Date | null;
   isCached: boolean;
   cacheStats?: {
@@ -31,6 +32,7 @@ const initialState: PreferencesState = {
   preferences: null,
   isLoading: false,
   error: null,
+  hasUnsavedChanges: false,
   lastSaved: null,
   isCached: false,
 };
@@ -45,74 +47,87 @@ export const useAnalyticsPreferences = () => {
   const loadingRef = useRef<boolean>(false);
 
   // ==================== CACHE AWARE FETCH PREFERENCES ====================
-  const loadPreferences = useCallback(async (forceRefresh: boolean = false) => {
-    if (!user?.id || loadingRef.current) return;
+  const loadPreferences = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (!user?.id || loadingRef.current) return;
 
-    loadingRef.current = true;
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+      loadingRef.current = true;
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    try {
-      logger.start(LogModule.DB, 'Loading analytics preferences', {
-        userId: user.id,
-        forceRefresh,
-      });
+      try {
+        logger.start(LogModule.DB, 'Loading analytics preferences', {
+          userId: user.id,
+          forceRefresh,
+        });
 
-      let preferences: AnalyticsPreferences | null = null;
-      let fromCache = false;
+        let preferences: AnalyticsPreferences | null = null;
+        let fromCache = false;
 
-      // Try cache first unless force refresh
-      if (!forceRefresh) {
-        preferences = await preferencesCache.get(user.id);
-        fromCache = !!preferences;
-      }
-
-      // If no cache hit or force refresh, fetch from database
-      if (!preferences) {
-        preferences = await AnalyticsPreferencesService.getEffectivePreferences(user.id);
-        
-        // Cache the fresh data
-        if (preferences) {
-          await preferencesCache.set(user.id, preferences);
+        // Try cache first unless force refresh
+        if (!forceRefresh) {
+          preferences = await preferencesCache.get(user.id);
+          fromCache = !!preferences;
         }
+
+        // If no cache hit or force refresh, fetch from database
+        if (!preferences) {
+          preferences =
+            await AnalyticsPreferencesService.getEffectivePreferences(user.id);
+
+          // Cache the fresh data
+          if (preferences) {
+            await preferencesCache.set(user.id, preferences);
+          }
+        }
+
+        // Get cache stats for debugging
+        const cacheStats = await preferencesCache.getStats();
+
+        setState({
+          preferences,
+          isLoading: false,
+          error: null,
+          hasUnsavedChanges: false,
+          lastSaved: new Date(),
+          isCached: fromCache,
+          cacheStats: {
+            hitRatio: cacheStats.hitRatio,
+            totalRequests: cacheStats.totalRequests,
+          },
+        });
+
+        logger.success(
+          LogModule.DB,
+          'Analytics preferences loaded successfully',
+          {
+            fromCache,
+            hitRatio: cacheStats.hitRatio,
+          }
+        );
+      } catch (error) {
+        logger.error(
+          LogModule.DB,
+          'Error loading analytics preferences',
+          error
+        );
+
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          isCached: false,
+          // Fallback to defaults
+          preferences: prev.preferences || {
+            user_id: user.id,
+            ...DEFAULT_USER_PREFERENCES,
+          },
+        }));
+      } finally {
+        loadingRef.current = false;
       }
-
-      // Get cache stats for debugging
-      const cacheStats = await preferencesCache.getStats();
-
-      setState({
-        preferences,
-        isLoading: false,
-        error: null,
-              lastSaved: new Date(),
-        isCached: fromCache,
-        cacheStats: {
-          hitRatio: cacheStats.hitRatio,
-          totalRequests: cacheStats.totalRequests,
-        },
-      });
-
-      logger.success(LogModule.DB, 'Analytics preferences loaded successfully', {
-        fromCache,
-        hitRatio: cacheStats.hitRatio,
-      });
-    } catch (error) {
-      logger.error(LogModule.DB, 'Error loading analytics preferences', error);
-
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Error desconocido',
-        isCached: false,
-        // Fallback to defaults
-        preferences: prev.preferences || {
-          user_id: user.id,
-          ...DEFAULT_USER_PREFERENCES,
-        },
-      }));
-    } finally {
-      loadingRef.current = false;
-    }
-  }, [user?.id]);
+    },
+    [user?.id]
+  );
 
   // ==================== CACHE-AWARE UPDATE PREFERENCES ====================
   const updatePreferences = useCallback(
@@ -130,6 +145,7 @@ export const useAnalyticsPreferences = () => {
         setState((prev) => ({
           ...prev,
           preferences: optimisticPreferences,
+          hasUnsavedChanges: true,
           isCached: false, // Mark as not cached since we're updating
         }));
 
@@ -146,7 +162,8 @@ export const useAnalyticsPreferences = () => {
         setState((prev) => ({
           ...prev,
           preferences: updatedPreferences,
-                  lastSaved: new Date(),
+          hasUnsavedChanges: false,
+          lastSaved: new Date(),
           error: null,
           isCached: true, // Now it's cached
         }));
@@ -173,7 +190,8 @@ export const useAnalyticsPreferences = () => {
             error instanceof Error
               ? error.message
               : 'Error al actualizar preferencias',
-                  isCached: false,
+          hasUnsavedChanges: false,
+          isCached: false,
         }));
 
         // Reload to get correct state
@@ -203,7 +221,8 @@ export const useAnalyticsPreferences = () => {
         preferences: defaultPreferences,
         isLoading: false,
         error: null,
-              lastSaved: new Date(),
+        hasUnsavedChanges: false,
+        lastSaved: new Date(),
         isCached: true,
       });
 
@@ -232,79 +251,104 @@ export const useAnalyticsPreferences = () => {
     }
   }, [user?.id]);
 
-  // ==================== AUTO-SAVE UPDATE HELPERS ====================
+  // ==================== BATCH UPDATE HELPERS ====================
   const updateTimePreferences = useCallback(
-    async (updates: {
+    (updates: {
       spendingPatternsDays?: number;
       monthlyInsightsMonths?: number;
       forecastDays?: number;
     }) => {
-      // Auto-save immediately
-      const result = await updatePreferences({
+      return updatePreferences({
         spending_patterns_days: updates.spendingPatternsDays,
         monthly_insights_months: updates.monthlyInsightsMonths,
         forecast_days: updates.forecastDays,
       });
-      return result;
     },
     [updatePreferences]
   );
 
   const updateUIPreferences = useCallback(
-    async (updates: {
+    (updates: {
       defaultTab?: 'insights' | 'patterns' | 'forecast';
       showQuickStats?: boolean;
       maxInsightsPerType?: number;
       hideCompletedInsights?: boolean;
       preferHighImpactInsights?: boolean;
     }) => {
-      // Auto-save immediately
-      const result = await updatePreferences({
+      return updatePreferences({
         default_tab: updates.defaultTab,
         show_quick_stats: updates.showQuickStats,
         max_insights_per_type: updates.maxInsightsPerType,
         hide_completed_insights: updates.hideCompletedInsights,
         prefer_high_impact_insights: updates.preferHighImpactInsights,
       });
-      return result;
     },
     [updatePreferences]
   );
 
   const updateFeaturePreferences = useCallback(
-    async (updates: {
+    (updates: {
       enablePsychologicalInsights?: boolean;
       enableSpendingForecast?: boolean;
       enablePushNotifications?: boolean;
+      enableExportFunctionality?: boolean;
     }) => {
-      // Auto-save immediately
-      const result = await updatePreferences({
+      return updatePreferences({
         enable_psychological_insights: updates.enablePsychologicalInsights,
         enable_spending_forecast: updates.enableSpendingForecast,
         enable_push_notifications: updates.enablePushNotifications,
+        enable_export_functionality: updates.enableExportFunctionality,
       });
-      return result;
     },
     [updatePreferences]
   );
 
   const updateLocalizationPreferences = useCallback(
-    async (updates: {
+    (updates: {
       preferredLanguage?: 'es' | 'en';
       currency?: 'UYU' | 'USD' | 'EUR';
       dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
     }) => {
-      // Auto-save immediately
-      const result = await updatePreferences({
+      return updatePreferences({
         preferred_language: updates.preferredLanguage,
         currency: updates.currency,
         date_format: updates.dateFormat,
       });
-      return result;
     },
     [updatePreferences]
   );
 
+  // ==================== EXPORT/IMPORT ====================
+  const exportPreferences = useCallback(() => {
+    if (!state.preferences) return null;
+
+    try {
+      return AnalyticsPreferencesService.exportPreferences(state.preferences);
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error exporting preferences', error);
+      return null;
+    }
+  }, [state.preferences]);
+
+  const importPreferences = useCallback(
+    async (importData: string) => {
+      if (!user?.id) return false;
+
+      try {
+        const parsedPreferences =
+          AnalyticsPreferencesService.parseImportedPreferences(importData);
+        return await updatePreferences(parsedPreferences);
+      } catch (error) {
+        logger.error(LogModule.DB, 'Error importing preferences', error);
+        setState((prev) => ({
+          ...prev,
+          error: 'Error al importar preferencias: formato inválido',
+        }));
+        return false;
+      }
+    },
+    [user?.id, updatePreferences]
+  );
 
   // ==================== CACHE MANAGEMENT ====================
   const clearCache = useCallback(async () => {
@@ -390,6 +434,9 @@ export const useAnalyticsPreferences = () => {
     updateFeaturePreferences,
     updateLocalizationPreferences,
 
+    // Import/Export
+    exportPreferences,
+    importPreferences,
 
     // Computed values
     getAnalyticsOptions,
@@ -415,6 +462,7 @@ export const useAnalyticsPreferences = () => {
             state.preferences.enable_psychological_insights,
           spendingForecast: state.preferences.enable_spending_forecast,
           pushNotifications: state.preferences.enable_push_notifications,
+          exportFunctionality: state.preferences.enable_export_functionality,
         }
       : null,
   };

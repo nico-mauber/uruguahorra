@@ -2534,7 +2534,8 @@ BEGIN
         LEFT JOIN transaction_categories tc ON t.category_id = tc.id
         WHERE t.user_id = get_spending_patterns.user_id
             AND t.created_at >= NOW() - INTERVAL '1 day' * days_back
-            AND t.amount > 0 -- Solo gastos
+            AND t.type = 'expense' -- Solo gastos por tipo, no por signo
+            AND t.deleted_at IS NULL -- Excluir transacciones eliminadas
         GROUP BY tc.name
     )
     SELECT 
@@ -2566,12 +2567,13 @@ BEGIN
     WITH monthly_data AS (
         SELECT 
             TO_CHAR(DATE_TRUNC('month', t.created_at), 'YYYY-MM') as month_key,
-            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as spent,
-            SUM(CASE WHEN t.amount < 0 THEN ABS(t.amount) ELSE 0 END) as saved,
+            SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as spent,
+            SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as earned,
             DATE_TRUNC('month', t.created_at) as month_date
         FROM transactions t
         WHERE t.user_id = get_monthly_insights.user_id
             AND t.created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' * months_back
+            AND t.deleted_at IS NULL -- Excluir transacciones eliminadas
         GROUP BY DATE_TRUNC('month', t.created_at)
     ),
     top_cats AS (
@@ -2595,7 +2597,8 @@ BEGIN
             FROM transactions t
             LEFT JOIN transaction_categories tc ON t.category_id = tc.id
             WHERE t.user_id = get_monthly_insights.user_id 
-                AND t.amount > 0
+                AND t.type = 'expense' -- Solo gastos por tipo, no por signo
+                AND t.deleted_at IS NULL -- Excluir transacciones eliminadas
                 AND t.created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' * months_back
             GROUP BY DATE_TRUNC('month', t.created_at), tc.name
         ) ranked_categories
@@ -2616,8 +2619,8 @@ BEGIN
         -- Budget variance (asumiendo presupuesto base)
         CASE WHEN md.spent > 1000 THEN ((md.spent - 1000) / 1000 * 100) ELSE 0 END as variance,
         COALESCE(tc.top_3, '[]'::jsonb),
-        CASE WHEN (md.spent + md.saved) > 0 
-             THEN ROUND((md.saved / (md.spent + md.saved) * 100)::NUMERIC, 2)
+        CASE WHEN md.earned > 0 
+             THEN ROUND(((md.earned - md.spent) / md.earned * 100)::NUMERIC, 2)
              ELSE 0 
         END as savings_percentage,
         CASE WHEN md.month_key = sd.current_month 
@@ -2643,11 +2646,13 @@ BEGIN
     RETURN QUERY
     WITH spending_summary AS (
         SELECT 
-            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as total_spent,
-            COUNT(CASE WHEN t.amount > 0 THEN 1 END) as spending_days,
+            SUM(t.amount) as total_spent,
+            COUNT(t.id) as spending_days,
             EXTRACT(days FROM (NOW() - MIN(t.created_at)))::INTEGER + 1 as total_days
         FROM transactions t
         WHERE t.user_id = get_user_spending_analysis.user_id
+            AND t.type = 'expense' -- FIJO: Solo gastos por tipo, no por signo
+            AND t.deleted_at IS NULL
             AND t.created_at >= NOW() - INTERVAL '30 days'
     ),
     top_category_data AS (
@@ -2658,7 +2663,8 @@ BEGIN
         FROM transactions t
         LEFT JOIN transaction_categories tc ON t.category_id = tc.id
         WHERE t.user_id = get_user_spending_analysis.user_id
-            AND t.amount > 0
+            AND t.type = 'expense' -- FIJO: Solo gastos por tipo, no por signo
+            AND t.deleted_at IS NULL
             AND t.created_at >= NOW() - INTERVAL '30 days'
         GROUP BY tc.name
     )

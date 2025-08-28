@@ -297,6 +297,27 @@ export const AnalyticsDashboard: React.FC = () => {
               >
                 📊 Análisis Financiero
               </Text>
+              {/* Data source indicator */}
+              {hasData && (
+                <View style={styles.dataSourceIndicator}>
+                  <Text
+                    style={[
+                      styles.dataSourceText,
+                      {
+                        color:
+                          spendingPatterns.length > 0 ||
+                          monthlyInsights.length > 0
+                            ? colors.success || '#10B981'
+                            : colors.warning || '#F59E0B',
+                      },
+                    ]}
+                  >
+                    {spendingPatterns.length > 0 || monthlyInsights.length > 0
+                      ? '• Datos reales'
+                      : '• Datos de demostración'}
+                  </Text>
+                </View>
+              )}
               <Text
                 style={[
                   styles.headerSubtitle,
@@ -845,5 +866,15 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Data source indicator styles
+  dataSourceIndicator: {
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  dataSourceText: {
+    fontSize: 11,
+    fontWeight: '500',
+    opacity: 0.8,
   },
 });

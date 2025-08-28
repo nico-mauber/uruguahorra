@@ -62,7 +62,9 @@ export const ENV_CONFIG = {
 
   // Development settings
   DEBUG_MODE: getEnvBoolean('EXPO_PUBLIC_ANALYTICS_DEBUG_MODE', __DEV__),
+  // Data source preferences
   MOCK_FALLBACK: getEnvBoolean('EXPO_PUBLIC_ANALYTICS_MOCK_FALLBACK', true),
+  PREFER_REAL_DATA: getEnvBoolean('EXPO_PUBLIC_PREFER_REAL_DATA', true),
   VERBOSE_LOGGING: getEnvBoolean(
     'EXPO_PUBLIC_ANALYTICS_VERBOSE_LOGGING',
     __DEV__

@@ -4,7 +4,6 @@ import { ENV_CONFIG, RUNTIME_CONFIG } from '@/config/env.config';
 import {
   ANALYTICS_TIME_PERIODS,
   DATA_VALIDATION,
-  isFeatureEnabled,
 } from '@/config/analytics.config';
 import {
   generateMockSpendingPatterns,
@@ -250,14 +249,10 @@ class AnalyticsService {
         );
 
         try {
-          const { data, error } = await supabase.rpc(
-            'get_spending_patterns',
-            {
-              user_id: userId,
-              days_back: validatedDays,
-            },
-            { signal: controller.signal }
-          );
+          const { data, error } = await supabase.rpc('get_spending_patterns', {
+            user_id: userId,
+            days_back: validatedDays,
+          });
 
           clearTimeout(timeoutId);
 
@@ -279,10 +274,23 @@ class AnalyticsService {
         }
       }
 
-      // Fallback to mock data
+      // Check if we should try harder to get real data
+      if (ENV_CONFIG.PREFER_REAL_DATA) {
+        logger.info(
+          LogModule.DB,
+          'Real data preferred but SQL function unavailable',
+          {
+            reason: 'Will return empty array instead of mock data',
+          }
+        );
+        return [];
+      }
+
+      // Fallback to mock data only if explicitly enabled and not preferring real data
       if (ENV_CONFIG.MOCK_FALLBACK) {
         logger.warn(LogModule.DB, 'Using mock data for spending patterns', {
-          reason: 'SQL function not available or disabled',
+          reason:
+            'SQL function not available or disabled, real data not preferred',
         });
         return generateMockSpendingPatterns(userId, validatedDays);
       }
@@ -296,7 +304,10 @@ class AnalyticsService {
     } catch (error) {
       logger.error(LogModule.DB, 'Error getting spending patterns', error);
 
-      // Return mock data as last resort
+      // Return mock data as last resort only if not preferring real data
+      if (ENV_CONFIG.PREFER_REAL_DATA) {
+        return [];
+      }
       return ENV_CONFIG.MOCK_FALLBACK
         ? generateMockSpendingPatterns(userId, days)
         : [];
@@ -330,14 +341,10 @@ class AnalyticsService {
         );
 
         try {
-          const { data, error } = await supabase.rpc(
-            'get_monthly_insights',
-            {
-              user_id: userId,
-              months_back: validatedMonths,
-            },
-            { signal: controller.signal }
-          );
+          const { data, error } = await supabase.rpc('get_monthly_insights', {
+            user_id: userId,
+            months_back: validatedMonths,
+          });
 
           clearTimeout(timeoutId);
 
@@ -359,10 +366,23 @@ class AnalyticsService {
         }
       }
 
-      // Fallback to mock data
+      // Check if we should try harder to get real data
+      if (ENV_CONFIG.PREFER_REAL_DATA) {
+        logger.info(
+          LogModule.DB,
+          'Real data preferred but SQL function unavailable',
+          {
+            reason: 'Will return empty array instead of mock data',
+          }
+        );
+        return [];
+      }
+
+      // Fallback to mock data only if explicitly enabled and not preferring real data
       if (ENV_CONFIG.MOCK_FALLBACK) {
         logger.warn(LogModule.DB, 'Using mock data for monthly insights', {
-          reason: 'SQL function not available or disabled',
+          reason:
+            'SQL function not available or disabled, real data not preferred',
         });
         return generateMockMonthlyInsights(userId, validatedMonths);
       }
@@ -376,7 +396,10 @@ class AnalyticsService {
     } catch (error) {
       logger.error(LogModule.DB, 'Error getting monthly insights', error);
 
-      // Return mock data as last resort
+      // Return mock data as last resort only if not preferring real data
+      if (ENV_CONFIG.PREFER_REAL_DATA) {
+        return [];
+      }
       return ENV_CONFIG.MOCK_FALLBACK
         ? generateMockMonthlyInsights(userId, monthsBack)
         : [];
@@ -486,8 +509,7 @@ class AnalyticsService {
             {
               user_id: userId,
               forecast_days: validatedDays,
-            },
-            { signal: controller.signal }
+            }
           );
 
           clearTimeout(timeoutId);

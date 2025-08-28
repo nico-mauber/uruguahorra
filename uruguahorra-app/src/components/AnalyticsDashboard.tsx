@@ -16,10 +16,7 @@ import { useSpendingAnalytics } from '@/hooks/useSpendingAnalytics';
 import { useAnalyticsPreferences } from '@/hooks/useAnalyticsPreferences';
 import { SpendingAnalytics } from '@components';
 import { logger, LogModule } from '@/utils/logger';
-import {
-  getInsightTypeConfig,
-  UI_CONFIG,
-} from '@/config/analytics.config';
+import { getInsightTypeConfig, UI_CONFIG } from '@/config/analytics.config';
 import type { PsychologicalInsight } from '@/services/analytics.service';
 
 interface PsychologicalInsightCardProps {
@@ -152,15 +149,23 @@ const QuickStatCard: React.FC<QuickStatCardProps> = ({
         <Ionicons
           // @ts-expect-error - Ionicons type issue
           name={icon}
-          size={20}
+          size={18}
           color={colors.primary}
         />
-        <Text style={[styles.quickStatTitle, { color: colors.text.secondary }]}>
+        <Text
+          style={[styles.quickStatTitle, { color: colors.text.secondary }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {title}
         </Text>
       </View>
 
-      <Text style={[styles.quickStatValue, { color: colors.text.primary }]}>
+      <Text
+        style={[styles.quickStatValue, { color: colors.text.primary }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {value}
       </Text>
 
@@ -169,12 +174,16 @@ const QuickStatCard: React.FC<QuickStatCardProps> = ({
           {trend && (
             <Ionicons
               name={getTrendIcon()}
-              size={16}
+              size={14}
               color={getTrendColor()}
               style={styles.trendIcon}
             />
           )}
-          <Text style={[styles.quickStatSubtitle, { color: getTrendColor() }]}>
+          <Text
+            style={[styles.quickStatSubtitle, { color: getTrendColor() }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {subtitle}
           </Text>
         </View>
@@ -314,39 +323,45 @@ export const AnalyticsDashboard: React.FC = () => {
           </View>
         </View>
 
-        {/* Quick Stats - Conditional based on preferences */}
+        {/* Quick Stats - Optimized for mobile */}
         {hasData && showQuickStats && (
           <View style={styles.quickStatsContainer}>
-            <QuickStatCard
-              title={UI_CONFIG.QUICK_STATS.TOTAL_SPENDING.title}
-              value={
-                latestMonth
-                  ? `$${latestMonth.totalSpent?.toFixed(0) || '0'}`
-                  : 'N/A'
-              }
-              subtitle={latestMonth ? 'Este mes' : undefined}
-              icon={UI_CONFIG.QUICK_STATS.TOTAL_SPENDING.icon}
-              trend={overallTrend}
-            />
-            <QuickStatCard
-              title={UI_CONFIG.QUICK_STATS.TOP_CATEGORY.title}
-              value={topCategory?.category || 'N/A'}
-              subtitle={
-                topCategory
-                  ? `$${topCategory.amount?.toFixed(0) || '0'}`
-                  : undefined
-              }
-              icon={UI_CONFIG.QUICK_STATS.TOP_CATEGORY.icon}
-            />
-            <QuickStatCard
-              title={UI_CONFIG.QUICK_STATS.CURRENT_STREAK.title}
-              value={latestMonth ? `${latestMonth.streakDays} días` : '0 días'}
-              subtitle="Días consecutivos"
-              icon={UI_CONFIG.QUICK_STATS.CURRENT_STREAK.icon}
-              trend={
-                latestMonth && latestMonth.streakDays > 7 ? 'up' : 'stable'
-              }
-            />
+            <View style={styles.quickStatsRow}>
+              <QuickStatCard
+                title={UI_CONFIG.QUICK_STATS.TOTAL_SPENDING.title}
+                value={
+                  latestMonth
+                    ? `$${latestMonth.totalSpent?.toFixed(0) || '0'}`
+                    : 'N/A'
+                }
+                subtitle={latestMonth ? 'Este mes' : undefined}
+                icon={UI_CONFIG.QUICK_STATS.TOTAL_SPENDING.icon}
+                trend={overallTrend}
+              />
+              <QuickStatCard
+                title={UI_CONFIG.QUICK_STATS.TOP_CATEGORY.title}
+                value={topCategory?.category || 'N/A'}
+                subtitle={
+                  topCategory
+                    ? `$${topCategory.amount?.toFixed(0) || '0'}`
+                    : undefined
+                }
+                icon={UI_CONFIG.QUICK_STATS.TOP_CATEGORY.icon}
+              />
+            </View>
+            <View style={styles.quickStatsFullRow}>
+              <QuickStatCard
+                title={UI_CONFIG.QUICK_STATS.CURRENT_STREAK.title}
+                value={
+                  latestMonth ? `${latestMonth.streakDays} días` : '0 días'
+                }
+                subtitle="Días consecutivos"
+                icon={UI_CONFIG.QUICK_STATS.CURRENT_STREAK.icon}
+                trend={
+                  latestMonth && latestMonth.streakDays > 7 ? 'up' : 'stable'
+                }
+              />
+            </View>
           </View>
         )}
 
@@ -674,40 +689,53 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   quickStatsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    gap: 8,
+  },
+  quickStatsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 12,
+    gap: 8,
+  },
+  quickStatsFullRow: {
+    flexDirection: 'row',
   },
   quickStatCard: {
     flex: 1,
-    padding: 16,
-    minHeight: 100,
+    padding: 12,
+    minHeight: 85,
+    justifyContent: 'center',
   },
   quickStatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   quickStatTitle: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '500',
     marginLeft: 6,
-    opacity: 0.7,
+    opacity: 0.8,
+    flexShrink: 1,
   },
   quickStatValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
+    lineHeight: 20,
   },
   quickStatFooter: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 2,
   },
   trendIcon: {
-    marginRight: 4,
+    marginRight: 3,
   },
   quickStatSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: '500',
+    flexShrink: 1,
   },
   tabContainer: {
     flexDirection: 'row',

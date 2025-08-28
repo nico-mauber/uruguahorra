@@ -30,6 +30,7 @@ export interface AnalyticsPreferences {
   enable_psychological_insights: boolean;
   enable_spending_forecast: boolean;
   enable_push_notifications: boolean;
+  enable_export_functionality: boolean;
 
   // Localization preferences
   preferred_language: 'es' | 'en';
@@ -57,6 +58,7 @@ export interface AnalyticsPreferencesUpdate {
   enable_psychological_insights?: boolean;
   enable_spending_forecast?: boolean;
   enable_push_notifications?: boolean;
+  enable_export_functionality?: boolean;
   preferred_language?: 'es' | 'en';
   currency?: 'UYU' | 'USD' | 'EUR';
   date_format?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
@@ -234,13 +236,35 @@ export class AnalyticsPreferencesService {
   private static getDefaultPreferences(userId: string): AnalyticsPreferences {
     return {
       user_id: userId,
-      ...DEFAULT_USER_PREFERENCES,
-      // Override with environment config
-      cache_interval: ENV_CONFIG.CACHE_INTERVAL,
+
+      // Time period preferences
+      spending_patterns_days: DEFAULT_USER_PREFERENCES.spendingPatternsDays,
+      monthly_insights_months: DEFAULT_USER_PREFERENCES.monthlyInsightsMonths,
+      forecast_days: DEFAULT_USER_PREFERENCES.forecastDays,
+
+      // UI preferences
+      default_tab: DEFAULT_USER_PREFERENCES.defaultTab,
+      show_quick_stats: DEFAULT_USER_PREFERENCES.showQuickStats,
+      max_insights_per_type: DEFAULT_USER_PREFERENCES.maxInsightsPerType,
+      hide_completed_insights: DEFAULT_USER_PREFERENCES.hideCompletedInsights,
+      prefer_high_impact_insights:
+        DEFAULT_USER_PREFERENCES.preferHighImpactInsights,
+
+      // Feature preferences
       enable_psychological_insights: ENV_CONFIG.PSYCHOLOGICAL_INSIGHTS_ENABLED,
       enable_spending_forecast: ENV_CONFIG.SPENDING_FORECAST_ENABLED,
+      enable_push_notifications:
+        DEFAULT_USER_PREFERENCES.enablePushNotifications,
+      enable_export_functionality: false, // Default disabled
+
+      // Localization preferences
       preferred_language: ENV_CONFIG.DEFAULT_LANGUAGE as 'es' | 'en',
       currency: ENV_CONFIG.DEFAULT_CURRENCY as 'UYU' | 'USD' | 'EUR',
+      date_format: DEFAULT_USER_PREFERENCES.dateFormat,
+
+      // Performance preferences
+      cache_interval: ENV_CONFIG.CACHE_INTERVAL,
+      auto_refresh: true, // Default enabled
     };
   }
 
@@ -264,6 +288,7 @@ export class AnalyticsPreferencesService {
       enable_psychological_insights: dbData.enable_psychological_insights,
       enable_spending_forecast: dbData.enable_spending_forecast,
       enable_push_notifications: dbData.enable_push_notifications,
+      enable_export_functionality: dbData.enable_export_functionality || false,
       preferred_language: dbData.preferred_language,
       currency: dbData.currency,
       date_format: dbData.date_format,
@@ -381,7 +406,6 @@ export class AnalyticsPreferencesService {
       preferences.currency === defaults.currency
     );
   }
-
 }
 
 // ==================== EXPORT HELPERS ====================

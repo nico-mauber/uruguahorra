@@ -266,32 +266,48 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
       </Text>
 
       <View style={styles.confirmContainer}>
-        <View style={styles.confirmRow}>
-          <Text style={styles.confirmLabel}>Monto:</Text>
-          <Text style={[styles.confirmValue, { color: getStepColor() }]}>
+        {/* Monto Section - Más prominente */}
+        <View style={styles.confirmAmountSection}>
+          <Text style={styles.confirmSectionLabel}>Monto</Text>
+          <Text style={[styles.confirmAmountValue, { color: getStepColor() }]}>
             ${amount}
           </Text>
         </View>
 
-        <View style={styles.confirmRow}>
-          <Text style={styles.confirmLabel}>Categoría:</Text>
-          <View style={styles.confirmCategoryContainer}>
-            <Text style={styles.confirmCategoryEmoji}>
-              {selectedCategory?.emoji}
+        {/* Categoría Section - Más espaciosa */}
+        <View style={styles.confirmCategorySection}>
+          <Text style={styles.confirmSectionLabel}>Categoría</Text>
+          <View style={styles.confirmCategoryDisplay}>
+            <View
+              style={[
+                styles.categoryIconContainer,
+                { backgroundColor: selectedCategory?.color + '20' },
+              ]}
+            >
+              <Text style={styles.confirmCategoryEmoji}>
+                {selectedCategory?.emoji}
+              </Text>
+            </View>
+            <Text style={styles.confirmCategoryName}>
+              {selectedCategory?.name}
             </Text>
-            <Text style={styles.confirmValue}>{selectedCategory?.name}</Text>
           </View>
         </View>
 
-        <TextInput
-          style={styles.descriptionInput}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Descripción (opcional)"
-          placeholderTextColor="#ADB5BD"
-          multiline
-          maxLength={100}
-        />
+        {/* Descripción Section - Mejorada */}
+        <View style={styles.confirmDescriptionSection}>
+          <Text style={styles.confirmSectionLabel}>Descripción</Text>
+          <TextInput
+            style={styles.descriptionInputImproved}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Añade una nota sobre esta transacción (opcional)"
+            placeholderTextColor="#ADB5BD"
+            multiline
+            maxLength={100}
+            textAlignVertical="top"
+          />
+        </View>
       </View>
 
       <TouchableOpacity
@@ -422,8 +438,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '75%',
-    minHeight: 350,
+    maxHeight: '85%', // Aumentado de 75% a 85%
+    minHeight: Platform.OS === 'ios' ? 500 : 400, // Altura mínima mayor en iOS
     width: '100%',
   },
 
@@ -475,7 +491,7 @@ const styles = StyleSheet.create({
   },
 
   stepContainer: {
-    padding: 24,
+    padding: Platform.OS === 'ios' ? 32 : 24, // Más padding en iOS
     flex: 1,
   },
 
@@ -483,7 +499,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: Platform.OS === 'ios' ? 40 : 32, // Más espacio en iOS
   },
 
   // Amount Step
@@ -570,11 +586,85 @@ const styles = StyleSheet.create({
     color: '#495057',
   },
 
-  // Confirm Step
+  // Confirm Step - Improved
   confirmContainer: {
+    flex: 1,
+    paddingTop: 8,
+  },
+
+  // New improved styles
+  confirmAmountSection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+
+  confirmSectionLabel: {
+    fontSize: 14,
+    color: '#6C757D',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+
+  confirmAmountValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
+  confirmCategorySection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+
+  confirmCategoryDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  categoryIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  confirmCategoryName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#212529',
     flex: 1,
   },
 
+  confirmDescriptionSection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    flex: 1,
+  },
+
+  descriptionInputImproved: {
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    minHeight: 80,
+    backgroundColor: '#FFFFFF',
+    textAlignVertical: 'top',
+  },
+
+  // Legacy styles for backwards compatibility
   confirmRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -622,16 +712,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#51CF66',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 8,
-    marginTop: 24,
+    borderRadius: 16, // Más redondeado
+    paddingVertical: Platform.OS === 'ios' ? 20 : 16, // Más altura en iOS
+    paddingHorizontal: 32, // Más ancho
+    gap: 10,
+    marginTop: Platform.OS === 'ios' ? 32 : 24, // Más espacio arriba en iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
 
   createButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17, // Ligeramente más grande
     fontWeight: '600',
   },
 

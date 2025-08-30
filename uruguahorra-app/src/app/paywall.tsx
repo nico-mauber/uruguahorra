@@ -22,7 +22,7 @@ import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 export default function PaywallScreen() {
   const { colors } = useTheme();
-  const router = useRouter();
+  // const router = useRouter(); // Not used
   const { user } = useAuth();
   const analytics = useAnalytics();
   const [selectedPlan, setSelectedPlan] = useState<
@@ -151,7 +151,7 @@ export default function PaywallScreen() {
     }
   };
 
-  const currentPlan = plans.find((p) => p.id === selectedPlan);
+  // const currentPlan = plans.find((p) => p.id === selectedPlan); // Defined but never used
   const monthlyPlan = plans.find((p) => p.id === 'premium_monthly');
   const yearlyPlan = plans.find((p) => p.id === 'premium_yearly');
 

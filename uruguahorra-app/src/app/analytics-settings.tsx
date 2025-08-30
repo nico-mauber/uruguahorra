@@ -26,7 +26,7 @@ import { ToastNotification } from '@/components/settings/ToastNotification';
 export default function AnalyticsSettingsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
+  // useAuth(); // User authentication not needed in this component
   const { showSuccess, showError, toast, hideToast } = useToast();
 
   const {

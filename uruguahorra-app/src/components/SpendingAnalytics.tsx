@@ -41,7 +41,6 @@ const AnimatedBar: React.FC<AnimatedBarProps> = ({
   const animatedOpacity = useRef(new Animated.Value(0)).current;
 
   const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-  const barWidth = (width - 80) * 0.6; // 60% del ancho disponible
 
   useEffect(() => {
     const sequence = Animated.sequence([

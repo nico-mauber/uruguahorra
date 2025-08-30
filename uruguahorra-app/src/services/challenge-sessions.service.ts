@@ -618,4 +618,356 @@ export class ChallengeSessionsService {
       throw error;
     }
   }
+
+  // ============================================
+  // NUEVAS FUNCIONES PARA SEGUIMIENTO AUTOMÁTICO
+  // ============================================
+
+  /**
+   * Registra check-in diario manual para un reto específico
+   */
+  static async recordDailyCheckin(
+    userId: string,
+    sessionId: string,
+    completed: boolean = true,
+    note?: string,
+    checkinDate?: string
+  ): Promise<void> {
+    try {
+      logger.start(LogModule.DB, 'Registrando check-in diario de reto', {
+        userId,
+        sessionId,
+        completed,
+        note,
+        checkinDate,
+      });
+
+      const { error } = await supabase.rpc('record_challenge_daily_checkin', {
+        p_user_id: userId,
+        p_session_id: sessionId,
+        p_completed: completed,
+        p_checkin_date: checkinDate || new Date().toISOString().split('T')[0],
+        p_note: note || null,
+      });
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error registrando check-in diario', error);
+        throw error;
+      }
+
+      logger.success(LogModule.DB, 'Check-in diario registrado exitosamente');
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error registrando check-in diario', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calcula el progreso real de una sesión basado en actividades completadas
+   */
+  static async calculateSessionRealProgress(sessionId: string): Promise<{
+    currentProgress: number;
+    daysCompleted: number;
+    totalDaysRequired: number;
+    isOnTrack: boolean;
+  }> {
+    try {
+      logger.start(LogModule.DB, 'Calculando progreso real de sesión', {
+        sessionId,
+      });
+
+      const { data, error } = await supabase.rpc(
+        'calculate_challenge_session_progress',
+        {
+          p_session_id: sessionId,
+        }
+      );
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error calculando progreso real', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo calcular el progreso de la sesión');
+      }
+
+      const result = data[0];
+      const progressData = {
+        currentProgress: Number(result.current_progress),
+        daysCompleted: result.days_completed,
+        totalDaysRequired: result.total_days_required,
+        isOnTrack: result.is_on_track,
+      };
+
+      logger.success(LogModule.DB, 'Progreso real calculado', progressData);
+      return progressData;
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error calculando progreso real', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza el progreso basado en actividades reales (reemplaza updateSessionProgress manual)
+   */
+  static async updateSessionProgressFromActivity(
+    sessionId: string,
+    note?: string
+  ): Promise<{
+    currentProgress: number;
+    daysCompleted: number;
+    wasCompleted: boolean;
+  }> {
+    try {
+      logger.start(LogModule.DB, 'Actualizando progreso desde actividad', {
+        sessionId,
+      });
+
+      // Calcular progreso real
+      const progressData = await this.calculateSessionRealProgress(sessionId);
+
+      // Actualizar la sesión con el progreso real
+      const progressLogEntry = {
+        timestamp: new Date().toISOString(),
+        progress: progressData.currentProgress,
+        days_completed: progressData.daysCompleted,
+        automated: true,
+        note:
+          note ||
+          `Progreso automático: ${progressData.daysCompleted}/${progressData.totalDaysRequired} días completados`,
+      };
+
+      const session = await this.getSessionById(sessionId);
+      if (!session) {
+        throw new Error('Sesión no encontrada');
+      }
+
+      const updatedProgressLog = [...session.progress_log, progressLogEntry];
+
+      const { error } = await supabase
+        .from('user_challenge_sessions')
+        .update({
+          progress: progressData.currentProgress,
+          progress_log: updatedProgressLog,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error actualizando progreso', error);
+        throw error;
+      }
+
+      let wasCompleted = false;
+
+      // Si llegó a 100% y realmente completó todos los días, completar automáticamente
+      if (
+        progressData.currentProgress >= 100 &&
+        progressData.daysCompleted >= progressData.totalDaysRequired
+      ) {
+        await this.completeSessionAutomatically(sessionId);
+        wasCompleted = true;
+      }
+
+      logger.success(LogModule.DB, 'Progreso actualizado desde actividad', {
+        sessionId,
+        currentProgress: progressData.currentProgress,
+        daysCompleted: progressData.daysCompleted,
+        wasCompleted,
+      });
+
+      return {
+        currentProgress: progressData.currentProgress,
+        daysCompleted: progressData.daysCompleted,
+        wasCompleted,
+      };
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error actualizando progreso', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Completa sesión automáticamente con validaciones estrictas
+   */
+  static async completeSessionAutomatically(
+    sessionId: string
+  ): Promise<boolean> {
+    try {
+      logger.start(LogModule.DB, 'Completando sesión automáticamente', {
+        sessionId,
+      });
+
+      const { data, error } = await supabase.rpc(
+        'complete_challenge_session_automatically',
+        {
+          p_session_id: sessionId,
+        }
+      );
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error completando sesión', error);
+        throw error;
+      }
+
+      const wasCompleted = data;
+
+      if (wasCompleted) {
+        logger.success(LogModule.DB, 'Sesión completada automáticamente', {
+          sessionId,
+        });
+      } else {
+        logger.warn(
+          LogModule.DB,
+          'Sesión no pudo ser completada - requisitos no cumplidos',
+          { sessionId }
+        );
+      }
+
+      return wasCompleted;
+    } catch (error) {
+      logger.error(
+        LogModule.DB,
+        'Error completando sesión automáticamente',
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza todas las sesiones activas (para cron job diario)
+   */
+  static async updateAllActiveSessionsProgress(): Promise<{
+    updatedSessions: number;
+    completedSessions: number;
+  }> {
+    try {
+      logger.start(LogModule.DB, 'Actualizando todas las sesiones activas');
+
+      const { data, error } = await supabase.rpc(
+        'update_all_active_sessions_progress'
+      );
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error actualizando sesiones', error);
+        throw error;
+      }
+
+      const result =
+        data && data.length > 0
+          ? data[0]
+          : { updated_sessions: 0, completed_sessions: 0 };
+
+      logger.success(LogModule.DB, 'Sesiones actualizadas exitosamente', {
+        updatedSessions: result.updated_sessions,
+        completedSessions: result.completed_sessions,
+      });
+
+      return {
+        updatedSessions: result.updated_sessions,
+        completedSessions: result.completed_sessions,
+      };
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error actualizando sesiones activas', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Función para realizar check-in en un reto y actualizar progreso
+   */
+  static async performDailyCheckinAndUpdateProgress(
+    userId: string,
+    sessionId: string,
+    completed: boolean = true,
+    note?: string
+  ): Promise<{
+    currentProgress: number;
+    daysCompleted: number;
+    wasCompleted: boolean;
+  }> {
+    try {
+      logger.start(
+        LogModule.DB,
+        'Realizando check-in y actualizando progreso',
+        {
+          userId,
+          sessionId,
+          completed,
+          note,
+        }
+      );
+
+      // 1. Registrar check-in diario
+      await this.recordDailyCheckin(userId, sessionId, completed, note);
+
+      // 2. Actualizar progreso de la sesión
+      const result = await this.updateSessionProgressFromActivity(
+        sessionId,
+        `Check-in diario: ${completed ? 'Cumplido' : 'No cumplido'}${note ? ` - ${note}` : ''}`
+      );
+
+      logger.success(
+        LogModule.DB,
+        'Check-in y progreso actualizado exitosamente',
+        {
+          sessionId,
+          currentProgress: result.currentProgress,
+          daysCompleted: result.daysCompleted,
+          wasCompleted: result.wasCompleted,
+        }
+      );
+
+      return result;
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error en check-in y actualización', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica si ya se hizo check-in hoy para una sesión
+   */
+  static async getTodaysCheckinStatus(
+    userId: string,
+    sessionId: string
+  ): Promise<{
+    hasCheckedIn: boolean;
+    completed?: boolean;
+    note?: string;
+  }> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('daily_challenge_checkins')
+        .select('completed, note')
+        .eq('user_id', userId)
+        .eq('session_id', sessionId)
+        .eq('checkin_date', today)
+        .maybeSingle();
+
+      if (error) {
+        logger.error(LogModule.DB, 'Error verificando check-in de hoy', error);
+        throw error;
+      }
+
+      if (data) {
+        return {
+          hasCheckedIn: true,
+          completed: data.completed,
+          note: data.note,
+        };
+      } else {
+        return {
+          hasCheckedIn: false,
+        };
+      }
+    } catch (error) {
+      logger.error(LogModule.DB, 'Error verificando check-in de hoy', error);
+      throw error;
+    }
+  }
 }

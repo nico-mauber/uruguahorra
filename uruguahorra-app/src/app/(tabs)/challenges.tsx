@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Alert,
   Modal,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +21,8 @@ import type {
   ChallengeDurationType,
 } from '@/types/challenge-system.types';
 import { logger, LogModule } from '@/utils/logger';
+import { useMultipleChallengeProgress } from '@/hooks/useChallengeProgress';
+import { ChallengeCheckinModal } from '@/components/ChallengeCheckinModal';
 
 export default function ChallengesScreen() {
   const { colors } = useTheme();
@@ -36,7 +37,16 @@ export default function ChallengesScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDurationModal, setShowDurationModal] = useState(false);
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(
+    null
+  );
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [selectedSession, setSelectedSession] =
+    useState<UserChallengeSession | null>(null);
+
+  // Hook para obtener progreso real de sesiones activas
+  const activeSessionIds = activeSessions.map((session) => session.id);
+  const challengeProgressData = useMultipleChallengeProgress(activeSessionIds);
 
   // Cargar datos iniciales
   const loadInitialData = useCallback(async (userId: string) => {
@@ -155,6 +165,33 @@ export default function ChallengesScreen() {
     }
   };
 
+  const handleActiveSessionClick = (session: UserChallengeSession) => {
+    if (!user?.id) return;
+
+    setSelectedSession(session);
+    setShowCheckinModal(true);
+  };
+
+  const handleCheckinComplete = async () => {
+    if (!user?.id) return;
+
+    // Recargar sesiones activas después del check-in
+    try {
+      const updatedSessions =
+        await ChallengeSessionsService.getUserActiveSessions(user.id);
+      setActiveSessions(updatedSessions);
+    } catch (error) {
+      logger.error(
+        LogModule.UI,
+        'Error recargando sesiones después de check-in',
+        error
+      );
+    }
+
+    setShowCheckinModal(false);
+    setSelectedSession(null);
+  };
+
   if (!user) {
     return (
       <SafeAreaView
@@ -187,33 +224,79 @@ export default function ChallengesScreen() {
             </Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {activeSessions.map((session) => (
-                <View
-                  key={session.id}
-                  style={[
-                    styles.activeSessionCard,
-                    { backgroundColor: colors.background },
-                  ]}
-                >
-                  <Text
+              {activeSessions.map((session) => {
+                const progressData = challengeProgressData[session.id];
+                const displayProgress =
+                  progressData?.currentProgress ?? session.progress;
+                const daysInfo = progressData
+                  ? `${progressData.daysCompleted}/${progressData.totalDaysRequired} días`
+                  : '';
+
+                return (
+                  <TouchableOpacity
+                    key={session.id}
                     style={[
-                      styles.activeSessionTitle,
-                      { color: colors.text.primary },
+                      styles.activeSessionCard,
+                      { backgroundColor: colors.background },
+                      !progressData?.isOnTrack &&
+                        progressData?.currentProgress > 0 && {
+                          borderLeftWidth: 3,
+                          borderLeftColor: colors.warning || '#FFA500',
+                        },
                     ]}
-                    numberOfLines={2}
+                    onPress={() => handleActiveSessionClick(session)}
                   >
-                    {session.challenge?.title || 'Reto'}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.activeSessionProgress,
-                      { color: colors.primary },
-                    ]}
-                  >
-                    {session.progress}% completado
-                  </Text>
-                </View>
-              ))}
+                    <Text
+                      style={[
+                        styles.activeSessionTitle,
+                        { color: colors.text.primary },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {session.challenge?.title || 'Reto'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.activeSessionProgress,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      {Math.round(displayProgress)}% completado
+                    </Text>
+                    {daysInfo && (
+                      <Text
+                        style={[
+                          styles.activeSessionDays,
+                          { color: colors.text.secondary },
+                        ]}
+                      >
+                        {daysInfo}
+                      </Text>
+                    )}
+                    {progressData &&
+                      !progressData.isOnTrack &&
+                      progressData.currentProgress > 0 && (
+                        <Text
+                          style={[
+                            styles.warningText,
+                            { color: colors.warning || '#FFA500' },
+                          ]}
+                        >
+                          ⚠️ Atraso
+                        </Text>
+                      )}
+
+                    {/* Indicador de que es clickeable */}
+                    <View style={styles.clickIndicator}>
+                      <Ionicons
+                        name="finger-print"
+                        size={16}
+                        color={colors.text.secondary}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </View>
@@ -399,6 +482,18 @@ export default function ChallengesScreen() {
         </View>
       </ScrollView>
 
+      {/* Modal de check-in diario */}
+      {selectedSession && (
+        <ChallengeCheckinModal
+          visible={showCheckinModal}
+          onClose={() => setShowCheckinModal(false)}
+          sessionId={selectedSession.id}
+          challengeTitle={selectedSession.challenge?.title || 'Reto'}
+          userId={user.id}
+          onCheckinComplete={handleCheckinComplete}
+        />
+      )}
+
       {/* Modal de selección de duración */}
       <Modal
         visible={showDurationModal}
@@ -407,7 +502,9 @@ export default function ChallengesScreen() {
         onRequestClose={closeDurationModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
                 {selectedChallenge?.title}
@@ -416,73 +513,143 @@ export default function ChallengesScreen() {
                 onPress={closeDurationModal}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color={colors.text.secondary} />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={colors.text.secondary}
+                />
               </TouchableOpacity>
             </View>
-            
-            <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>
+
+            <Text
+              style={[styles.modalSubtitle, { color: colors.text.secondary }]}
+            >
               Elige la duración de tu reto:
             </Text>
 
             <View style={styles.durationOptions}>
               <TouchableOpacity
-                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                style={[
+                  styles.durationButton,
+                  { backgroundColor: colors.background },
+                ]}
                 onPress={() => selectDuration('1_week')}
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text
+                  style={[styles.durationText, { color: colors.text.primary }]}
+                >
                   1 semana
                 </Text>
-                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                <Text
+                  style={[
+                    styles.durationSubtext,
+                    { color: colors.text.secondary },
+                  ]}
+                >
                   7 días
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                style={[
+                  styles.durationButton,
+                  { backgroundColor: colors.background },
+                ]}
                 onPress={() => selectDuration('15_days')}
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text
+                  style={[styles.durationText, { color: colors.text.primary }]}
+                >
                   15 días
                 </Text>
-                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                <Text
+                  style={[
+                    styles.durationSubtext,
+                    { color: colors.text.secondary },
+                  ]}
+                >
                   2 semanas
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                style={[
+                  styles.durationButton,
+                  { backgroundColor: colors.background },
+                ]}
                 onPress={() => selectDuration('30_days')}
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text
+                  style={[styles.durationText, { color: colors.text.primary }]}
+                >
                   30 días
                 </Text>
-                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                <Text
+                  style={[
+                    styles.durationSubtext,
+                    { color: colors.text.secondary },
+                  ]}
+                >
                   1 mes
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                style={[
+                  styles.durationButton,
+                  { backgroundColor: colors.background },
+                ]}
                 onPress={() => selectDuration('1_year')}
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text
+                  style={[styles.durationText, { color: colors.text.primary }]}
+                >
                   1 año
                 </Text>
-                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                <Text
+                  style={[
+                    styles.durationSubtext,
+                    { color: colors.text.secondary },
+                  ]}
+                >
                   365 días
                 </Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.text.secondary }]}
+              style={[
+                styles.cancelButton,
+                { borderColor: colors.text.secondary },
+              ]}
               onPress={closeDurationModal}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text.secondary }]}>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.text.secondary },
+                ]}
+              >
                 Cancelar
               </Text>
             </TouchableOpacity>
@@ -544,6 +711,22 @@ const styles = StyleSheet.create({
   activeSessionProgress: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  activeSessionDays: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  warningText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  clickIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    opacity: 0.5,
   },
   categoriesSection: {
     paddingHorizontal: 16,

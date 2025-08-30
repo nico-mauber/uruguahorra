@@ -2120,6 +2120,356 @@ LEFT JOIN public.users u ON sc.user_id = u.id
 ORDER BY sc.created_at DESC;
 
 -- ============================================
+-- PASO 9: SISTEMA DE CHECK-IN MANUAL PARA RETOS
+-- ============================================
+
+-- Función auxiliar para actualizar updated_at (si no existe)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tabla para check-ins diarios de retos
+CREATE TABLE IF NOT EXISTS public.daily_challenge_checkins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    session_id UUID NOT NULL REFERENCES public.user_challenge_sessions(id) ON DELETE CASCADE,
+    checkin_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    completed BOOLEAN NOT NULL DEFAULT false,
+    note TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Un check-in por día por sesión
+    UNIQUE(user_id, session_id, checkin_date)
+);
+
+-- Índices para la tabla de check-ins
+CREATE INDEX IF NOT EXISTS idx_checkins_user_session ON public.daily_challenge_checkins(user_id, session_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_date ON public.daily_challenge_checkins(checkin_date);
+CREATE INDEX IF NOT EXISTS idx_checkins_completed ON public.daily_challenge_checkins(completed);
+
+-- Políticas RLS para daily_challenge_checkins
+ALTER TABLE public.daily_challenge_checkins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "checkins_all_own" ON public.daily_challenge_checkins
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Trigger para actualizar updated_at
+CREATE TRIGGER update_checkins_updated_at
+    BEFORE UPDATE ON public.daily_challenge_checkins
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Función para registrar check-in diario de reto (manual)
+CREATE OR REPLACE FUNCTION record_challenge_daily_checkin(
+    p_user_id UUID,
+    p_session_id UUID,
+    p_completed BOOLEAN DEFAULT TRUE,
+    p_checkin_date DATE DEFAULT CURRENT_DATE,
+    p_note TEXT DEFAULT NULL
+)
+RETURNS VOID AS $$
+BEGIN
+    -- Registrar o actualizar check-in diario para un reto específico
+    INSERT INTO public.daily_challenge_checkins (
+        user_id,
+        session_id,
+        checkin_date,
+        completed,
+        note,
+        created_at,
+        updated_at
+    ) VALUES (
+        p_user_id,
+        p_session_id,
+        p_checkin_date,
+        p_completed,
+        p_note,
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (user_id, session_id, checkin_date)
+    DO UPDATE SET 
+        completed = EXCLUDED.completed,
+        note = EXCLUDED.note,
+        updated_at = NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para calcular días completados de una sesión de reto (CORREGIDA)
+CREATE OR REPLACE FUNCTION calculate_challenge_session_progress(
+    p_session_id UUID
+)
+RETURNS TABLE(
+    current_progress DECIMAL,
+    days_completed INTEGER,
+    total_days_required INTEGER,
+    is_on_track BOOLEAN
+) AS $$
+DECLARE
+    v_user_id UUID;
+    v_start_date DATE;
+    v_end_date DATE;
+    v_days_completed INTEGER := 0;
+    v_total_days INTEGER;
+    v_current_progress DECIMAL;
+    v_is_on_track BOOLEAN;
+    v_days_elapsed INTEGER;
+    v_expected_progress DECIMAL;
+BEGIN
+    -- Obtener información básica de la sesión
+    SELECT 
+        user_id,
+        start_date::DATE,
+        end_date::DATE,
+        (end_date::DATE - start_date::DATE) + 1
+    INTO v_user_id, v_start_date, v_end_date, v_total_days
+    FROM public.user_challenge_sessions
+    WHERE id = p_session_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Sesión de reto no encontrada: %', p_session_id;
+    END IF;
+    
+    -- Contar días completados basados en check-ins manuales
+    SELECT COUNT(*)
+    INTO v_days_completed
+    FROM public.daily_challenge_checkins
+    WHERE user_id = v_user_id
+        AND session_id = p_session_id
+        AND checkin_date >= v_start_date
+        AND checkin_date <= CURRENT_DATE
+        AND completed = true;
+    
+    -- Calcular progreso actual
+    v_current_progress := CASE 
+        WHEN v_total_days > 0 THEN 
+            LEAST((v_days_completed::DECIMAL / v_total_days::DECIMAL) * 100, 100)
+        ELSE 0 
+    END;
+    
+    -- Calcular días transcurridos desde el inicio
+    v_days_elapsed := GREATEST((CURRENT_DATE - v_start_date) + 1, 1);
+    
+    -- Calcular progreso esperado basado en días transcurridos
+    v_expected_progress := CASE 
+        WHEN v_total_days > 0 THEN 
+            LEAST((v_days_elapsed::DECIMAL / v_total_days::DECIMAL) * 100, 100)
+        ELSE 0 
+    END;
+    
+    -- Determinar si está en camino (80% del progreso esperado)
+    v_is_on_track := v_current_progress >= (v_expected_progress * 0.8);
+    
+    RETURN QUERY SELECT 
+        v_current_progress,
+        v_days_completed,
+        v_total_days,
+        v_is_on_track;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para actualizar progreso de todas las sesiones activas
+CREATE OR REPLACE FUNCTION update_all_active_sessions_progress()
+RETURNS TABLE(
+    updated_sessions INTEGER,
+    completed_sessions INTEGER,
+    execution_time TIMESTAMPTZ
+) AS $$
+DECLARE
+    v_session RECORD;
+    v_progress_data RECORD;
+    v_updated_count INTEGER := 0;
+    v_completed_count INTEGER := 0;
+    v_start_time TIMESTAMPTZ := NOW();
+BEGIN
+    -- Procesar cada sesión activa
+    FOR v_session IN 
+        SELECT id, user_id, challenge_id, progress as current_progress
+        FROM public.user_challenge_sessions 
+        WHERE status = 'active'
+    LOOP
+        -- Calcular nuevo progreso
+        SELECT * INTO v_progress_data 
+        FROM calculate_challenge_session_progress(v_session.id);
+        
+        -- Solo actualizar si hay cambio en el progreso
+        IF v_progress_data.current_progress != v_session.current_progress THEN
+            -- Actualizar progreso de la sesión
+            UPDATE public.user_challenge_sessions
+            SET 
+                progress = v_progress_data.current_progress,
+                updated_at = NOW(),
+                progress_log = progress_log || jsonb_build_object(
+                    'timestamp', NOW(),
+                    'progress', v_progress_data.current_progress,
+                    'days_completed', v_progress_data.days_completed,
+                    'automated', true,
+                    'note', format('Progreso automático: %s/%s días completados', 
+                                  v_progress_data.days_completed, 
+                                  v_progress_data.total_days_required)
+                )
+            WHERE id = v_session.id;
+            
+            v_updated_count := v_updated_count + 1;
+            
+            -- Si llegó a 100%, completar automáticamente
+            IF v_progress_data.current_progress >= 100 THEN
+                PERFORM complete_challenge_session_automatically(v_session.id);
+                v_completed_count := v_completed_count + 1;
+            END IF;
+        END IF;
+    END LOOP;
+    
+    -- Registrar en audit log
+    INSERT INTO public.audit_logs (
+        action, 
+        table_name, 
+        new_values, 
+        created_at
+    ) VALUES (
+        'update_sessions_progress', 
+        'user_challenge_sessions', 
+        jsonb_build_object(
+            'updated_sessions', v_updated_count,
+            'completed_sessions', v_completed_count,
+            'execution_time', v_start_time
+        ), 
+        NOW()
+    );
+    
+    RETURN QUERY SELECT 
+        v_updated_count,
+        v_completed_count,
+        v_start_time;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para completar sesión automáticamente con validaciones
+CREATE OR REPLACE FUNCTION complete_challenge_session_automatically(
+    p_session_id UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_session RECORD;
+    v_progress_data RECORD;
+    v_xp_earned INTEGER;
+BEGIN
+    -- Obtener información de la sesión y el reto
+    SELECT 
+        ucs.*,
+        c.xp_reward,
+        c.title as challenge_title
+    INTO v_session
+    FROM public.user_challenge_sessions ucs
+    JOIN public.challenges c ON c.id = ucs.challenge_id
+    WHERE ucs.id = p_session_id AND ucs.status = 'active';
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Sesión activa no encontrada: %', p_session_id;
+    END IF;
+    
+    -- Verificar progreso real
+    SELECT * INTO v_progress_data 
+    FROM calculate_challenge_session_progress(p_session_id);
+    
+    -- Solo completar si realmente se cumplieron los requisitos
+    IF v_progress_data.current_progress >= 100 AND 
+       v_progress_data.days_completed >= v_progress_data.total_days_required THEN
+       
+        v_xp_earned := v_session.xp_reward;
+        
+        -- Marcar sesión como completada
+        UPDATE public.user_challenge_sessions
+        SET 
+            status = 'completed',
+            progress = 100,
+            xp_earned = v_xp_earned,
+            completed_at = NOW(),
+            updated_at = NOW(),
+            progress_log = progress_log || jsonb_build_object(
+                'timestamp', NOW(),
+                'progress', 100,
+                'days_completed', v_progress_data.days_completed,
+                'automated', true,
+                'note', 'Reto completado automáticamente - todos los días cumplidos'
+            )
+        WHERE id = p_session_id;
+        
+        -- Registrar XP en el log del usuario
+        INSERT INTO public.user_xp_log (
+            user_id,
+            event_type,
+            xp_earned,
+            event_data,
+            created_at
+        ) VALUES (
+            v_session.user_id,
+            'challenge_session_complete',
+            v_xp_earned,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'challenge_id', v_session.challenge_id,
+                'challenge_title', v_session.challenge_title,
+                'duration_type', v_session.duration_type,
+                'days_completed', v_progress_data.days_completed,
+                'automated_completion', true
+            ),
+            NOW()
+        );
+        
+        -- Actualizar XP total del usuario
+        UPDATE public.users
+        SET 
+            total_xp = total_xp + v_xp_earned,
+            updated_at = NOW()
+        WHERE id = v_session.user_id;
+        
+        -- Log de auditoría
+        INSERT INTO public.audit_logs (
+            action, 
+            table_name, 
+            record_id, 
+            new_values, 
+            created_at
+        ) VALUES (
+            'complete_session_auto', 
+            'user_challenge_sessions', 
+            p_session_id,
+            jsonb_build_object(
+                'user_id', v_session.user_id,
+                'challenge_id', v_session.challenge_id,
+                'xp_earned', v_xp_earned,
+                'days_completed', v_progress_data.days_completed
+            ), 
+            NOW()
+        );
+        
+        RETURN TRUE;
+    ELSE
+        -- No se puede completar, no cumple requisitos
+        RETURN FALSE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Permisos para las funciones
+GRANT EXECUTE ON FUNCTION record_challenge_daily_checkin TO authenticated;
+GRANT EXECUTE ON FUNCTION calculate_challenge_session_progress TO authenticated;
+GRANT EXECUTE ON FUNCTION update_all_active_sessions_progress TO authenticated;
+GRANT EXECUTE ON FUNCTION complete_challenge_session_automatically TO authenticated;
+
+-- Comentarios de documentación
+COMMENT ON FUNCTION record_challenge_daily_checkin IS 'Registra check-in diario manual para cumplimiento de retos';
+COMMENT ON FUNCTION calculate_challenge_session_progress IS 'Calcula el progreso real basado en días de check-in completados';
+COMMENT ON FUNCTION update_all_active_sessions_progress IS 'Actualiza progreso de todas las sesiones activas (para cron job)';
+COMMENT ON FUNCTION complete_challenge_session_automatically IS 'Completa automáticamente sesiones que han cumplido todos los requisitos';
+COMMENT ON TABLE daily_challenge_checkins IS 'Registro diario de check-ins manuales para cumplimiento de retos';
+
+-- ============================================
 -- PASO 10: CONFIGURACIÓN IMPORTANTE
 -- ============================================
 -- IMPORTANTE: Después de ejecutar este script, configurar en Supabase Dashboard:

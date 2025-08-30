@@ -160,10 +160,7 @@ export const ToastNotification: React.FC<ToastProps> = ({
               style={styles.icon}
             />
             <Text
-              style={[
-                styles.message,
-                { color: config.textColor },
-              ]}
+              style={[styles.message, { color: config.textColor }]}
               numberOfLines={2}
             >
               {message}
@@ -179,12 +176,7 @@ export const ToastNotification: React.FC<ToastProps> = ({
                 ]}
                 onPress={action.onPress}
               >
-                <Text
-                  style={[
-                    styles.actionText,
-                    { color: config.textColor },
-                  ]}
-                >
+                <Text style={[styles.actionText, { color: config.textColor }]}>
                   {action.label}
                 </Text>
               </TouchableOpacity>
@@ -195,11 +187,7 @@ export const ToastNotification: React.FC<ToastProps> = ({
               onPress={hide}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons
-                name="close"
-                size={18}
-                color={config.iconColor}
-              />
+              <Ionicons name="close" size={18} color={config.iconColor} />
             </TouchableOpacity>
           </View>
         </View>

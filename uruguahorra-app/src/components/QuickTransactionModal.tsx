@@ -216,7 +216,11 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
           placeholder="0.00"
           placeholderTextColor="#ADB5BD"
           keyboardType="decimal-pad"
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+          blurOnSubmit={true}
           selectTextOnFocus
+          autoFocus={step === 1}
         />
       </View>
 
@@ -239,7 +243,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
       <ScrollView
         style={styles.categoriesContainer}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={{ paddingVertical: 8 }}
       >
         <View style={styles.categoriesGrid}>
           {getCategoriesByType().map((category) => (
@@ -260,59 +265,66 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
   );
 
   const renderConfirmStep = () => (
-    <View style={styles.stepContainer}>
+    <ScrollView 
+      style={styles.stepContainer}
+      contentContainerStyle={styles.confirmScrollContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={[styles.stepTitle, { color: getStepColor() }]}>
         {getStepTitle()}
       </Text>
 
-      <View style={styles.confirmContainer}>
-        {/* Monto Section - Más prominente */}
-        <View style={styles.confirmAmountSection}>
-          <Text style={styles.confirmSectionLabel}>Monto</Text>
-          <Text style={[styles.confirmAmountValue, { color: getStepColor() }]}>
-            ${amount}
-          </Text>
-        </View>
+      {/* Monto Section - Compacta */}
+      <View style={styles.confirmAmountSectionCompact}>
+        <Text style={styles.confirmSectionLabel}>Monto</Text>
+        <Text style={[styles.confirmAmountValue, { color: getStepColor() }]}>
+          ${amount}
+        </Text>
+      </View>
 
-        {/* Categoría Section - Más espaciosa */}
-        <View style={styles.confirmCategorySection}>
-          <Text style={styles.confirmSectionLabel}>Categoría</Text>
-          <View style={styles.confirmCategoryDisplay}>
-            <View
-              style={[
-                styles.categoryIconContainer,
-                { backgroundColor: selectedCategory?.color + '20' },
-              ]}
-            >
-              <Text style={styles.confirmCategoryEmoji}>
-                {selectedCategory?.emoji}
-              </Text>
-            </View>
-            <Text style={styles.confirmCategoryName}>
-              {selectedCategory?.name}
+      {/* Categoría Section - Compacta */}
+      <View style={styles.confirmCategorySectionCompact}>
+        <Text style={styles.confirmSectionLabel}>Categoría</Text>
+        <View style={styles.confirmCategoryDisplay}>
+          <View
+            style={[
+              styles.categoryIconContainerCompact,
+              { backgroundColor: selectedCategory?.color + '20' },
+            ]}
+          >
+            <Text style={styles.confirmCategoryEmojiCompact}>
+              {selectedCategory?.emoji}
             </Text>
           </View>
-        </View>
-
-        {/* Descripción Section - Mejorada */}
-        <View style={styles.confirmDescriptionSection}>
-          <Text style={styles.confirmSectionLabel}>Descripción</Text>
-          <TextInput
-            style={styles.descriptionInputImproved}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Añade una nota sobre esta transacción (opcional)"
-            placeholderTextColor="#ADB5BD"
-            multiline
-            maxLength={100}
-            textAlignVertical="top"
-          />
+          <Text style={styles.confirmCategoryName}>
+            {selectedCategory?.name}
+          </Text>
         </View>
       </View>
 
+      {/* Descripción Section - Optimizada */}
+      <View style={styles.confirmDescriptionSectionCompact}>
+        <Text style={styles.confirmSectionLabel}>Descripción</Text>
+        <TextInput
+          style={styles.descriptionInputCompact}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Nota opcional sobre esta transacción"
+          placeholderTextColor="#ADB5BD"
+          multiline
+          maxLength={100}
+          textAlignVertical="top"
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+          blurOnSubmit={true}
+        />
+      </View>
+
+      {/* Botón al final - Sin superposición */}
       <TouchableOpacity
         style={[
-          styles.createButton,
+          styles.createButtonCompact,
           { backgroundColor: getStepColor() },
           isLoading && styles.disabledButton,
         ]}
@@ -328,7 +340,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
           </>
         )}
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 
   const renderCurrentStep = () => {
@@ -353,7 +365,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
+        style={styles.keyboardContainer}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.overlay}>
@@ -423,6 +436,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  keyboardContainer: {
+    flex: 1,
+  },
+  
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -438,8 +455,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '85%', // Aumentado de 75% a 85%
-    minHeight: Platform.OS === 'ios' ? 500 : 400, // Altura mínima mayor en iOS
+    height: '75%', // Cambiado de maxHeight a height fijo del 75%
     width: '100%',
   },
 
@@ -448,7 +464,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContentContainer: {
-    flexGrow: 1,
+    flex: 1,
     paddingBottom: 20,
   },
 
@@ -547,20 +563,22 @@ const styles = StyleSheet.create({
   // Category Step
   categoriesContainer: {
     flex: 1,
+    marginTop: 16, // Espacio después del título
   },
 
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 12, // Reducido de 16 a 12 para más espacio
+    paddingBottom: 16, // Espacio al final para scroll
   },
 
   categoryButton: {
-    width: (width - 80) / 3, // 3 columnas con padding
-    aspectRatio: 1,
+    width: (width - 88) / 3, // Optimizado para 3 columnas 
+    aspectRatio: 0.9, // Reducido de 1 a 0.9 para mostrar más categorías
     borderWidth: 2,
-    borderRadius: 16,
+    borderRadius: 12, // Reducido de 16 a 12
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -586,7 +604,13 @@ const styles = StyleSheet.create({
     color: '#495057',
   },
 
-  // Confirm Step - Improved
+  // Confirm Step - Scroll Container
+  confirmScrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 32, // Espacio extra al final
+  },
+
+  // Confirm Step - Improved (legacy)
   confirmContainer: {
     flex: 1,
     paddingTop: 8,
@@ -649,7 +673,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    flex: 1,
+    // Removido flex: 1 para evitar superposición
   },
 
   descriptionInputImproved: {
@@ -660,6 +684,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     minHeight: 80,
+    maxHeight: 100, // Altura máxima para evitar que crezca demasiado
     backgroundColor: '#FFFFFF',
     textAlignVertical: 'top',
   },
@@ -707,6 +732,11 @@ const styles = StyleSheet.create({
     maxHeight: 80,
   },
 
+  createButtonContainer: {
+    marginTop: 24, // Espacio claro entre el TextInput y el botón
+    paddingHorizontal: 0, 
+  },
+
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -716,7 +746,6 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'ios' ? 20 : 16, // Más altura en iOS
     paddingHorizontal: 32, // Más ancho
     gap: 10,
-    marginTop: Platform.OS === 'ios' ? 32 : 24, // Más espacio arriba en iOS
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -735,5 +764,78 @@ const styles = StyleSheet.create({
 
   disabledButton: {
     opacity: 0.6,
+  },
+
+  // ============================================
+  // ESTILOS COMPACTOS PARA PASO DE CONFIRMACIÓN
+  // ============================================
+  
+  confirmAmountSectionCompact: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16, // Reducido de 20 a 16
+    marginBottom: 16, // Reducido de 20 a 16
+    alignItems: 'center',
+  },
+
+  confirmCategorySectionCompact: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16, // Reducido de 20 a 16
+    marginBottom: 16, // Reducido de 20 a 16
+    alignItems: 'center',
+  },
+
+  categoryIconContainerCompact: {
+    width: 40, // Reducido de 50 a 40
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  confirmCategoryEmojiCompact: {
+    fontSize: 20, // Reducido de 24 a 20
+  },
+
+  confirmDescriptionSectionCompact: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16, // Reducido de 20 a 16
+    marginBottom: 24,
+  },
+
+  descriptionInputCompact: {
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    borderRadius: 8, // Reducido de 12 a 8
+    paddingHorizontal: 12, // Reducido de 16 a 12
+    paddingVertical: 10, // Reducido de 12 a 10
+    fontSize: 14, // Reducido de 16 a 14
+    minHeight: 60, // Reducido de 80 a 60
+    maxHeight: 80, // Reducido de 100 a 80
+    backgroundColor: '#FFFFFF',
+    textAlignVertical: 'top',
+  },
+
+  createButtonCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#51CF66',
+    borderRadius: 12, // Reducido de 16 a 12
+    paddingVertical: 16, // Estándar para todos los OS
+    paddingHorizontal: 24, // Reducido de 32 a 24
+    gap: 8, // Reducido de 10 a 8
+    marginTop: 16, // Espacio desde la descripción
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });

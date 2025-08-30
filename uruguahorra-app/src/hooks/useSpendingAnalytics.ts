@@ -63,12 +63,10 @@ const initialState: AnalyticsState = {
  * @param options - Configuración del hook
  * @returns Estado y funciones para manejo de analytics
  */
-export const useSpendingAnalytics = (
-  options?: AnalyticsOptions | null
-) => {
+export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
   // Handle null/undefined options (when preferences haven't loaded yet)
   const safeOptions = options ?? {};
-  
+
   const {
     spendingPatternsDays = ANALYTICS_TIME_PERIODS.DEFAULT_SPENDING_PATTERNS_DAYS,
     monthlyInsightsMonths = ANALYTICS_TIME_PERIODS.DEFAULT_MONTHLY_INSIGHTS_MONTHS,

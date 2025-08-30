@@ -188,18 +188,19 @@ class AnalyticsService {
         metadata: {
           fetchedAt: new Date().toISOString(),
           dataSources: {
-            patterns: spendingPatterns.length > 0
-              ? ('available' as const)
-              : ('empty' as const),
-            insights: monthlyInsights.length > 0
-              ? ('available' as const)
-              : ('empty' as const),
-            psychological: psychologicalInsights.length > 0
-              ? ('available' as const)
-              : ('empty' as const),
-            forecast: forecast
-              ? ('available' as const)
-              : ('disabled' as const),
+            patterns:
+              spendingPatterns.length > 0
+                ? ('available' as const)
+                : ('empty' as const),
+            insights:
+              monthlyInsights.length > 0
+                ? ('available' as const)
+                : ('empty' as const),
+            psychological:
+              psychologicalInsights.length > 0
+                ? ('available' as const)
+                : ('empty' as const),
+            forecast: forecast ? ('available' as const) : ('disabled' as const),
           },
           performance: {
             cacheInterval: ENV_CONFIG.CACHE_INTERVAL,

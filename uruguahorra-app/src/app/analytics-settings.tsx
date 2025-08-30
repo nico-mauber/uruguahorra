@@ -78,13 +78,14 @@ export default function AnalyticsSettingsScreen() {
   // Auto-save time preferences
   const handleTimePreferenceChange = async (field: string, value: number) => {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
-    
+
     // Auto-save immediately
     const updates: any = {};
     if (field === 'spendingPatternsDays') updates.spendingPatternsDays = value;
-    if (field === 'monthlyInsightsMonths') updates.monthlyInsightsMonths = value;
+    if (field === 'monthlyInsightsMonths')
+      updates.monthlyInsightsMonths = value;
     if (field === 'forecastDays') updates.forecastDays = value;
-    
+
     const success = await updateTimePreferences(updates);
     if (!success) {
       showError('Error al guardar la configuración');
@@ -97,12 +98,12 @@ export default function AnalyticsSettingsScreen() {
     value: string | boolean | number
   ) => {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
-    
+
     // Auto-save immediately
     const updates: any = {};
     if (field === 'defaultTab') updates.defaultTab = value;
     if (field === 'maxInsightsPerType') updates.maxInsightsPerType = value;
-    
+
     const success = await updateUIPreferences(updates);
     if (!success) {
       showError('Error al guardar la configuración');
@@ -112,7 +113,7 @@ export default function AnalyticsSettingsScreen() {
   // Auto-save feature toggles
   const handleFeatureToggle = async (field: string, value: boolean) => {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
-    
+
     // Auto-save immediately
     const updates: any = {};
     if (field === 'enablePsychologicalInsights')
@@ -121,7 +122,7 @@ export default function AnalyticsSettingsScreen() {
       updates.enableSpendingForecast = value;
     if (field === 'enablePushNotifications')
       updates.enablePushNotifications = value;
-    
+
     const success = await updateFeaturePreferences(updates);
     if (!success) {
       showError('Error al guardar la configuración');
@@ -131,7 +132,7 @@ export default function AnalyticsSettingsScreen() {
   // Auto-save localization preferences
   const handleLocalizationChange = async (field: string, value: string) => {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
-    
+
     // Auto-save immediately
     const updates: any = {};
     if (field === 'preferredLanguage') {
@@ -140,7 +141,7 @@ export default function AnalyticsSettingsScreen() {
     }
     if (field === 'currency') updates.currency = value;
     if (field === 'dateFormat') updates.dateFormat = value;
-    
+
     const success = await updateLocalizationPreferences(updates);
     if (!success) {
       showError('Error al guardar la configuración');
@@ -422,17 +423,8 @@ export default function AnalyticsSettingsScreen() {
           ]}
           onPress={handleReset}
         >
-          <Ionicons
-            name="refresh-outline"
-            size={20}
-            color={colors.error}
-          />
-          <Text
-            style={[
-              styles.resetButtonText,
-              { color: colors.error },
-            ]}
-          >
+          <Ionicons name="refresh-outline" size={20} color={colors.error} />
+          <Text style={[styles.resetButtonText, { color: colors.error }]}>
             Resetear Configuración
           </Text>
         </TouchableOpacity>

@@ -346,10 +346,13 @@ export default function DashboardScreen() {
         });
       }
 
-      // 5. Verificar desafíos de ahorro
+      // 5. Las contribuciones ya no están ligadas a retos
+      // Los retos requieren check-in manual diario desde la pestaña Retos
+
+      // 6. También verificar desafíos de ahorro del sistema legacy (compatibilidad)
       await ChallengesService.checkSavingsChallenges(user.id, amount);
 
-      // 6. Mostrar toast de éxito con XP
+      // 7. Mostrar toast de éxito con XP
       ToastService.savingSuccess(amount, selectedGoal.name);
 
       if (gamificationResult.xpEarned > 0) {

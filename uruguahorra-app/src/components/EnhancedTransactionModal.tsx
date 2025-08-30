@@ -172,7 +172,7 @@ export const EnhancedTransactionModal: React.FC<
           value={amount}
           onChangeText={handleAmountChange}
           placeholder="0.00"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.text.secondary}
           keyboardType="numeric"
           returnKeyType="next"
           onSubmitEditing={() => canProceed() && handleNext()}
@@ -185,7 +185,7 @@ export const EnhancedTransactionModal: React.FC<
         value={description}
         onChangeText={setDescription}
         placeholder="Descripción (opcional)"
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={colors.text.secondary}
         multiline
         numberOfLines={2}
       />
@@ -280,7 +280,7 @@ export const EnhancedTransactionModal: React.FC<
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.text} />
+            <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
 
           <View style={styles.titleContainer}>

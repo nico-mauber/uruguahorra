@@ -44,3 +44,6 @@ export {
   PreferencePicker,
   ToastNotification,
 } from './settings';
+
+// Challenge Components
+export { ChallengeCheckinModal } from './ChallengeCheckinModal';

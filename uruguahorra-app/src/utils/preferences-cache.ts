@@ -48,7 +48,7 @@ class PreferencesCache {
     const now = Date.now();
     const isExpired = now - entry.timestamp > this.CACHE_DURATION;
     const isVersionMismatch = entry.version !== this.CACHE_VERSION;
-    
+
     return !isExpired && !isVersionMismatch;
   }
 
@@ -59,14 +59,14 @@ class PreferencesCache {
     try {
       const cacheKey = this.getCacheKey(userId);
       const cachedData = await AsyncStorage.getItem(cacheKey);
-      
+
       if (!cachedData) {
         await this.updateMetadata({ cacheMisses: 1 });
         return null;
       }
 
       const entry: CacheEntry = JSON.parse(cachedData);
-      
+
       if (!this.isValidCacheEntry(entry)) {
         // Remove expired cache
         await AsyncStorage.removeItem(cacheKey);
@@ -120,12 +120,14 @@ class PreferencesCache {
   async clearAll(): Promise<void> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const cacheKeys = keys.filter(key => key.startsWith(this.CACHE_KEY_PREFIX));
-      
+      const cacheKeys = keys.filter((key) =>
+        key.startsWith(this.CACHE_KEY_PREFIX)
+      );
+
       if (cacheKeys.length > 0) {
         await AsyncStorage.multiRemove(cacheKeys);
       }
-      
+
       await AsyncStorage.removeItem(this.METADATA_KEY);
     } catch (error) {
       console.warn('PreferencesCache.clearAll error:', error);
@@ -138,18 +140,25 @@ class PreferencesCache {
   async getStats(): Promise<CacheMetadata & { hitRatio: number }> {
     try {
       const metadataRaw = await AsyncStorage.getItem(this.METADATA_KEY);
-      const metadata: CacheMetadata = metadataRaw 
+      const metadata: CacheMetadata = metadataRaw
         ? JSON.parse(metadataRaw)
         : { lastSync: 0, cacheHits: 0, cacheMisses: 0, totalRequests: 0 };
 
-      const hitRatio = metadata.totalRequests > 0 
-        ? metadata.cacheHits / metadata.totalRequests 
-        : 0;
+      const hitRatio =
+        metadata.totalRequests > 0
+          ? metadata.cacheHits / metadata.totalRequests
+          : 0;
 
       return { ...metadata, hitRatio };
     } catch (error) {
       console.warn('PreferencesCache.getStats error:', error);
-      return { lastSync: 0, cacheHits: 0, cacheMisses: 0, totalRequests: 0, hitRatio: 0 };
+      return {
+        lastSync: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
+        totalRequests: 0,
+        hitRatio: 0,
+      };
     }
   }
 
@@ -163,10 +172,16 @@ class PreferencesCache {
         lastSync: updates.lastSync || current.lastSync,
         cacheHits: current.cacheHits + (updates.cacheHits || 0),
         cacheMisses: current.cacheMisses + (updates.cacheMisses || 0),
-        totalRequests: current.totalRequests + (updates.cacheHits || 0) + (updates.cacheMisses || 0),
+        totalRequests:
+          current.totalRequests +
+          (updates.cacheHits || 0) +
+          (updates.cacheMisses || 0),
       };
 
-      await AsyncStorage.setItem(this.METADATA_KEY, JSON.stringify(newMetadata));
+      await AsyncStorage.setItem(
+        this.METADATA_KEY,
+        JSON.stringify(newMetadata)
+      );
     } catch (error) {
       console.warn('PreferencesCache.updateMetadata error:', error);
     }
@@ -175,7 +190,10 @@ class PreferencesCache {
   /**
    * Preload preferences for multiple users
    */
-  async preloadUsers(userIds: string[], getPreferences: (userId: string) => Promise<AnalyticsPreferences>): Promise<void> {
+  async preloadUsers(
+    userIds: string[],
+    getPreferences: (userId: string) => Promise<AnalyticsPreferences>
+  ): Promise<void> {
     const promises = userIds.map(async (userId) => {
       const cached = await this.get(userId);
       if (!cached) {
@@ -183,7 +201,10 @@ class PreferencesCache {
           const preferences = await getPreferences(userId);
           await this.set(userId, preferences);
         } catch (error) {
-          console.warn(`Failed to preload preferences for user ${userId}:`, error);
+          console.warn(
+            `Failed to preload preferences for user ${userId}:`,
+            error
+          );
         }
       }
     });
@@ -197,7 +218,9 @@ class PreferencesCache {
   async cleanup(): Promise<number> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const cacheKeys = keys.filter(key => key.startsWith(this.CACHE_KEY_PREFIX));
+      const cacheKeys = keys.filter((key) =>
+        key.startsWith(this.CACHE_KEY_PREFIX)
+      );
       let cleanedCount = 0;
 
       for (const key of cacheKeys) {
@@ -227,11 +250,16 @@ class PreferencesCache {
   /**
    * Get cache size information
    */
-  async getCacheSize(): Promise<{ entryCount: number; estimatedSizeKB: number }> {
+  async getCacheSize(): Promise<{
+    entryCount: number;
+    estimatedSizeKB: number;
+  }> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const cacheKeys = keys.filter(key => key.startsWith(this.CACHE_KEY_PREFIX));
-      
+      const cacheKeys = keys.filter((key) =>
+        key.startsWith(this.CACHE_KEY_PREFIX)
+      );
+
       let totalSize = 0;
       for (const key of cacheKeys) {
         const data = await AsyncStorage.getItem(key);
@@ -267,7 +295,7 @@ export const withCache = <T extends any[], R>(
 ) => {
   return async (...args: T): Promise<R> => {
     const cacheKey = getCacheKey(...args);
-    
+
     // Try to get from cache first
     const cached = await preferencesCache.get(`${userId}_${cacheKey}`);
     if (cached) {
@@ -276,10 +304,13 @@ export const withCache = <T extends any[], R>(
 
     // Execute original function
     const result = await fn(...args);
-    
+
     // Cache the result
     if (result && typeof result === 'object') {
-      await preferencesCache.set(`${userId}_${cacheKey}`, result as AnalyticsPreferences);
+      await preferencesCache.set(
+        `${userId}_${cacheKey}`,
+        result as AnalyticsPreferences
+      );
     }
 
     return result;
@@ -289,7 +320,10 @@ export const withCache = <T extends any[], R>(
 /**
  * Cache warming utility
  */
-export const warmCache = async (userId: string, getPreferences: () => Promise<AnalyticsPreferences>): Promise<void> => {
+export const warmCache = async (
+  userId: string,
+  getPreferences: () => Promise<AnalyticsPreferences>
+): Promise<void> => {
   try {
     const preferences = await getPreferences();
     await preferencesCache.set(userId, preferences);

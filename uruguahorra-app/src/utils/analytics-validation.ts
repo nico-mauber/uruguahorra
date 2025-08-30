@@ -103,7 +103,8 @@ export const validateAnalyticsPreferences = (
     if (interval < 30000 || interval > 1800000) {
       errors.push({
         field: 'cache_interval',
-        message: 'El intervalo de cache debe estar entre 30 segundos y 30 minutos',
+        message:
+          'El intervalo de cache debe estar entre 30 segundos y 30 minutos',
         code: 'INVALID_RANGE',
       });
     } else if (interval < 60000) {
@@ -120,17 +121,22 @@ export const validateAnalyticsPreferences = (
     if (preferences.forecast_days > preferences.spending_patterns_days * 3) {
       warnings.push({
         field: 'forecast_days',
-        message: 'Pronósticos muy largos comparados con el período de análisis pueden ser imprecisos',
+        message:
+          'Pronósticos muy largos comparados con el período de análisis pueden ser imprecisos',
         code: 'CROSS_FIELD_WARNING',
       });
     }
   }
 
   // Feature compatibility validations
-  if (preferences.enable_spending_forecast === false && preferences.default_tab === 'forecast') {
+  if (
+    preferences.enable_spending_forecast === false &&
+    preferences.default_tab === 'forecast'
+  ) {
     errors.push({
       field: 'default_tab',
-      message: 'No puedes tener "Proyección" como tab por defecto si los pronósticos están deshabilitados',
+      message:
+        'No puedes tener "Proyección" como tab por defecto si los pronósticos están deshabilitados',
       code: 'FEATURE_CONFLICT',
     });
   }
@@ -187,7 +193,10 @@ export const sanitizeAnalyticsPreferences = (
   }
 
   // Fix feature conflicts
-  if (sanitized.enable_spending_forecast === false && sanitized.default_tab === 'forecast') {
+  if (
+    sanitized.enable_spending_forecast === false &&
+    sanitized.default_tab === 'forecast'
+  ) {
     sanitized.default_tab = 'insights';
   }
 
@@ -238,17 +247,23 @@ export const assessAnalyticsQuality = (
   if (preferences.spending_patterns_days) {
     if (preferences.spending_patterns_days < 14) {
       score -= 20;
-      recommendations.push('Aumenta los días de análisis de patrones a al menos 14 para mejor precisión');
+      recommendations.push(
+        'Aumenta los días de análisis de patrones a al menos 14 para mejor precisión'
+      );
     } else if (preferences.spending_patterns_days < 30) {
       score -= 10;
-      recommendations.push('Considera usar 30+ días para patrones más estables');
+      recommendations.push(
+        'Considera usar 30+ días para patrones más estables'
+      );
     }
   }
 
   if (preferences.monthly_insights_months) {
     if (preferences.monthly_insights_months < 3) {
       score -= 15;
-      recommendations.push('Usa al menos 3 meses de datos para insights más relevantes');
+      recommendations.push(
+        'Usa al menos 3 meses de datos para insights más relevantes'
+      );
     } else if (preferences.monthly_insights_months >= 12) {
       score += 5; // Bonus for long-term analysis
     }
@@ -257,24 +272,36 @@ export const assessAnalyticsQuality = (
   // Evaluate features enabled
   if (preferences.enable_psychological_insights === false) {
     score -= 25;
-    recommendations.push('Los insights psicológicos proporcionan análisis valiosos del comportamiento');
+    recommendations.push(
+      'Los insights psicológicos proporcionan análisis valiosos del comportamiento'
+    );
   }
 
   if (preferences.enable_spending_forecast === false) {
     score -= 15;
-    recommendations.push('Los pronósticos te ayudan a planificar mejor tus gastos futuros');
+    recommendations.push(
+      'Los pronósticos te ayudan a planificar mejor tus gastos futuros'
+    );
   }
 
   // Evaluate UI preferences
-  if (preferences.max_insights_per_type && preferences.max_insights_per_type < 2) {
+  if (
+    preferences.max_insights_per_type &&
+    preferences.max_insights_per_type < 2
+  ) {
     score -= 5;
-    recommendations.push('Mostrar más insights por tipo te dará más información útil');
+    recommendations.push(
+      'Mostrar más insights por tipo te dará más información útil'
+    );
   }
 
   // Evaluate performance settings
-  if (preferences.cache_interval && preferences.cache_interval < 120000) { // 2 minutes
+  if (preferences.cache_interval && preferences.cache_interval < 120000) {
+    // 2 minutes
     score -= 5;
-    recommendations.push('Un cache muy corto puede afectar la velocidad de la app');
+    recommendations.push(
+      'Un cache muy corto puede afectar la velocidad de la app'
+    );
   }
 
   // Determine quality level
@@ -290,7 +317,9 @@ export const assessAnalyticsQuality = (
 /**
  * Get quality indicator emoji and text
  */
-export const getQualityIndicator = (quality: 'excellent' | 'good' | 'fair' | 'poor'): {
+export const getQualityIndicator = (
+  quality: 'excellent' | 'good' | 'fair' | 'poor'
+): {
   emoji: string;
   text: string;
   color: string;

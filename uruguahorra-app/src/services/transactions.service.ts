@@ -32,9 +32,7 @@ type DBTransactionInsert = {
   achievements_unlocked?: string[] | null;
   goal_id?: string | null;
   squad_id?: string | null;
-
 };
-
 
 type DBTransactionUpdate = Partial<DBTransactionInsert> & {
   updated_at?: string;
@@ -874,5 +872,4 @@ export class TransactionsService {
       throw error;
     }
   }
-
 }

@@ -215,7 +215,9 @@ export type DashboardTabType = keyof typeof UI_CONFIG.DASHBOARD_TABS;
 export type UserPreferencesType = typeof DEFAULT_USER_PREFERENCES;
 
 // ==================== HELPER FUNCTIONS ====================
-export const getInsightTypeConfig = (type: PsychologicalInsightType | string) => {
+export const getInsightTypeConfig = (
+  type: PsychologicalInsightType | string
+) => {
   // Handle null/undefined
   if (!type) {
     console.warn('No insight type provided');
@@ -226,25 +228,25 @@ export const getInsightTypeConfig = (type: PsychologicalInsightType | string) =>
       priority: 5,
     };
   }
-  
+
   // Convert to string and handle case
   const typeStr = String(type);
   const upperType = typeStr.toUpperCase();
-  
+
   // Map lowercase to uppercase if needed
   const typeMap: Record<string, PsychologicalInsightType> = {
-    'loss_aversion': 'LOSS_AVERSION',
-    'mental_accounting': 'MENTAL_ACCOUNTING', 
-    'present_bias': 'PRESENT_BIAS',
-    'social_proof': 'SOCIAL_PROOF',
-    'LOSS_AVERSION': 'LOSS_AVERSION',
-    'MENTAL_ACCOUNTING': 'MENTAL_ACCOUNTING',
-    'PRESENT_BIAS': 'PRESENT_BIAS', 
-    'SOCIAL_PROOF': 'SOCIAL_PROOF',
+    loss_aversion: 'LOSS_AVERSION',
+    mental_accounting: 'MENTAL_ACCOUNTING',
+    present_bias: 'PRESENT_BIAS',
+    social_proof: 'SOCIAL_PROOF',
+    LOSS_AVERSION: 'LOSS_AVERSION',
+    MENTAL_ACCOUNTING: 'MENTAL_ACCOUNTING',
+    PRESENT_BIAS: 'PRESENT_BIAS',
+    SOCIAL_PROOF: 'SOCIAL_PROOF',
   };
-  
+
   const mappedType = typeMap[typeStr] || typeMap[upperType];
-  
+
   if (!mappedType) {
     console.warn(`Unknown insight type: ${type}`);
     // Return a default config instead of null
@@ -255,9 +257,9 @@ export const getInsightTypeConfig = (type: PsychologicalInsightType | string) =>
       priority: 5,
     };
   }
-  
+
   const config = PSYCHOLOGICAL_INSIGHTS_CONFIG.INSIGHT_TYPES[mappedType];
-  
+
   // Ensure the config has all required fields
   return {
     ...config,

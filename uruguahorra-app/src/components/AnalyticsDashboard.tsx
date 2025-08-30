@@ -38,7 +38,7 @@ const PsychologicalInsightCard: React.FC<PsychologicalInsightCardProps> = ({
 
     // Get the config using the improved function that handles case conversion
     const typeConfig = getInsightTypeConfig(insight.type);
-    
+
     // Use default if no config found
     const config = typeConfig || defaultConfig;
 
@@ -224,7 +224,6 @@ export const AnalyticsDashboard: React.FC = () => {
     getOverallTrend,
     hasData,
   } = useSpendingAnalytics(analyticsOptions);
-
 
   // Update active tab when preferences change
   useEffect(() => {
@@ -469,7 +468,6 @@ export const AnalyticsDashboard: React.FC = () => {
               </Text>
             </TouchableOpacity>
           )}
-          
         </View>
 
         {/* Tab Content */}
@@ -666,7 +664,6 @@ export const AnalyticsDashboard: React.FC = () => {
               )}
             </View>
           )}
-
         </View>
       </ScrollView>
     </View>

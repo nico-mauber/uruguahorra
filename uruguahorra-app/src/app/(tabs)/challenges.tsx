@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +35,8 @@ export default function ChallengesScreen() {
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDurationModal, setShowDurationModal] = useState(false);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
   // Cargar datos iniciales
   const loadInitialData = useCallback(async (userId: string) => {
@@ -135,28 +139,20 @@ export default function ChallengesScreen() {
   };
 
   const showDurationSelector = (challenge: Challenge) => {
-    Alert.alert(challenge.title, 'Elige la duración de tu reto:', [
-      {
-        text: '1 semana',
-        onPress: () => handleStartChallenge(challenge.id, '1_week'),
-      },
-      {
-        text: '15 días',
-        onPress: () => handleStartChallenge(challenge.id, '15_days'),
-      },
-      {
-        text: '30 días',
-        onPress: () => handleStartChallenge(challenge.id, '30_days'),
-      },
-      {
-        text: '1 año',
-        onPress: () => handleStartChallenge(challenge.id, '1_year'),
-      },
-      {
-        text: 'Cancelar',
-        style: 'cancel',
-      },
-    ]);
+    setSelectedChallenge(challenge);
+    setShowDurationModal(true);
+  };
+
+  const closeDurationModal = () => {
+    setShowDurationModal(false);
+    setSelectedChallenge(null);
+  };
+
+  const selectDuration = async (durationType: ChallengeDurationType) => {
+    if (selectedChallenge) {
+      closeDurationModal();
+      await handleStartChallenge(selectedChallenge.id, durationType);
+    }
   };
 
   if (!user) {
@@ -402,6 +398,97 @@ export default function ChallengesScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal de selección de duración */}
+      <Modal
+        visible={showDurationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeDurationModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                {selectedChallenge?.title}
+              </Text>
+              <TouchableOpacity
+                onPress={closeDurationModal}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>
+              Elige la duración de tu reto:
+            </Text>
+
+            <View style={styles.durationOptions}>
+              <TouchableOpacity
+                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                onPress={() => selectDuration('1_week')}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                  1 semana
+                </Text>
+                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                  7 días
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                onPress={() => selectDuration('15_days')}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                  15 días
+                </Text>
+                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                  2 semanas
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                onPress={() => selectDuration('30_days')}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                  30 días
+                </Text>
+                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                  1 mes
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.durationButton, { backgroundColor: colors.background }]}
+                onPress={() => selectDuration('1_year')}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.durationText, { color: colors.text.primary }]}>
+                  1 año
+                </Text>
+                <Text style={[styles.durationSubtext, { color: colors.text.secondary }]}>
+                  365 días
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.cancelButton, { borderColor: colors.text.secondary }]}
+              onPress={closeDurationModal}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.text.secondary }]}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -548,5 +635,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 50,
+  },
+  // Estilos del modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 12,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  durationOptions: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  durationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  durationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  durationSubtext: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -7,6 +7,8 @@
       "@/*": ["src/*"],
       "@components": ["src/components"],
       "@components/*": ["src/components/*"],
+      "@contexts": ["src/contexts"],
+      "@contexts/*": ["src/contexts/*"],
       "@features/*": ["src/features/*"],
       "@lib/*": ["src/lib/*"],
       "@store": ["src/store"],

@@ -32,7 +32,9 @@ type DBTransactionInsert = {
   achievements_unlocked?: string[] | null;
   goal_id?: string | null;
   squad_id?: string | null;
+
 };
+
 
 type DBTransactionUpdate = Partial<DBTransactionInsert> & {
   updated_at?: string;
@@ -57,13 +59,21 @@ export class TransactionsService {
         .limit(1);
 
       if (error) {
-        logger.error(LogModule.TRANSACTIONS, 'Error checking user transactions', error);
+        logger.error(
+          LogModule.TRANSACTIONS,
+          'Error checking user transactions',
+          error
+        );
         return false;
       }
 
       return (count || 0) > 0;
     } catch (error) {
-      logger.error(LogModule.TRANSACTIONS, 'Error checking user transactions', error);
+      logger.error(
+        LogModule.TRANSACTIONS,
+        'Error checking user transactions',
+        error
+      );
       return false;
     }
   }
@@ -864,4 +874,5 @@ export class TransactionsService {
       throw error;
     }
   }
+
 }

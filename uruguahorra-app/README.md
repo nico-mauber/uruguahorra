@@ -434,6 +434,18 @@ MIT License - ver [LICENSE](LICENSE) para más detalles.
 
 ---
 
+## 📚 Documentación Adicional
+
+### Guías de Desarrollo
+- **[Sistema de Billing](docs/BILLING.md)** - Configuración de pagos con MercadoPago
+- **[Guía de Mantenimiento](docs/MAINTENANCE.md)** - Rutinas y procedimientos de mantenimiento
+- **[Analytics Roadmap](docs/ANALYTICS-ROADMAP.md)** - Plan de desarrollo del sistema de analytics
+
+### Testing y Configuración
+- **[Billing Testing](docs/billing-testing.md)** - Guía para probar el sistema de pagos
+- **[PostHog Integration](docs/POSTHOG-INTEGRATION-GUIDE.md)** - Configuración de analytics
+- **[Notification Testing](docs/NOTIFICATION-TESTING-GUIDE.md)** - Pruebas de notificaciones
+
 ## 🔗 Enlaces Útiles
 
 - [Documentación Expo](https://docs.expo.dev/)

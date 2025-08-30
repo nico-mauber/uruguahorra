@@ -29,6 +29,7 @@ export { SquadStatsCard } from './SquadStatsCard';
 // Transactions (Psychologically Enhanced)
 export { TransactionFAB } from './TransactionFAB-Simple';
 export { QuickTransactionModal } from './QuickTransactionModal';
+export { EnhancedTransactionModal } from './EnhancedTransactionModal';
 export { SimpleTransactionItem } from './SimpleTransactionItem';
 
 // Analytics & Gamification

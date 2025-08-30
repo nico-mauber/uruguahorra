@@ -225,14 +225,15 @@ export const AnalyticsDashboard: React.FC = () => {
     hasData,
   } = useSpendingAnalytics(analyticsOptions);
 
+
   // Update active tab when preferences change
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     logger.info(LogModule.UI, 'Analytics dashboard refresh triggered');
-    refreshAnalytics();
+    await refreshAnalytics();
   };
 
   const handleInsightPress = (insight: PsychologicalInsight) => {
@@ -468,6 +469,7 @@ export const AnalyticsDashboard: React.FC = () => {
               </Text>
             </TouchableOpacity>
           )}
+          
         </View>
 
         {/* Tab Content */}
@@ -664,6 +666,7 @@ export const AnalyticsDashboard: React.FC = () => {
               )}
             </View>
           )}
+
         </View>
       </ScrollView>
     </View>
@@ -876,5 +879,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     opacity: 0.8,
+  },
+  // Behavioral analytics styles
+  tabWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

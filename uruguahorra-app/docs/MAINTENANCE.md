@@ -3,6 +3,7 @@
 ## 📅 Rutinas de Mantenimiento
 
 ### 🔄 Rutinas Diarias
+
 - [ ] Revisar logs de errores en producción
 - [ ] Verificar métricas de performance en PostHog
 - [ ] Monitorear uso de API y rate limits
@@ -10,6 +11,7 @@
 ### 📆 Rutinas Semanales
 
 #### Lunes - Security Check
+
 ```bash
 # Verificar vulnerabilidades
 npm audit
@@ -22,6 +24,7 @@ git secrets --scan
 ```
 
 #### Miércoles - Code Quality
+
 ```bash
 # Ejecutar linter
 npm run lint
@@ -34,6 +37,7 @@ npx ts-prune
 ```
 
 #### Viernes - Performance Check
+
 ```bash
 # Analizar bundle size
 npm run build:web
@@ -49,6 +53,7 @@ expo start -c
 ### 📅 Rutinas Mensuales
 
 #### Primera semana del mes
+
 ```bash
 # Actualizar dependencias menores
 npm update
@@ -62,6 +67,7 @@ npm dedupe
 ```
 
 #### Tercera semana del mes
+
 ```bash
 # Análisis profundo de código muerto
 ./scripts/cleanup.sh --verbose
@@ -75,13 +81,16 @@ npm dedupe
 ### 📅 Rutinas Trimestrales
 
 #### Cada 3 meses
+
 1. **Evaluación de actualizaciones major**
+
    ```bash
    npm outdated
    # Evaluar cambios breaking de cada paquete
    ```
 
 2. **Security audit completo**
+
    ```bash
    npm audit fix --dry-run
    # Revisar cambios antes de aplicar
@@ -99,21 +108,22 @@ npm dedupe
 
 ## 🎯 Métricas Objetivo (SLAs)
 
-| Métrica | Objetivo | Actual | Estado |
-|---------|----------|--------|--------|
-| Build time | < 30s | ~30s | ✅ |
-| Bundle size | < 1.5MB | ~1.4MB | ✅ |
-| Vulnerabilidades | 0 | 0 | ✅ |
-| Test coverage | > 70% | 0% | ❌ |
-| Error rate | < 0.1% | N/A | ⏸️ |
-| Cold start móvil | < 2s | N/A | ⏸️ |
-| Cold start web | < 1s | N/A | ⏸️ |
-| Cache hit ratio | > 80% | N/A | ⏸️ |
-| Lighthouse score | > 90 | N/A | ⏸️ |
+| Métrica          | Objetivo | Actual | Estado |
+| ---------------- | -------- | ------ | ------ |
+| Build time       | < 30s    | ~30s   | ✅     |
+| Bundle size      | < 1.5MB  | ~1.4MB | ✅     |
+| Vulnerabilidades | 0        | 0      | ✅     |
+| Test coverage    | > 70%    | 0%     | ❌     |
+| Error rate       | < 0.1%   | N/A    | ⏸️     |
+| Cold start móvil | < 2s     | N/A    | ⏸️     |
+| Cold start web   | < 1s     | N/A    | ⏸️     |
+| Cache hit ratio  | > 80%    | N/A    | ⏸️     |
+| Lighthouse score | > 90     | N/A    | ⏸️     |
 
 ## 🛠️ Comandos Útiles
 
 ### Desarrollo
+
 ```bash
 # Iniciar en modo desarrollo
 npm start
@@ -129,6 +139,7 @@ npm run format
 ```
 
 ### Análisis
+
 ```bash
 # Verificar dependencias no utilizadas
 npx depcheck
@@ -144,6 +155,7 @@ find src -name "*.ts" -o -name "*.tsx" | xargs wc -l
 ```
 
 ### Limpieza
+
 ```bash
 # Ejecutar limpieza completa
 ./scripts/cleanup.sh
@@ -157,6 +169,7 @@ npm install
 ```
 
 ### Seguridad
+
 ```bash
 # Audit de seguridad
 npm audit
@@ -171,11 +184,13 @@ npm audit --json
 ## 📊 Monitoreo
 
 ### Herramientas Configuradas
+
 - **PostHog**: Analytics y eventos
 - **GitHub Actions**: CI/CD pipeline
 - **npm audit**: Vulnerabilidades
 
 ### Herramientas Recomendadas (por configurar)
+
 - **Sentry**: Error tracking en producción
 - **Datadog/New Relic**: APM y métricas
 - **LogRocket**: Session replay
@@ -184,18 +199,21 @@ npm audit --json
 ## 🚨 Procedimientos de Emergencia
 
 ### Si el build falla
+
 1. Verificar logs: `npm run build:web 2>&1 | tee build.log`
 2. Limpiar cache: `expo start -c`
 3. Reinstalar dependencias: `rm -rf node_modules && npm install`
 4. Revertir último cambio: `git revert HEAD`
 
 ### Si hay vulnerabilidades críticas
+
 1. Ejecutar: `npm audit`
 2. Intentar fix automático: `npm audit fix`
 3. Si persiste, actualizar manualmente el paquete afectado
 4. Verificar compatibilidad con: `npm test`
 
 ### Si el performance degrada
+
 1. Analizar bundle: `ANALYZE=true npm run build:web`
 2. Revisar imports dinámicos
 3. Implementar lazy loading
@@ -223,6 +241,7 @@ npm audit --json
 ## 🔄 Historial de Mantenimiento
 
 ### 2025-08-25
+
 - ✅ Auditoría técnica completa
 - ✅ Eliminación de 2000+ líneas de código muerto
 - ✅ Fix de 8 vulnerabilidades de seguridad

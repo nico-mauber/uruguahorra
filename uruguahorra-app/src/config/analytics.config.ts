@@ -150,7 +150,6 @@ export const ANALYTICS_FEATURES = {
   ENABLE_CUSTOM_CATEGORIES: false, // Future feature
 
   // Experimental features
-  EXPERIMENTAL_AI_INSIGHTS: false,
   EXPERIMENTAL_VOICE_INSIGHTS: false,
 
   // Development features

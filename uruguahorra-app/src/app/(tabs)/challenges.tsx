@@ -43,10 +43,11 @@ export default function ChallengesScreen() {
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [selectedSession, setSelectedSession] =
     useState<UserChallengeSession | null>(null);
+  const [progressRefreshKey, setProgressRefreshKey] = useState(0);
 
   // Hook para obtener progreso real de sesiones activas
   const activeSessionIds = activeSessions.map((session) => session.id);
-  const challengeProgressData = useMultipleChallengeProgress(activeSessionIds);
+  const challengeProgressData = useMultipleChallengeProgress(activeSessionIds, progressRefreshKey);
 
   // Cargar datos iniciales
   const loadInitialData = useCallback(async (userId: string) => {
@@ -180,6 +181,12 @@ export default function ChallengesScreen() {
       const updatedSessions =
         await ChallengeSessionsService.getUserActiveSessions(user.id);
       setActiveSessions(updatedSessions);
+
+      // Forzar actualización del progreso inmediatamente y después de un delay
+      setProgressRefreshKey((prev) => prev + 1);
+      setTimeout(() => {
+        setProgressRefreshKey((prev) => prev + 1);
+      }, 200);
     } catch (error) {
       logger.error(
         LogModule.UI,
@@ -272,6 +279,26 @@ export default function ChallengesScreen() {
                       >
                         {daysInfo}
                       </Text>
+                    )}
+                    {progressData && progressData.currentProgress > 0 && (
+                      <View style={styles.progressBarContainer}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            { backgroundColor: colors.background },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.progressBarFill,
+                              {
+                                backgroundColor: colors.primary,
+                                width: `${Math.min(displayProgress, 100)}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
                     )}
                     {progressData &&
                       !progressData.isOnTrack &&
@@ -727,6 +754,18 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     opacity: 0.5,
+  },
+  progressBarContainer: {
+    marginTop: 6,
+  },
+  progressBar: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   categoriesSection: {
     paddingHorizontal: 16,

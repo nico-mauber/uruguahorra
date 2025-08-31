@@ -5,18 +5,21 @@ Esta carpeta contiene toda la documentación técnica y guías del proyecto.
 ## 🏗️ **Guías de Desarrollo**
 
 ### **[Sistema de Billing](BILLING.md)**
+
 - Configuración completa de pagos con MercadoPago
 - Integración de webhooks y suscripciones
 - Variables de entorno necesarias
 - Scripts de deployment
 
 ### **[Guía de Mantenimiento](MAINTENANCE.md)**
+
 - Rutinas diarias, semanales y mensuales
 - Comandos útiles para limpieza
 - Métricas objetivo (SLAs)
 - Procedimientos de emergencia
 
 ### **[Analytics Roadmap](ANALYTICS-ROADMAP.md)**
+
 - Plan completo de desarrollo del sistema de analytics
 - Estado actual de implementación
 - Próximos pasos y prioridades
@@ -27,16 +30,19 @@ Esta carpeta contiene toda la documentación técnica y guías del proyecto.
 ## 🧪 **Testing y Configuración**
 
 ### **[Billing Testing](billing-testing.md)**
+
 - Guía para probar pagos con MercadoPago
 - Testing local de webhooks
 - Simulación de eventos de pago
 
 ### **[PostHog Integration](POSTHOG-INTEGRATION-GUIDE.md)**
+
 - Configuración de analytics con PostHog
 - Eventos y métricas a trackear
 - Setup de dashboards
 
 ### **[Notification Testing](NOTIFICATION-TESTING-GUIDE.md)**
+
 - Pruebas de notificaciones push
 - Testing local y en dispositivos
 - Configuración de Firebase
@@ -46,11 +52,13 @@ Esta carpeta contiene toda la documentación técnica y guías del proyecto.
 ## 📊 **Features y Funcionalidades**
 
 ### **[Analytics System](analytics.md)**
+
 - Documentación del sistema de analytics
 - Componentes y arquitectura
 - APIs y servicios
 
 ### **[Funcionalidad Analytics](FUNCIONALIDAD-ANALYTICS.md)**
+
 - Descripción detallada de características
 - Casos de uso y flujos de usuario
 
@@ -59,12 +67,15 @@ Esta carpeta contiene toda la documentación técnica y guías del proyecto.
 ## 🐛 **Fixes y Mejoras**
 
 ### **[Fix TypeError SpendingPatterns](FIX-TYPEERROR-SPENDINGPATTERNS.md)**
+
 - Solución a errores de tipos en patrones de gasto
 
 ### **[Mejoras Diseño Móvil QuickStats](MEJORAS-DISENO-MOVIL-QUICKSTATS.md)**
+
 - Optimizaciones de UI para dispositivos móviles
 
 ### **[Notificaciones Racha](NOTIFICACIONES-RACHA.md)**
+
 - Sistema de notificaciones para rachas de ahorro
 
 ---
@@ -72,6 +83,7 @@ Esta carpeta contiene toda la documentación técnica y guías del proyecto.
 ## 🗄️ **Instalación y Setup**
 
 ### **[Analytics SQL Installation](ANALYTICS-SQL-INSTALLATION.md)**
+
 - Scripts SQL para configurar analytics
 - Migraciones de base de datos
 - Configuración de Supabase

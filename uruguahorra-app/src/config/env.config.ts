@@ -110,10 +110,6 @@ export const ENV_CONFIG = {
     'EXPO_PUBLIC_ENABLE_CUSTOM_CATEGORIES',
     false
   ),
-  EXPERIMENTAL_AI_INSIGHTS: getEnvBoolean(
-    'EXPO_PUBLIC_EXPERIMENTAL_AI_INSIGHTS',
-    false
-  ),
 } as const;
 
 // ==================== RUNTIME CONFIGURATION ====================
@@ -153,7 +149,6 @@ export const getRuntimeConfig = () => {
       spendingForecast:
         ENV_CONFIG.SPENDING_FORECAST_ENABLED && ENV_CONFIG.ANALYTICS_ENABLED,
       customCategories: ENV_CONFIG.ENABLE_CUSTOM_CATEGORIES,
-      aiInsights: ENV_CONFIG.EXPERIMENTAL_AI_INSIGHTS && isDevelopment,
     },
   };
 };

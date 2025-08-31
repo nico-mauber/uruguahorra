@@ -3067,89 +3067,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Función para predicción de gastos futuros
-CREATE OR REPLACE FUNCTION predict_future_spending(
-    user_id UUID,
-    forecast_days INTEGER DEFAULT 30
-)
-RETURNS TABLE (
-    predicted_amount DECIMAL,
-    confidence DECIMAL,
-    trend TEXT,
-    based_on_days INTEGER
-) AS $$
-DECLARE
-    recent_avg DECIMAL;
-    older_avg DECIMAL;
-    variance_coefficient DECIMAL;
-    data_points INTEGER;
-BEGIN
-    -- Obtener promedio de los últimos 15 días
-    SELECT 
-        AVG(daily_spending),
-        COUNT(*)
-    INTO recent_avg, data_points
-    FROM (
-        SELECT 
-            DATE(t.created_at) as spending_date,
-            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
-        FROM transactions t
-        WHERE t.user_id = predict_future_spending.user_id
-            AND t.created_at >= NOW() - INTERVAL '15 days'
-        GROUP BY DATE(t.created_at)
-    ) daily_totals;
-    
-    -- Obtener promedio de 15 días anteriores para comparación
-    SELECT AVG(daily_spending)
-    INTO older_avg
-    FROM (
-        SELECT 
-            DATE(t.created_at) as spending_date,
-            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
-        FROM transactions t
-        WHERE t.user_id = predict_future_spending.user_id
-            AND t.created_at >= NOW() - INTERVAL '30 days'
-            AND t.created_at < NOW() - INTERVAL '15 days'
-        GROUP BY DATE(t.created_at)
-    ) daily_totals;
-    
-    -- Calcular coeficiente de varianza para confianza
-    SELECT STDDEV(daily_spending) / NULLIF(AVG(daily_spending), 0)
-    INTO variance_coefficient
-    FROM (
-        SELECT 
-            DATE(t.created_at) as spending_date,
-            SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END) as daily_spending
-        FROM transactions t
-        WHERE t.user_id = predict_future_spending.user_id
-            AND t.created_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(t.created_at)
-    ) daily_totals;
-    
-    RETURN QUERY
-    SELECT 
-        COALESCE(recent_avg * forecast_days, 0)::DECIMAL as prediction,
-        CASE 
-            WHEN data_points >= 10 AND variance_coefficient <= 0.5 THEN 0.8
-            WHEN data_points >= 5 AND variance_coefficient <= 1.0 THEN 0.6
-            WHEN data_points >= 3 THEN 0.4
-            ELSE 0.2
-        END::DECIMAL as conf_level,
-        CASE 
-            WHEN recent_avg > COALESCE(older_avg, recent_avg) * 1.1 THEN 'up'
-            WHEN recent_avg < COALESCE(older_avg, recent_avg) * 0.9 THEN 'down'
-            ELSE 'stable'
-        END::TEXT as trend_direction,
-        COALESCE(data_points, 0)::INTEGER as data_days;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Permisos para las funciones de analytics
 GRANT EXECUTE ON FUNCTION get_spending_patterns(UUID, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_monthly_insights(UUID, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_spending_analysis(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_streak_data(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION predict_future_spending(UUID, INTEGER) TO authenticated;
 
 -- ============================================
 

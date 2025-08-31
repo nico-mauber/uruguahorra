@@ -11,6 +11,7 @@
 Sistema completo de análisis financiero que proporciona insights psicológicos, patrones de gasto, proyecciones y análisis comportamental para ayudar a los usuarios a tomar mejores decisiones financieras.
 
 ### **Características Principales**
+
 - 📈 **Análisis de Patrones de Gasto**: Categorización automática y detección de tendencias
 - 🧠 **Insights Psicológicos**: Aplicación de principios de psicología financiera
 - 🔮 **Proyecciones Inteligentes**: Predicción de gastos futuros basada en comportamiento histórico
@@ -22,6 +23,7 @@ Sistema completo de análisis financiero que proporciona insights psicológicos,
 ## 🏗️ Arquitectura del Sistema
 
 ### **Stack Técnico**
+
 ```
 Frontend: React Native + TypeScript + Expo
 Backend: Supabase PostgreSQL + RPC Functions
@@ -30,6 +32,7 @@ UI Components: Sistema de diseño propio
 ```
 
 ### **Flujo de Datos**
+
 ```
 User Action → Hook → Service Layer → Supabase RPC → PostgreSQL → Fallback Mock → UI
 ```
@@ -81,39 +84,40 @@ static async getSpendingForecast(userId: string, days: number = 30): Promise<Spe
 
 ```typescript
 interface SpendingPattern {
-  category: string;           // Categoría de gasto
-  amount: number;            // Monto total
-  frequency: number;         // Frecuencia de transacciones
-  trend: 'up' | 'down' | 'stable';  // Tendencia
-  averageAmount: number;     // Promedio por transacción
+  category: string; // Categoría de gasto
+  amount: number; // Monto total
+  frequency: number; // Frecuencia de transacciones
+  trend: 'up' | 'down' | 'stable'; // Tendencia
+  averageAmount: number; // Promedio por transacción
 }
 
 interface MonthlyInsight {
-  month: string;             // Período analizado
-  totalSpent: number;        // Total gastado
-  budgetVariance: number;    // Variación vs presupuesto
-  topCategories: Array<{     // Top categorías
+  month: string; // Período analizado
+  totalSpent: number; // Total gastado
+  budgetVariance: number; // Variación vs presupuesto
+  topCategories: Array<{
+    // Top categorías
     category: string;
     amount: number;
     percentage: number;
   }>;
-  savingsRate: number;       // Tasa de ahorro
-  streakDays: number;        // Días consecutivos cumpliendo meta
+  savingsRate: number; // Tasa de ahorro
+  streakDays: number; // Días consecutivos cumpliendo meta
 }
 
 interface PsychologicalInsight {
   type: 'loss_aversion' | 'mental_accounting' | 'present_bias' | 'social_proof';
-  title: string;             // Título del insight
-  description: string;       // Explicación detallada
-  impact: 'high' | 'medium' | 'low';  // Nivel de impacto
-  actionable: string;        // Recomendación específica
+  title: string; // Título del insight
+  description: string; // Explicación detallada
+  impact: 'high' | 'medium' | 'low'; // Nivel de impacto
+  actionable: string; // Recomendación específica
 }
 
 interface SpendingForecast {
-  predicted_amount: number;  // Cantidad proyectada
-  confidence: number;        // Confianza de la predicción (0-1)
-  trend: 'up' | 'down' | 'stable';  // Tendencia proyectada
-  based_on_days: number;     // Días de datos históricos usados
+  predicted_amount: number; // Cantidad proyectada
+  confidence: number; // Confianza de la predicción (0-1)
+  trend: 'up' | 'down' | 'stable'; // Tendencia proyectada
+  based_on_days: number; // Días de datos históricos usados
 }
 ```
 
@@ -127,7 +131,7 @@ try {
   // 1. Intentar función SQL
   const { data, error } = await supabase.rpc('get_spending_patterns', params);
   if (!error && data) return data;
-  
+
   // 2. Fallback con datos mock
   logger.warn('Using mock data - SQL function not available');
   return mockData;
@@ -150,7 +154,7 @@ try {
    - Psychological Insights Cards con código de colores
    - Indicadores visuales por tipo de insight
 
-2. **📈 Patrones Tab**  
+2. **📈 Patrones Tab**
    - Lista de patrones de gasto por categoría
    - Indicadores de tendencia (📈📉📊)
    - Métricas de frecuencia y montos promedio
@@ -224,15 +228,17 @@ interface AnalyticsState {
 
 ```typescript
 // Filtros por tipo psicológico
-const getInsightsByType = (type: string) => 
-  psychologicalInsights.filter(insight => insight.type === type);
+const getInsightsByType = (type: string) =>
+  psychologicalInsights.filter((insight) => insight.type === type);
 
-const getHighImpactInsights = () => 
-  psychologicalInsights.filter(insight => insight.impact === 'high');
+const getHighImpactInsights = () =>
+  psychologicalInsights.filter((insight) => insight.impact === 'high');
 
 // Estadísticas computadas
 const totalSpentThisMonth = monthlyInsights[0]?.totalSpent || 0;
-const hasGrowingTrend = spendingPatterns.some(pattern => pattern.trend === 'up');
+const hasGrowingTrend = spendingPatterns.some(
+  (pattern) => pattern.trend === 'up'
+);
 ```
 
 ---
@@ -244,6 +250,7 @@ const hasGrowingTrend = spendingPatterns.some(pattern => pattern.trend === 'up')
 #### **Funciones Implementadas**
 
 ##### **`get_spending_patterns(user_id UUID, days_back INTEGER)`**
+
 ```sql
 -- Analiza patrones de gasto por categoría
 -- Calcula tendencias, frecuencias y promedios
@@ -251,6 +258,7 @@ const hasGrowingTrend = spendingPatterns.some(pattern => pattern.trend === 'up')
 ```
 
 ##### **`get_monthly_insights(user_id UUID, months_back INTEGER)`**
+
 ```sql
 -- Genera insights mensuales con:
 -- - Total gastado por mes
@@ -278,11 +286,13 @@ GRANT EXECUTE ON FUNCTION get_monthly_insights(UUID, INTEGER) TO authenticated;
 ## 📱 Integración en la App
 
 ### **Navegación**
+
 ```
 Tab Navigation → Analytics Tab → AnalyticsDashboard
 ```
 
 ### **Screen Analytics (`analytics.tsx`)**
+
 ```typescript
 export default function AnalyticsScreen() {
   return (
@@ -294,6 +304,7 @@ export default function AnalyticsScreen() {
 ```
 
 ### **Configuración de Tab**
+
 ```typescript
 // En _layout.tsx de (tabs)
 <Tabs.Screen
@@ -312,6 +323,7 @@ export default function AnalyticsScreen() {
 ## 🔍 Insights Psicológicos Implementados
 
 ### **1. Loss Aversion (Aversión a las Pérdidas)**
+
 ```typescript
 {
   type: 'loss_aversion',
@@ -323,6 +335,7 @@ export default function AnalyticsScreen() {
 ```
 
 ### **2. Mental Accounting (Contabilidad Mental)**
+
 ```typescript
 {
   type: 'mental_accounting',
@@ -334,6 +347,7 @@ export default function AnalyticsScreen() {
 ```
 
 ### **3. Present Bias (Sesgo del Presente)**
+
 ```typescript
 {
   type: 'present_bias',
@@ -345,6 +359,7 @@ export default function AnalyticsScreen() {
 ```
 
 ### **4. Social Proof (Prueba Social)**
+
 ```typescript
 {
   type: 'social_proof',
@@ -362,12 +377,14 @@ export default function AnalyticsScreen() {
 ### **Problemas Resueltos**
 
 #### **1. Error PGRST202 - Funciones SQL No Encontradas**
+
 ```
 ❌ Problema: Infinite loop de errores al acceder al analytics screen
 ✅ Solución: Sistema de fallbacks con datos mock realistas
 ```
 
 #### **2. TypeError con toFixed() en valores undefined**
+
 ```
 ❌ Problema: Crashes cuando forecast properties son undefined
 ✅ Solución: Optional chaining + fallback values
@@ -375,12 +392,14 @@ export default function AnalyticsScreen() {
 ```
 
 #### **3. Syntax Error en SQL (línea 2538)**
+
 ```
 ❌ Problema: Error de sintaxis en get_monthly_insights CTE
 ✅ Solución: Corrección de GROUP BY en top_cats CTE
 ```
 
 #### **4. Infinite Loop en useSpendingAnalytics**
+
 ```
 ❌ Problema: useEffect con dependencias mal configuradas
 ✅ Solución: useCallback optimizado + dependencias específicas
@@ -391,8 +410,20 @@ export default function AnalyticsScreen() {
 ```typescript
 // Mock data siempre disponible para desarrollo
 const mockSpendingPatterns = [
-  { category: 'Comida', amount: 450, frequency: 12, trend: 'up', averageAmount: 37.5 },
-  { category: 'Transporte', amount: 200, frequency: 8, trend: 'stable', averageAmount: 25 },
+  {
+    category: 'Comida',
+    amount: 450,
+    frequency: 12,
+    trend: 'up',
+    averageAmount: 37.5,
+  },
+  {
+    category: 'Transporte',
+    amount: 200,
+    frequency: 8,
+    trend: 'stable',
+    averageAmount: 25,
+  },
 ];
 
 // Logs detallados para debugging
@@ -414,6 +445,7 @@ logger.success(LogModule.DB, 'Analytics completed successfully');
 - ✅ **Memory Efficient**: Estado mínimo y cleanup automático
 
 ### **Tiempos de Respuesta**
+
 ```
 SQL Functions (real):  ~200-500ms
 Mock Data (fallback):  ~5-10ms
@@ -425,13 +457,14 @@ UI Render:            ~16ms (60fps)
 ## 🔮 Funcionalidades Futuras
 
 ### **Próximas Mejoras**
+
 - 📈 **Gráficos Avanzados**: ChartJS integration
-- 🤖 **ML Predictions**: Modelos más sofisticados
 - 🔔 **Smart Notifications**: Alertas basadas en insights
 - 📊 **Export Data**: CSV/PDF reports
 - 🎯 **Goal Tracking**: Integración con sistema de metas
 
 ### **Extensiones Psicológicas**
+
 - 🧠 **Anchoring Bias**: Análisis de precios de referencia
 - 💸 **Sunk Cost Fallacy**: Detección de inversiones perdidas
 - 🎲 **Prospect Theory**: Evaluación de decisiones bajo riesgo
@@ -442,19 +475,23 @@ UI Render:            ~16ms (60fps)
 ## 🎯 Conclusiones
 
 ### **Estado Actual**
+
 El sistema de Analytics está **completamente funcional** con:
+
 - ✅ **Frontend robusto** con manejo de errores
-- ✅ **Backend resiliente** con fallbacks inteligentes  
+- ✅ **Backend resiliente** con fallbacks inteligentes
 - ✅ **UI/UX intuitiva** con múltiples vistas
 - ✅ **Insights psicológicos** aplicados a finanzas personales
 
 ### **Valor para el Usuario**
+
 - 📊 **Visibilidad completa** de patrones de gasto
 - 🧠 **Educación financiera** a través de insights psicológicos
 - 🔮 **Planificación inteligente** con proyecciones
 - 📱 **Experiencia fluida** en mobile y PWA
 
 ### **Calidad del Código**
+
 - ✅ **TypeScript estricto** sin `any` types
 - ✅ **ESLint/Prettier** compliance
 - ✅ **Performance optimizada** con cache inteligente
@@ -464,4 +501,4 @@ El sistema de Analytics está **completamente funcional** con:
 ---
 
 **Desarrollado con ❤️ para Uruguahorra**  
-*Ayudando a tomar mejores decisiones financieras a través de la psicología y los datos*
+_Ayudando a tomar mejores decisiones financieras a través de la psicología y los datos_

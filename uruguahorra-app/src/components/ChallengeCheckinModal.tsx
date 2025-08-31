@@ -88,9 +88,11 @@ export function ChallengeCheckinModal({
           note.trim() || undefined
         );
 
-      // Mostrar resultado
+      // Mostrar resultado con información de progreso
       if (completed) {
-        ToastService.quickSuccess('¡Día completado! 🎉');
+        ToastService.quickSuccess(
+          `¡Día completado! 🎉 Progreso: ${Math.round(result.currentProgress)}% (${result.daysCompleted} días)`
+        );
       } else {
         ToastService.quickInfo('Check-in registrado');
       }
@@ -142,9 +144,9 @@ export function ChallengeCheckinModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <TouchableOpacity 
-          style={styles.overlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
           onPress={dismissKeyboard}
         >
           <ScrollView
@@ -155,154 +157,174 @@ export function ChallengeCheckinModal({
             <View
               style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text.primary }]}>
-              Check-in Diario
-            </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text.secondary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Challenge Title */}
-          <View style={styles.challengeInfo}>
-            <Text
-              style={[styles.challengeTitle, { color: colors.text.primary }]}
-            >
-              {challengeTitle}
-            </Text>
-            <Text style={[styles.todayLabel, { color: colors.text.secondary }]}>
-              Hoy,{' '}
-              {new Date().toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </Text>
-          </View>
-
-          {checkingStatus ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text
-                style={[styles.loadingText, { color: colors.text.secondary }]}
-              >
-                Verificando estado...
-              </Text>
-            </View>
-          ) : hasAlreadyCheckedIn ? (
-            // Mostrar estado del check-in previo
-            <View style={styles.alreadyCheckedContainer}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: previousCheckin?.completed
-                      ? colors.success || '#4CAF50'
-                      : colors.warning || '#FFA500',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={previousCheckin?.completed ? 'checkmark' : 'close'}
-                  size={20}
-                  color="white"
-                />
-                <Text style={styles.statusText}>
-                  {previousCheckin?.completed ? 'Cumplido' : 'No cumplido'}
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={[styles.title, { color: colors.text.primary }]}>
+                  Check-in Diario
                 </Text>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={colors.text.secondary}
+                  />
+                </TouchableOpacity>
               </View>
 
-              {previousCheckin?.note && (
+              {/* Challenge Title */}
+              <View style={styles.challengeInfo}>
                 <Text
                   style={[
-                    styles.previousNote,
-                    { color: colors.text.secondary },
+                    styles.challengeTitle,
+                    { color: colors.text.primary },
                   ]}
                 >
-                  Nota: {previousCheckin.note}
+                  {challengeTitle}
                 </Text>
-              )}
-
-              <Text
-                style={[styles.alreadyText, { color: colors.text.secondary }]}
-              >
-                Ya registraste tu check-in para hoy.
-              </Text>
-            </View>
-          ) : (
-            // Formulario de check-in
-            <>
-              <Text style={[styles.question, { color: colors.text.primary }]}>
-                ¿Cumpliste con el reto hoy?
-              </Text>
-
-              {/* Nota opcional */}
-              <TextInput
-                style={[
-                  styles.noteInput,
-                  {
-                    color: colors.text.primary,
-                    borderColor: colors.text.secondary,
-                    backgroundColor: colors.background,
-                  },
-                ]}
-                placeholder="Nota opcional (cómo te fue, dificultades, etc.)"
-                placeholderTextColor={colors.text.secondary}
-                value={note}
-                onChangeText={setNote}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-                returnKeyType="done"
-                onSubmitEditing={dismissKeyboard}
-                blurOnSubmit={true}
-                enablesReturnKeyAutomatically={true}
-              />
-
-              {/* Botones de respuesta */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.answerButton,
-                    styles.yesButton,
-                    { backgroundColor: colors.success || '#4CAF50' },
-                  ]}
-                  onPress={() => handleCheckin(true)}
-                  disabled={loading}
+                <Text
+                  style={[styles.todayLabel, { color: colors.text.secondary }]}
                 >
-                  {loading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark" size={24} color="white" />
-                      <Text style={styles.buttonText}>Sí, cumplí</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.answerButton,
-                    styles.noButton,
-                    { backgroundColor: colors.warning || '#FFA500' },
-                  ]}
-                  onPress={() => handleCheckin(false)}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons name="close" size={24} color="white" />
-                      <Text style={styles.buttonText}>No cumplí</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                  Hoy,{' '}
+                  {new Date().toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </Text>
               </View>
-            </>
-          )}
+
+              {checkingStatus ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text
+                    style={[
+                      styles.loadingText,
+                      { color: colors.text.secondary },
+                    ]}
+                  >
+                    Verificando estado...
+                  </Text>
+                </View>
+              ) : hasAlreadyCheckedIn ? (
+                // Mostrar estado del check-in previo
+                <View style={styles.alreadyCheckedContainer}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: previousCheckin?.completed
+                          ? colors.success || '#4CAF50'
+                          : colors.warning || '#FFA500',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={previousCheckin?.completed ? 'checkmark' : 'close'}
+                      size={20}
+                      color="white"
+                    />
+                    <Text style={styles.statusText}>
+                      {previousCheckin?.completed ? 'Cumplido' : 'No cumplido'}
+                    </Text>
+                  </View>
+
+                  {previousCheckin?.note && (
+                    <Text
+                      style={[
+                        styles.previousNote,
+                        { color: colors.text.secondary },
+                      ]}
+                    >
+                      Nota: {previousCheckin.note}
+                    </Text>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.alreadyText,
+                      { color: colors.text.secondary },
+                    ]}
+                  >
+                    Ya registraste tu check-in para hoy.
+                  </Text>
+                </View>
+              ) : (
+                // Formulario de check-in
+                <>
+                  <Text
+                    style={[styles.question, { color: colors.text.primary }]}
+                  >
+                    ¿Cumpliste con el reto hoy?
+                  </Text>
+
+                  {/* Nota opcional */}
+                  <TextInput
+                    style={[
+                      styles.noteInput,
+                      {
+                        color: colors.text.primary,
+                        borderColor: colors.text.secondary,
+                        backgroundColor: colors.background,
+                      },
+                    ]}
+                    placeholder="Nota opcional (cómo te fue, dificultades, etc.)"
+                    placeholderTextColor={colors.text.secondary}
+                    value={note}
+                    onChangeText={setNote}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    returnKeyType="done"
+                    onSubmitEditing={dismissKeyboard}
+                    blurOnSubmit={true}
+                    enablesReturnKeyAutomatically={true}
+                  />
+
+                  {/* Botones de respuesta */}
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.answerButton,
+                        styles.yesButton,
+                        { backgroundColor: colors.success || '#4CAF50' },
+                      ]}
+                      onPress={() => handleCheckin(true)}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark" size={24} color="white" />
+                          <Text style={styles.buttonText}>Sí, cumplí</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.answerButton,
+                        styles.noButton,
+                        { backgroundColor: colors.warning || '#FFA500' },
+                      ]}
+                      onPress={() => handleCheckin(false)}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <>
+                          <Ionicons name="close" size={24} color="white" />
+                          <Text style={styles.buttonText}>No cumplí</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           </ScrollView>
         </TouchableOpacity>

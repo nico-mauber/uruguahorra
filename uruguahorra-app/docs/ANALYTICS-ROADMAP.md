@@ -3,6 +3,7 @@
 ## 📋 **ESTADO ACTUAL (✅ COMPLETADO)**
 
 ### **Sistema Base Implementado**
+
 - ✅ **Configuración central** (`src/config/analytics.config.ts`)
 - ✅ **Variables de entorno** configurables (`.env.example`)
 - ✅ **Datos mock dinámicos** (`src/data/mockAnalytics.ts`)
@@ -13,6 +14,7 @@
 - ✅ **Base de datos integrada** (complete_database_schema.sql v5.6)
 
 ### **Componentes Funcionales**
+
 - ✅ **AnalyticsDashboard.tsx** - Usa preferencias dinámicamente
 - ✅ **useAnalyticsPreferences** - Hook completo de preferencias
 - ✅ **analytics.tsx** - Pantalla principal (básica)
@@ -22,14 +24,17 @@
 ## 🚀 **PRÓXIMOS PASOS - FASE 2**
 
 ### **1. Aplicar Esquema de Base de Datos** ⚠️
+
 ```sql
 -- Ejecutar en Supabase SQL Editor:
 -- supabase/migrations/add_analytics_preferences.sql
 -- Ya está integrado en complete_database_schema.sql v5.6
 ```
+
 **Estado**: Pendiente de ejecutar por el usuario
 
 ### **2. Configurar Variables de Entorno**
+
 ```bash
 # Copiar y personalizar
 cp .env.example .env.local
@@ -41,9 +46,11 @@ EXPO_PUBLIC_DEFAULT_LANGUAGE=es
 ```
 
 ### **3. Crear Pantalla de Configuración de Analytics**
+
 **Archivo**: `src/app/analytics-settings.tsx`
 
 #### **Componentes necesarios:**
+
 - [ ] **Pantalla principal de configuración**
 - [ ] **Secciones de configuración**:
   - [ ] Períodos de análisis (días/meses)
@@ -53,6 +60,7 @@ EXPO_PUBLIC_DEFAULT_LANGUAGE=es
   - [ ] Configuración de cache
 
 #### **Features específicas:**
+
 - [ ] **NumberInput** para períodos personalizables
 - [ ] **Switch/Toggle** para características
 - [ ] **Picker/Select** para opciones múltiples
@@ -65,15 +73,16 @@ EXPO_PUBLIC_DEFAULT_LANGUAGE=es
 ## 📱 **MEJORAS UX/UI RECOMENDADAS**
 
 ### **1. Pantalla de Configuración de Analytics**
+
 ```typescript
 export default function AnalyticsSettingsScreen() {
   const preferences = useAnalyticsPreferences();
-  
+
   return (
     <ScrollView>
       {/* Time Period Settings */}
       <SettingSection title="Períodos de Análisis">
-        <NumberInput 
+        <NumberInput
           label="Días para patrones"
           value={preferences.spendingPatternsDays}
           onChangeText={(value) => preferences.updateTimePreferences({
@@ -81,10 +90,10 @@ export default function AnalyticsSettingsScreen() {
           })}
         />
       </SettingSection>
-      
+
       {/* Feature Toggles */}
       <SettingSection title="Características">
-        <Switch 
+        <Switch
           label="Insights Psicológicos"
           value={preferences.featuresEnabled.psychologicalInsights}
           onValueChange={(value) => preferences.updateFeaturePreferences({
@@ -98,6 +107,7 @@ export default function AnalyticsSettingsScreen() {
 ```
 
 ### **2. Dashboard Personalizable**
+
 ```typescript
 // Permitir reordenar widgets
 const { preferences } = useAnalyticsPreferences();
@@ -107,7 +117,7 @@ if (preferences.showQuickStats) {
 }
 
 // Mostrar solo insights del tipo preferido
-const priorityInsights = insights.filter(insight => 
+const priorityInsights = insights.filter(insight =>
   preferences.preferHighImpactInsights ? insight.impact === 'high' : true
 );
 ```
@@ -117,6 +127,7 @@ const priorityInsights = insights.filter(insight =>
 ## 🔧 **OPTIMIZACIONES DE PERFORMANCE**
 
 ### **1. Lazy Loading de Componentes**
+
 ```typescript
 const AnalyticsDashboard = React.lazy(() => import('./AnalyticsDashboard'));
 const SpendingAnalytics = React.lazy(() => import('./SpendingAnalytics'));
@@ -128,6 +139,7 @@ const SpendingAnalytics = React.lazy(() => import('./SpendingAnalytics'));
 ```
 
 ### **2. Cache Inteligente Mejorado**
+
 ```typescript
 // Implementar cache por usuario + configuración
 const cacheKey = `analytics_${userId}_${JSON.stringify(options)}`;
@@ -135,6 +147,7 @@ const cachedData = await getCachedAnalytics(cacheKey);
 ```
 
 ### **3. Background Sync**
+
 ```typescript
 // Actualización en background cuando la app vuelve al foreground
 useEffect(() => {
@@ -143,7 +156,7 @@ useEffect(() => {
       analytics.refreshAnalytics();
     }
   };
-  
+
   AppState.addEventListener('change', handleAppStateChange);
   return () => AppState.removeEventListener('change', handleAppStateChange);
 }, []);
@@ -154,6 +167,7 @@ useEffect(() => {
 ## 📊 **MÉTRICAS Y MONITOREO**
 
 ### **1. Analytics de Usage**
+
 ```typescript
 // Trackear qué insights son más útiles
 const { track } = useAnalytics();
@@ -168,11 +182,13 @@ const handleInsightPress = (insight: PsychologicalInsight) => {
 ```
 
 ### **2. Performance Monitoring**
+
 ```typescript
 const performanceMetrics = analytics.getPerformanceMetrics();
 
 // Reportar métricas lentas
-if (performanceMetrics.dataFreshness > 10000) { // 10s
+if (performanceMetrics.dataFreshness > 10000) {
+  // 10s
   track('analytics_performance_slow', {
     freshness: performanceMetrics.dataFreshness,
     cacheHitRatio: performanceMetrics.cacheHitRatio,
@@ -185,6 +201,7 @@ if (performanceMetrics.dataFreshness > 10000) { // 10s
 ## 🧪 **TESTING Y VALIDACIÓN**
 
 ### **1. Test del Sistema de Configuración**
+
 ```typescript
 // src/__tests__/analytics-config.test.ts
 describe('Analytics Configuration', () => {
@@ -207,6 +224,7 @@ describe('Analytics Configuration', () => {
 ## 🔄 **FASE 3: SISTEMA DE LOCALIZACIÓN (OPCIONAL)**
 
 ### **Implementar i18n:**
+
 1. **Instalar react-i18next**: `npm install react-i18next`
 2. **Crear archivos de traducción**:
    - `src/locales/es/analytics.json`
@@ -214,10 +232,11 @@ describe('Analytics Configuration', () => {
 3. **Configurar provider de idioma**
 
 ### **Ejemplo de uso:**
+
 ```typescript
 const { t } = useTranslation('analytics');
 // En lugar de: title: "Gasto Total"
-title: t('quickStats.totalSpending')
+title: t('quickStats.totalSpending');
 ```
 
 ---
@@ -225,11 +244,13 @@ title: t('quickStats.totalSpending')
 ## 🎯 **FEATURES FUTURAS**
 
 ### **1. Dashboards Personalizables**
+
 - Widgets arrastrables
 - Layouts guardados por usuario
 - Temas personalizados
 
 ### **2. Export de Datos**
+
 ```typescript
 const exportAnalytics = async () => {
   const data = await AnalyticsService.getCompleteAnalytics(user.id);
@@ -239,6 +260,7 @@ const exportAnalytics = async () => {
 ```
 
 ### **3. Comparaciones Sociales**
+
 ```typescript
 // Comparar con promedio de usuarios similares
 const socialComparison = await AnalyticsService.getSocialComparison(user.id);
@@ -246,6 +268,7 @@ const socialComparison = await AnalyticsService.getSocialComparison(user.id);
 ```
 
 ### **4. AI-Powered Insights**
+
 ```typescript
 const aiInsights = await AnalyticsService.getAIInsights(user.id, {
   includeRecommendations: true,
@@ -292,24 +315,28 @@ const aiInsights = await AnalyticsService.getAIInsights(user.id, {
 ## ✅ **CHECKLIST DE IMPLEMENTACIÓN**
 
 ### **🔥 PRIORIDAD ALTA (Esta semana)**
+
 - [ ] **1. Ejecutar complete_database_schema.sql en Supabase**
 - [ ] **2. Crear analytics-settings.tsx básica**
 - [ ] **3. Implementar SettingSection y componentes básicos**
 - [ ] **4. Conectar configuración con AnalyticsDashboard**
 
 ### **📈 PRIORIDAD MEDIA (Próximas 2 semanas)**
+
 - [ ] **5. Validación robusta de inputs**
 - [ ] **6. Error handling mejorado**
 - [ ] **7. Estados de loading optimizados**
 - [ ] **8. Testing básico del flujo completo**
 
 ### **✨ PRIORIDAD BAJA (Futuro)**
+
 - [ ] **9. Exportar/importar configuraciones**
 - [ ] **10. Analytics de uso de preferencias**
 - [ ] **11. Presets de configuración**
 - [ ] **12. Modo avanzado/básico**
 
 ### **🌟 LARGO PLAZO (2-3 meses)**
+
 - [ ] Comparaciones sociales
 - [ ] AI-powered insights
 - [ ] Widgets de terceros
@@ -320,6 +347,7 @@ const aiInsights = await AnalyticsService.getAIInsights(user.id, {
 ## 🔧 **ARCHIVOS A CREAR/MODIFICAR**
 
 ### **Nuevos archivos:**
+
 1. `src/app/analytics-settings.tsx` - Pantalla de configuración
 2. `src/components/settings/SettingSection.tsx` - Sección de configuración
 3. `src/components/settings/NumberInput.tsx` - Input numérico
@@ -327,6 +355,7 @@ const aiInsights = await AnalyticsService.getAIInsights(user.id, {
 5. `src/components/settings/PreferencePicker.tsx` - Selector de opciones
 
 ### **Archivos a modificar:**
+
 1. `src/app/(tabs)/analytics.tsx` - Agregar botón de configuración
 2. `src/components/AnalyticsDashboard.tsx` - Link a configuración
 3. `src/components/index.ts` - Exportar nuevos componentes
@@ -336,12 +365,14 @@ const aiInsights = await AnalyticsService.getAIInsights(user.id, {
 ## 🎉 **BENEFICIOS LOGRADOS**
 
 ### **Para Desarrolladores:**
+
 - ✅ **0% hardcoding** - Todo configurable externamente
 - ✅ **Mantenibilidad** - Código modular y documentado
 - ✅ **Performance** - Cache inteligente y requests optimizados
 - ✅ **Flexibilidad** - Fácil agregar nuevas métricas
 
 ### **Para Usuarios:**
+
 - ✅ **Personalización** - Cada usuario controla su experiencia
 - ✅ **Performance** - Datos se cargan más rápido
 - ✅ **Confiabilidad** - Sistema robusto con fallbacks
@@ -352,8 +383,9 @@ const aiInsights = await AnalyticsService.getAIInsights(user.id, {
 ## 🎯 **OBJETIVO FINAL**
 
 **Un sistema de analytics completamente personalizable donde:**
+
 - ✅ **Cada usuario** puede configurar sus períodos de análisis
-- ✅ **Las características** se habilitan/deshabilitan dinámicamente  
+- ✅ **Las características** se habilitan/deshabilitan dinámicamente
 - ✅ **La UI se adapta** a las preferencias del usuario
 - ✅ **Los datos se actualizan** según la configuración
 - ✅ **La experiencia es fluida** y consistente

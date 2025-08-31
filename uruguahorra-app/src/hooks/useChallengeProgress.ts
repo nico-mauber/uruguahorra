@@ -88,7 +88,8 @@ export function useChallengeProgress(sessionId: string): ChallengeProgressData {
  * Hook para manejar múltiples sesiones de retos
  */
 export function useMultipleChallengeProgress(
-  sessionIds: string[]
+  sessionIds: string[],
+  refreshKey?: number
 ): Record<string, ChallengeProgressData> {
   const [dataMap, setDataMap] = useState<Record<string, ChallengeProgressData>>(
     {}
@@ -186,7 +187,7 @@ export function useMultipleChallengeProgress(
     return () => {
       mounted = false;
     };
-  }, [sessionIds.join(',')]); // Dependencia basada en IDs concatenados
+  }, [sessionIds.join(','), refreshKey]); // Dependencia basada en IDs concatenados y refreshKey
 
   return dataMap;
 }

@@ -219,53 +219,129 @@ export const generateMockMonthlyInsights = (
 const INSIGHT_TEMPLATES = {
   loss_aversion: [
     {
-      title: '🚨 Presupuesto excedido',
-      description: 'Has gastado {variance}% más de tu presupuesto este mes',
+      title: '💰 Te cuesta más gastar que te alegra ahorrar',
+      description:
+        'Notas que evitas gastos por miedo a "perder" dinero, pero esto a veces te hace perder oportunidades',
       actionable:
-        'Revisa tus gastos en {topCategory} y ajusta para los próximos días',
+        'Antes de compras grandes, haz una lista de pros y contras durante 5 minutos',
     },
     {
-      title: '💸 Gasto impulsivo detectado',
+      title: '🛡️ Prefieres lo seguro, aunque sea menos rentable',
       description:
-        'Tus gastos en {topCategory} aumentaron {increase}% este mes',
-      actionable: 'Define límites estrictos para gastos no planificados',
+        'Eliges opciones que garantizan no perder dinero, aunque tengas menos beneficios',
+      actionable:
+        'Prueba la regla 70/30: 70% seguro, 30% para oportunidades que te emocionen',
     },
   ],
   mental_accounting: [
     {
-      title: '💡 Tu categoría principal: {topCategory}',
-      description: 'Representa el {percentage}% de tus gastos',
-      actionable: 'Considera si esta proporción refleja tus prioridades reales',
+      title: '🏷️ Separas tu dinero en "cajitas" mentales',
+      description:
+        'Tienes dinero "para {topCategory}" y dinero "para otras cosas", pero esto puede limitarte',
+      actionable:
+        'Prueba un presupuesto flexible: si sobra en una categoría, úsalo en lo que más necesites',
     },
     {
-      title: '📊 Distribución de gastos',
-      description: 'Gastas de forma desigual entre categorías esenciales',
-      actionable: 'Usa un presupuesto único sin categorías mentales',
+      title: '💡 Gastas diferente según de dónde viene el dinero',
+      description:
+        'El dinero del sueldo lo cuidas más que un regalo o devolución de impuestos',
+      actionable:
+        'Trata todo tu dinero igual, sin importar su origen - al final es tuyo',
     },
   ],
   present_bias: [
     {
-      title: '📊 Proyección mensual',
-      description: 'A tu ritmo actual gastarás ${projected} este mes',
-      actionable: 'Ajusta tus gastos diarios para alcanzar tu meta mensual',
+      title: '⏰ Te gusta disfrutar hoy más que ahorrar para mañana',
+      description:
+        'Es normal querer disfrutar el presente, pero podrías estar sacrificando tu futuro yo',
+      actionable:
+        'Automatiza $500 de ahorro cada quincena - así no tienes que decidir cada vez',
     },
     {
-      title: '⏰ Patrón de gastos inmediatos',
-      description: 'Priorizas gastos inmediatos sobre ahorros a largo plazo',
-      actionable: 'Automatiza tus ahorros antes de ver el dinero',
+      title: '🎯 Te enfocas en beneficios inmediatos',
+      description:
+        'Prefieres gastar $100 hoy que ahorrar $120 en 3 meses, aunque matemáticamente convenga esperar',
+      actionable:
+        'Para compras grandes, espera 48 horas y pregúntate: "¿lo sigo queriendo igual?"',
     },
   ],
   social_proof: [
     {
-      title: '🎯 ¡Inicia tu racha!',
-      description: 'Comienza una racha de cumplimiento de metas',
+      title: '🚀 ¡Vas por buen camino!',
+      description:
+        'Personas con hábitos similares a los tuyos logran ahorrar $3,000 más por año',
       actionable:
-        'Usuarios constantes ahorran 40% más que usuarios esporádicos',
+        'Mantén tu racha actual - cada día que cumples tus metas, te acercas más a tus objetivos',
     },
     {
-      title: '🏆 Vas mejor que otros',
-      description: 'Tu control de gastos está por encima del promedio',
-      actionable: 'Mantén este comportamiento positivo',
+      title: '🏆 Tu control es mejor que el promedio',
+      description:
+        'El 70% de personas gasta sin planificar, pero tú estás tomando decisiones conscientes',
+      actionable:
+        'Comparte tus logros con amigos cercanos - te ayudará a mantenerte motivado',
+    },
+  ],
+  emotional_spending: [
+    {
+      title: '😊 Gastas más cuando estás contento o triste',
+      description:
+        'Tus emociones influyen en tus compras más de lo que crees - es completamente normal',
+      actionable:
+        'Antes de comprar algo >$50, anota cómo te sientes en una escala del 1 al 10',
+    },
+    {
+      title: '🎭 Tus gastos reflejan tu estado de ánimo',
+      description:
+        'Compras para celebrar, consolarte o simplemente por aburrimiento',
+      actionable:
+        'Crea una lista de 5 actividades gratuitas para cada emoción que sientas',
+    },
+  ],
+  anchoring_bias: [
+    {
+      title: '⚓ El primer precio que ves influye todo lo demás',
+      description:
+        'Si ves algo a $500, luego $300 te parece barato, aunque siga siendo caro para ti',
+      actionable:
+        'Antes de comprar, busca al menos 3 precios diferentes y decide cuál es tu máximo',
+    },
+    {
+      title: '🏪 Las ofertas te influencian más de lo normal',
+      description: 'Un "50% OFF" puede hacerte comprar cosas que no necesitas',
+      actionable:
+        'Pregúntate: "¿Lo compraría al precio original?" Si no, no lo compres en oferta',
+    },
+  ],
+  availability_heuristic: [
+    {
+      title: '🧠 Recuerdas más los gastos que te dolieron',
+      description:
+        'Los gastos recientes o muy caros los tienes más presentes que los pequeños pero frecuentes',
+      actionable:
+        'Revisa tus gastos semanalmente, no solo cuando "duelen" - los pequeños suman mucho',
+    },
+    {
+      title: '📺 Lo que ves en redes afecta lo que compras',
+      description:
+        'Las compras que ves en redes sociales te hacen sentir que "todos lo tienen"',
+      actionable:
+        'Antes de comprar algo que viste online, espera 3 días sin mirar redes',
+    },
+  ],
+  confirmation_bias: [
+    {
+      title: '✅ Buscas razones para justificar tus compras',
+      description:
+        'Una vez que quieres algo, encuentras mil razones de por qué es buena idea comprarlo',
+      actionable:
+        'Pide a un amigo cercano que haga de "abogado del diablo" en tus compras grandes',
+    },
+    {
+      title: '🔍 Solo ves información que confirma lo que quieres',
+      description:
+        'Lees reviews positivas y ignoras las negativas cuando ya decidiste comprar',
+      actionable:
+        'Busca activamente 3 razones por las que NO deberías comprar algo que quieres',
     },
   ],
 } as const;

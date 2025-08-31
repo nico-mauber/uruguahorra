@@ -161,7 +161,7 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
           forecastDays,
         });
 
-        // Use the new complete analytics method for better performance
+        // Use the complete analytics method
         const analyticsData = await AnalyticsService.getCompleteAnalytics(
           user.id,
           {
@@ -194,6 +194,7 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
           insightsCount: analyticsData.monthlyInsights.length,
           psychologicalCount: analyticsData.psychologicalInsights.length,
           hasForecast: !!analyticsData.forecast,
+          processingTime: analyticsData.metadata.performance.processingTime,
         });
       } catch (error) {
         // Don't update state if request was aborted

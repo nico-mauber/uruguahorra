@@ -265,7 +265,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
   );
 
   const renderConfirmStep = () => (
-    <ScrollView 
+    <ScrollView
       style={styles.stepContainer}
       contentContainerStyle={styles.confirmScrollContainer}
       showsVerticalScrollIndicator={false}
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
   },
-  
+
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   },
 
   categoryButton: {
-    width: (width - 88) / 3, // Optimizado para 3 columnas 
+    width: (width - 88) / 3, // Optimizado para 3 columnas
     aspectRatio: 0.9, // Reducido de 1 a 0.9 para mostrar más categorías
     borderWidth: 2,
     borderRadius: 12, // Reducido de 16 a 12
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
 
   createButtonContainer: {
     marginTop: 24, // Espacio claro entre el TextInput y el botón
-    paddingHorizontal: 0, 
+    paddingHorizontal: 0,
   },
 
   createButton: {
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
   // ============================================
   // ESTILOS COMPACTOS PARA PASO DE CONFIRMACIÓN
   // ============================================
-  
+
   confirmAmountSectionCompact: {
     backgroundColor: '#F8F9FA',
     borderRadius: 12,

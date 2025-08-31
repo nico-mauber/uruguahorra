@@ -112,7 +112,7 @@ config.server = {
 config.watcher = {
   ...config.watcher,
   watchman: true, // Reactivar watchman para mejor performance
-  crawl: false,   // Usar native find en lugar de crawl para mejor velocidad
+  crawl: false, // Usar native find en lugar de crawl para mejor velocidad
 };
 
 module.exports = config;

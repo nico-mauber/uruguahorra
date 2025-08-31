@@ -47,7 +47,10 @@ export default function ChallengesScreen() {
 
   // Hook para obtener progreso real de sesiones activas
   const activeSessionIds = activeSessions.map((session) => session.id);
-  const challengeProgressData = useMultipleChallengeProgress(activeSessionIds, progressRefreshKey);
+  const challengeProgressData = useMultipleChallengeProgress(
+    activeSessionIds,
+    progressRefreshKey
+  );
 
   // Cargar datos iniciales
   const loadInitialData = useCallback(async (userId: string) => {

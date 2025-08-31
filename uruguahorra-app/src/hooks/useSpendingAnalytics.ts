@@ -13,6 +13,7 @@ import {
   ANALYTICS_TIME_PERIODS,
   DATA_VALIDATION,
 } from '@/config/analytics.config';
+import { cacheManager } from '@/services/cache-manager.service';
 
 interface AnalyticsState {
   spendingPatterns: SpendingPattern[];
@@ -80,55 +81,49 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
   const [state, setState] = useState<AnalyticsState>(initialState);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastOptionsRef = useRef<string>('');
+  const userIdRef = useRef<string | undefined>(user?.id);
+  const fetchAnalyticsRef = useRef<((force?: boolean) => Promise<void>) | null>(
+    null
+  );
 
-  // Cache inteligente: evitar fetch excesivos
-  const shouldFetch = useCallback(() => {
-    // Always fetch if forced or no previous fetch
-    if (forceRefresh || !state.lastFetch) return true;
+  // Update user ID ref when user changes
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
-    // Check if analytics are disabled
-    if (!RUNTIME_CONFIG.featuresEnabled.analytics) return false;
-
-    // Check time-based cache
-    const timeDiff = Date.now() - state.lastFetch.getTime();
-    const shouldRefreshByTime = timeDiff > refreshInterval;
-
-    // Check if options changed (for dynamic updates)
-    const currentOptionsHash = JSON.stringify({
-      spendingPatternsDays,
-      monthlyInsightsMonths,
-      forecastDays,
-    });
-    const optionsChanged = currentOptionsHash !== lastOptionsRef.current;
-
-    return shouldRefreshByTime || optionsChanged;
-  }, [
-    state.lastFetch,
-    refreshInterval,
-    forceRefresh,
-    spendingPatternsDays,
-    monthlyInsightsMonths,
-    forecastDays,
-  ]);
+  // Simplified cache logic - only check for first load
+  const isFirstLoad = !state.lastFetch;
 
   const fetchAnalytics = useCallback(
     async (force = false) => {
-      if (!user?.id) {
+      const currentUserId = userIdRef.current;
+      
+      if (!currentUserId) {
         logger.warn(LogModule.DB, 'No user ID available for analytics fetch');
         return;
       }
 
-      if (state.isLoading && !force) {
+      // Simple loading check without depending on state.isLoading
+      if (abortControllerRef.current && !force) {
         logger.info(LogModule.DB, 'Analytics fetch already in progress');
         return;
       }
 
-      if (!force && !shouldFetch()) {
-        logger.info(
-          LogModule.DB,
-          'Skipping analytics fetch - cache still valid'
-        );
-        return;
+      // In development, only fetch if forced or first time
+      if (ENV_CONFIG.DEBUG_MODE && !force) {
+        setState((prev) => {
+          if (prev.lastFetch) {
+            logger.info(
+              LogModule.DB,
+              'Skipping fetch - development mode, not forced'
+            );
+            return prev;
+          }
+          // Continue with fetch if no previous fetch
+          return { ...prev, isLoading: true, error: null };
+        });
+      } else {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
       }
 
       // Cancel previous request if still running
@@ -139,31 +134,21 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
       // Create new abort controller for this request
       abortControllerRef.current = new AbortController();
 
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
       try {
         logger.start(LogModule.DB, 'Fetching complete analytics', {
-          userId: user.id,
+          userId: currentUserId,
           options: {
             spendingPatternsDays,
             monthlyInsightsMonths,
             forecastDays,
             includePsychological,
           },
-          cacheInterval: refreshInterval,
           forceRefresh: force,
-        });
-
-        // Update options hash for change detection
-        lastOptionsRef.current = JSON.stringify({
-          spendingPatternsDays,
-          monthlyInsightsMonths,
-          forecastDays,
         });
 
         // Use the complete analytics method
         const analyticsData = await AnalyticsService.getCompleteAnalytics(
-          user.id,
+          currentUserId,
           {
             spendingPatternsDays,
             monthlyInsightsMonths,
@@ -194,7 +179,6 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
           insightsCount: analyticsData.monthlyInsights.length,
           psychologicalCount: analyticsData.psychologicalInsights.length,
           hasForecast: !!analyticsData.forecast,
-          processingTime: analyticsData.metadata.performance.processingTime,
         });
       } catch (error) {
         // Don't update state if request was aborted
@@ -213,24 +197,53 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
       }
     },
     [
-      user?.id,
-      state.isLoading,
-      shouldFetch,
       spendingPatternsDays,
       monthlyInsightsMonths,
       forecastDays,
       includePsychological,
-      refreshInterval,
     ]
   );
 
-  // Auto-fetch on mount and user change
+  // Update ref when fetchAnalytics changes
   useEffect(() => {
-    if (user?.id && RUNTIME_CONFIG.featuresEnabled.analytics) {
+    fetchAnalyticsRef.current = fetchAnalytics;
+  }, [fetchAnalytics]);
+
+  // Auto-fetch only on initial mount when user is available
+  useEffect(() => {
+    if (user?.id && RUNTIME_CONFIG.featuresEnabled.analytics && isFirstLoad) {
       fetchAnalytics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]); // Solo cuando cambia el user ID
+  }, [user?.id, isFirstLoad]); // Only when user changes or first load
+
+  // Subscribe to cache manager for cross-store invalidation
+  useEffect(() => {
+    const unsubscribe = cacheManager.subscribe(() => {
+      logger.info(LogModule.DB, 'Cache invalidation received - clearing analytics state');
+      setState(prev => ({
+        ...prev,
+        spendingPatterns: [],
+        monthlyInsights: [],
+        psychologicalInsights: [],
+        forecast: null,
+        lastFetch: null,
+        isLoading: false,
+        error: null
+      }));
+      
+      // Force refresh if user is available
+      if (user?.id) {
+        setTimeout(() => {
+          if (fetchAnalyticsRef.current) {
+            fetchAnalyticsRef.current(true);
+          }
+        }, 100); // Small delay to ensure state is cleared first
+      }
+    });
+
+    return unsubscribe;
+  }, [user?.id]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -268,10 +281,12 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
     return 'stable';
   }, [state.monthlyInsights]);
 
-  // Refresh manual para pull-to-refresh
+  // Completely stable refresh function using ref
   const refreshAnalytics = useCallback(() => {
-    fetchAnalytics(true);
-  }, [fetchAnalytics]);
+    if (fetchAnalyticsRef.current) {
+      fetchAnalyticsRef.current(true);
+    }
+  }, []); // No dependencies = completely stable
 
   return {
     // Data state
@@ -288,7 +303,6 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
     // Status helpers
     hasData:
       state.spendingPatterns.length > 0 || state.monthlyInsights.length > 0,
-    shouldRefresh: shouldFetch(),
 
     // Configuration helpers
     isFeatureEnabled: (feature: keyof typeof RUNTIME_CONFIG.featuresEnabled) =>
@@ -298,7 +312,6 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
       monthlyInsightsMonths,
       forecastDays,
       includePsychological,
-      refreshInterval,
     }),
 
     // Validation helpers
@@ -310,11 +323,8 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
       return hasMinTransactions && hasMinData;
     },
 
-    // Performance metrics
+    // Performance metrics (simplified)
     getPerformanceMetrics: () => ({
-      cacheHitRatio: state.lastFetch
-        ? (Date.now() - state.lastFetch.getTime()) / refreshInterval
-        : 0,
       dataFreshness: state.lastFetch
         ? Date.now() - state.lastFetch.getTime()
         : null,

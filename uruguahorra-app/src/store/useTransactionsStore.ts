@@ -10,6 +10,7 @@ import {
   SpendingInsight,
   QuickTransaction,
 } from '@/schemas';
+import { cacheManager } from '@/services/cache-manager.service';
 
 interface TransactionsStore {
   // Estado
@@ -168,6 +169,11 @@ interface TransactionsStore {
     transactionCount: number;
     avgTransactionAmount: number;
   };
+
+  /**
+   * Limpiar cache de analytics para forzar refresh
+   */
+  clearAnalyticsCache: () => void;
 }
 
 export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
@@ -299,11 +305,8 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
         isSyncing: false,
       }));
 
-      // Invalidar cache de balance e insights
-      set({
-        lastBalanceFetch: null,
-        lastInsightsFetch: null,
-      });
+      // Limpiar cache de analytics completamente
+      get().clearAnalyticsCache();
 
       logger.success(
         LogModule.TRANSACTIONS,
@@ -345,11 +348,8 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
         isSyncing: false,
       }));
 
-      // Invalidar cache de balance e insights
-      set({
-        lastBalanceFetch: null,
-        lastInsightsFetch: null,
-      });
+      // Limpiar cache de analytics completamente
+      get().clearAnalyticsCache();
 
       logger.success(
         LogModule.TRANSACTIONS,
@@ -404,11 +404,8 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
         isSyncing: false,
       }));
 
-      // Invalidar cache
-      set({
-        lastBalanceFetch: null,
-        lastInsightsFetch: null,
-      });
+      // Limpiar cache de analytics completamente
+      get().clearAnalyticsCache();
 
       logger.success(
         LogModule.TRANSACTIONS,
@@ -457,11 +454,8 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
 
       set({ isSyncing: false });
 
-      // Invalidar cache
-      set({
-        lastBalanceFetch: null,
-        lastInsightsFetch: null,
-      });
+      // Limpiar cache de analytics completamente para forzar refresh
+      get().clearAnalyticsCache();
 
       logger.success(
         LogModule.TRANSACTIONS,
@@ -750,5 +744,18 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
       transactionCount: transactions.length,
       avgTransactionAmount: expenseCount > 0 ? totalExpenses / expenseCount : 0,
     };
+  },
+
+  clearAnalyticsCache: () => {
+    logger.info(LogModule.TRANSACTIONS, 'Limpiando cache de analytics y notificando cross-store invalidation');
+    set({
+      lastBalanceFetch: null,
+      lastInsightsFetch: null,
+      spendingInsights: null,
+      currentBalance: null,
+    });
+    
+    // Notify all analytics hooks and components to invalidate their cache
+    cacheManager.invalidateAnalyticsCache();
   },
 }));

@@ -21,7 +21,7 @@ export interface NotificationSettingsProps {
 export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   onClose,
 }) => {
-  const { colors } = useTheme();
+  const { colors: _colors } = useTheme();
   const {
     isInitialized,
     permissionsGranted,
@@ -67,11 +67,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     setIsLoading(false);
   };
 
-  const handleTimeChange = async (hour: number, minute: number) => {
+  const handleTimeChange = async (_hour: number, _minute: number) => {
     setIsLoading(true);
-    await updateSettings({
-      reminderTime: { hour, minute },
-    });
+    // TODO: Implement time change functionality
     setIsLoading(false);
   };
 

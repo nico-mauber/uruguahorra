@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Button, Card } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
@@ -22,7 +21,6 @@ import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
 
 export default function PaywallScreen() {
   const { colors } = useTheme();
-  // const router = useRouter(); // Not used
   const { user } = useAuth();
   const analytics = useAnalytics();
   const [selectedPlan, setSelectedPlan] = useState<

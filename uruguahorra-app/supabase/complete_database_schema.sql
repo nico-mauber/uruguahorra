@@ -1391,7 +1391,7 @@ BEGIN
     WHERE user_id = input_user_id 
     AND type = 'expense' 
     AND deleted_at IS NULL
-    AND transaction_date >= CURRENT_DATE - INTERVAL '%s days' % days_back;
+    AND transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL;
     
     -- Categoría con más gasto
     SELECT category_name INTO most_expensive_category
@@ -1401,7 +1401,7 @@ BEGIN
         WHERE user_id = input_user_id 
         AND type = 'expense' 
         AND deleted_at IS NULL
-        AND transaction_date >= CURRENT_DATE - INTERVAL '%s days' % days_back
+        AND transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
         GROUP BY category_name
         ORDER BY total DESC
         LIMIT 1
@@ -3190,7 +3190,295 @@ GRANT EXECUTE ON FUNCTION update_analytics_preferences(UUID, INTEGER, INTEGER, I
 GRANT EXECUTE ON FUNCTION reset_analytics_preferences(UUID) TO authenticated;
 
 -- ============================================
+-- ANALYTICS FUNCTIONS - REAL DATA
+-- ============================================
+
+-- Función para obtener patrones de gasto reales
+-- DROP existing function first to avoid type conflicts
+DROP FUNCTION IF EXISTS get_spending_patterns_for_period(UUID, INTEGER);
+
+CREATE OR REPLACE FUNCTION get_spending_patterns_for_period(
+    user_uuid UUID,
+    days_back INTEGER DEFAULT 30
+)
+RETURNS TABLE(
+    category TEXT,
+    amount DECIMAL,
+    frequency INTEGER,
+    trend TEXT,
+    average_amount DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH period_data AS (
+        SELECT 
+            COALESCE(t.category_name, 'Sin categoría') as cat_name,
+            t.amount as transaction_amount,
+            t.transaction_date
+        FROM public.transactions t
+        WHERE t.user_id = user_uuid 
+            AND t.type = 'expense'
+            AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
+    ),
+    category_stats AS (
+        SELECT 
+            cat_name,
+            SUM(pd.transaction_amount) as total_amount,
+            COUNT(*) as transaction_count,
+            AVG(pd.transaction_amount) as avg_amount
+        FROM period_data pd
+        GROUP BY cat_name
+    )
+    SELECT 
+        cs.cat_name::TEXT,
+        cs.total_amount::DECIMAL,
+        cs.transaction_count::INTEGER,
+        'stable'::TEXT,
+        ROUND(cs.avg_amount, 2)::DECIMAL
+    FROM category_stats cs
+    WHERE cs.total_amount > 0
+    ORDER BY cs.total_amount DESC
+    LIMIT 10;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- DROP existing function first to avoid type conflicts
+DROP FUNCTION IF EXISTS get_monthly_spending_insights(UUID, INTEGER);
+
+CREATE OR REPLACE FUNCTION get_monthly_spending_insights(
+    user_uuid UUID,
+    months_back INTEGER DEFAULT 6
+)
+RETURNS TABLE(
+    month TEXT,
+    total_spent DECIMAL,
+    budget_variance INTEGER,
+    top_categories JSONB,
+    savings_rate INTEGER,
+    streak_days INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH monthly_data AS (
+        SELECT 
+            TO_CHAR(t.transaction_date, 'YYYY-MM') as month_key,
+            TO_CHAR(t.transaction_date, 'Mon YYYY') as month_display,
+            SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as expenses,
+            SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income
+        FROM public.transactions t
+        WHERE t.user_id = user_uuid 
+            AND t.transaction_date >= CURRENT_DATE - (months_back || ' months')::INTERVAL
+        GROUP BY month_key, month_display
+    ),
+    monthly_categories AS (
+        SELECT 
+            TO_CHAR(t.transaction_date, 'YYYY-MM') as month_key,
+            JSONB_AGG(
+                JSONB_BUILD_OBJECT(
+                    'category', COALESCE(t.category_name, 'Sin categoría'),
+                    'amount', cat_totals.total,
+                    'percentage', ROUND((cat_totals.total / md.expenses * 100)::NUMERIC, 0)
+                )
+                ORDER BY cat_totals.total DESC
+            ) as top_cats
+        FROM public.transactions t
+        JOIN monthly_data md ON TO_CHAR(t.transaction_date, 'YYYY-MM') = md.month_key
+        JOIN LATERAL (
+            SELECT SUM(t2.amount) as total
+            FROM public.transactions t2
+            WHERE t2.user_id = user_uuid
+                AND t2.type = 'expense'
+                AND TO_CHAR(t2.transaction_date, 'YYYY-MM') = TO_CHAR(t.transaction_date, 'YYYY-MM')
+                AND COALESCE(t2.category_name, 'Sin categoría') = COALESCE(t.category_name, 'Sin categoría')
+        ) cat_totals ON true
+        WHERE t.user_id = user_uuid 
+            AND t.type = 'expense'
+            AND cat_totals.total > 0
+        GROUP BY TO_CHAR(t.transaction_date, 'YYYY-MM'), md.expenses
+    )
+    SELECT 
+        md.month_display::TEXT,
+        md.expenses::DECIMAL,
+        0::INTEGER, -- Simplificado por ahora
+        COALESCE(mc.top_cats, '[]'::JSONB),
+        0::INTEGER, -- Simplificado por ahora
+        0::INTEGER  -- Simplificado por ahora
+    FROM monthly_data md
+    LEFT JOIN monthly_categories mc ON md.month_key = mc.month_key
+    ORDER BY md.month_key DESC
+    LIMIT months_back;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- DROP existing function first to avoid type conflicts
+DROP FUNCTION IF EXISTS get_user_transaction_summary(UUID, INTEGER);
+
+CREATE OR REPLACE FUNCTION get_user_transaction_summary(
+    user_uuid UUID,
+    days_back INTEGER DEFAULT 30
+)
+RETURNS TABLE(
+    total_expenses DECIMAL,
+    total_income DECIMAL,
+    transaction_count INTEGER,
+    avg_daily_expense DECIMAL,
+    top_category TEXT,
+    spending_trend TEXT,
+    days_with_data INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH transaction_summary AS (
+        SELECT 
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+            COUNT(*) as tx_count,
+            COUNT(DISTINCT transaction_date) as unique_days
+        FROM public.transactions t
+        WHERE t.user_id = user_uuid 
+            AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
+    ),
+    top_cat AS (
+        SELECT COALESCE(category_name, 'Sin categoría') as cat_name
+        FROM public.transactions t
+        WHERE t.user_id = user_uuid 
+            AND t.type = 'expense'
+            AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
+        GROUP BY COALESCE(category_name, 'Sin categoría')
+        ORDER BY SUM(amount) DESC
+        LIMIT 1
+    )
+    SELECT 
+        COALESCE(ts.expenses, 0)::DECIMAL,
+        COALESCE(ts.income, 0)::DECIMAL,
+        COALESCE(ts.tx_count, 0)::INTEGER,
+        CASE 
+            WHEN ts.unique_days > 0 THEN ROUND(ts.expenses / ts.unique_days, 2)
+            ELSE 0
+        END::DECIMAL,
+        COALESCE(tc.cat_name, 'Sin datos')::TEXT,
+        CASE 
+            WHEN ts.expenses > (
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM public.transactions 
+                WHERE user_id = user_uuid 
+                AND type = 'expense'
+                AND transaction_date >= CURRENT_DATE - (days_back * 2 || ' days')::INTERVAL
+                AND transaction_date < CURRENT_DATE - (days_back || ' days')::INTERVAL
+            ) * 1.1 THEN 'up'
+            WHEN ts.expenses < (
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM public.transactions 
+                WHERE user_id = user_uuid 
+                AND type = 'expense'
+                AND transaction_date >= CURRENT_DATE - (days_back * 2 || ' days')::INTERVAL
+                AND transaction_date < CURRENT_DATE - (days_back || ' days')::INTERVAL
+            ) * 0.9 THEN 'down'
+            ELSE 'stable'
+        END::TEXT,
+        COALESCE(ts.unique_days, 0)::INTEGER
+    FROM transaction_summary ts
+    LEFT JOIN top_cat tc ON true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grants para las nuevas funciones
+GRANT EXECUTE ON FUNCTION get_spending_patterns_for_period(UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_monthly_spending_insights(UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_transaction_summary(UUID, INTEGER) TO authenticated;
+
+-- ============================================
 -- FIN ANALYTICS SYSTEM
 -- ============================================
 
- 
+-- ============================================
+-- ANALYTICS TESTING UTILITIES
+-- ============================================
+-- Funciones auxiliares para testing del sistema de analytics
+-- NO incluye datos de prueba - solo utilidades
+
+-- Función para limpiar transacciones del día actual de un usuario
+CREATE OR REPLACE FUNCTION cleanup_today_transactions(target_user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM public.transactions 
+    WHERE user_id = target_user_id 
+    AND transaction_date = CURRENT_DATE;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función ultra-simplificada para obtener estadísticas básicas
+CREATE OR REPLACE FUNCTION get_analytics_stats(target_user_id UUID)
+RETURNS TABLE(
+    total_transactions INTEGER,
+    top_category TEXT,
+    top_category_percentage DECIMAL,
+    mental_accounting_active BOOLEAN,
+    present_bias_active BOOLEAN
+) AS $$
+DECLARE
+    tx_count INTEGER;
+    top_cat TEXT;
+    top_percent DECIMAL;
+    total_amount DECIMAL;
+    top_cat_amount DECIMAL;
+BEGIN
+    -- Contar transacciones de los últimos 30 días
+    SELECT COUNT(*) INTO tx_count
+    FROM public.transactions 
+    WHERE user_id = target_user_id 
+      AND transaction_date >= CURRENT_DATE - INTERVAL '30 days';
+
+    -- Obtener categoría principal
+    SELECT category_name INTO top_cat
+    FROM public.transactions 
+    WHERE user_id = target_user_id 
+      AND transaction_date >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY category_name 
+    ORDER BY SUM(amount) DESC 
+    LIMIT 1;
+
+    -- Calcular total y porcentaje de la categoría principal
+    SELECT SUM(amount) INTO total_amount
+    FROM public.transactions 
+    WHERE user_id = target_user_id 
+      AND transaction_date >= CURRENT_DATE - INTERVAL '30 days';
+
+    IF total_amount > 0 AND top_cat IS NOT NULL THEN
+        SELECT SUM(amount) INTO top_cat_amount
+        FROM public.transactions 
+        WHERE user_id = target_user_id 
+          AND category_name = top_cat
+          AND transaction_date >= CURRENT_DATE - INTERVAL '30 days';
+        
+        top_percent := ROUND((top_cat_amount * 100.0 / total_amount), 2);
+    ELSE
+        top_percent := 0;
+    END IF;
+
+    -- Valores por defecto si no hay datos
+    IF top_cat IS NULL THEN
+        top_cat := 'Sin datos';
+    END IF;
+
+    RETURN QUERY SELECT 
+        tx_count,
+        top_cat,
+        COALESCE(top_percent, 0::DECIMAL),
+        (COALESCE(top_percent, 0) > 40),
+        (tx_count >= 5);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grants para las funciones de testing
+GRANT EXECUTE ON FUNCTION cleanup_today_transactions(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_analytics_stats(UUID) TO authenticated;
+
+-- ============================================
+-- FINAL DEL SCHEMA
+-- ============================================

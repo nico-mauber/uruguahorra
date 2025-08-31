@@ -18,6 +18,7 @@ import { SpendingAnalytics } from '@components';
 import { logger, LogModule } from '@/utils/logger';
 import { getInsightTypeConfig, UI_CONFIG } from '@/config/analytics.config';
 import type { PsychologicalInsight } from '@/services/analytics.service';
+import { useTransactionsStore } from '@/store/useTransactionsStore';
 
 interface PsychologicalInsightCardProps {
   insight: PsychologicalInsight;
@@ -230,8 +231,15 @@ export const AnalyticsDashboard: React.FC = () => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
+  const { clearAnalyticsCache } = useTransactionsStore();
+
   const handleRefresh = async () => {
-    logger.info(LogModule.UI, 'Analytics dashboard refresh triggered');
+    logger.info(LogModule.UI, 'Analytics dashboard refresh triggered - forcing complete cache invalidation');
+    
+    // Limpiar cache del store de transacciones
+    clearAnalyticsCache();
+    
+    // Forzar refresh completo de analytics
     await refreshAnalytics();
   };
 

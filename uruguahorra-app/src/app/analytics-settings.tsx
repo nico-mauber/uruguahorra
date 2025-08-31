@@ -12,7 +12,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
 import { useAnalyticsPreferences } from '@/hooks/useAnalyticsPreferences';
-import { useAuth } from '@/contexts/SimpleAuthContext';
 import {
   SettingSection,
   NumberInput,
@@ -26,7 +25,6 @@ import { ToastNotification } from '@/components/settings/ToastNotification';
 export default function AnalyticsSettingsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  // useAuth(); // User authentication not needed in this component
   const { showSuccess, showError, toast, hideToast } = useToast();
 
   const {
@@ -80,7 +78,7 @@ export default function AnalyticsSettingsScreen() {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
 
     // Auto-save immediately
-    const updates: any = {};
+    const updates: Record<string, number> = {};
     if (field === 'spendingPatternsDays') updates.spendingPatternsDays = value;
     if (field === 'monthlyInsightsMonths')
       updates.monthlyInsightsMonths = value;
@@ -100,7 +98,7 @@ export default function AnalyticsSettingsScreen() {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
 
     // Auto-save immediately
-    const updates: any = {};
+    const updates: Record<string, string | number> = {};
     if (field === 'defaultTab') updates.defaultTab = value;
     if (field === 'maxInsightsPerType') updates.maxInsightsPerType = value;
 
@@ -115,7 +113,7 @@ export default function AnalyticsSettingsScreen() {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
 
     // Auto-save immediately
-    const updates: any = {};
+    const updates: Record<string, boolean> = {};
     if (field === 'enablePsychologicalInsights')
       updates.enablePsychologicalInsights = value;
     if (field === 'enableSpendingForecast')
@@ -134,7 +132,7 @@ export default function AnalyticsSettingsScreen() {
     setLocalPreferences((prev) => ({ ...prev, [field]: value }));
 
     // Auto-save immediately
-    const updates: any = {};
+    const updates: Record<string, string> = {};
     if (field === 'preferredLanguage') {
       updates.preferredLanguage = value;
       // TODO: Trigger language change in the app

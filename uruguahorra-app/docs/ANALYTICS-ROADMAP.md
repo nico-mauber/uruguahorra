@@ -6,7 +6,7 @@
 
 - ✅ **Configuración central** (`src/config/analytics.config.ts`)
 - ✅ **Variables de entorno** configurables (`.env.example`)
-- ✅ **Datos mock dinámicos** (`src/data/mockAnalytics.ts`)
+- ✅ **Sistema solo con datos reales** (sin datos mock)
 - ✅ **AnalyticsService refactorizado** con configuración externa
 - ✅ **Hook useSpendingAnalytics** con opciones configurables
 - ✅ **Sistema de preferencias completo** (`analytics-preferences.service.ts`)
@@ -210,11 +210,10 @@ describe('Analytics Configuration', () => {
     expect(validation.isValid).toBe(true);
   });
 
-  it('should generate consistent mock data', () => {
-    const userId = 'test-user';
-    const data1 = generateMockSpendingPatterns(userId, 30);
-    const data2 = generateMockSpendingPatterns(userId, 30);
-    expect(data1).toEqual(data2); // Debe ser consistente
+  it('should handle empty analytics data gracefully', () => {
+    const result = AnalyticsService.getCompleteAnalytics('test-user');
+    expect(result).toBeDefined();
+    // Sistema debe funcionar sin datos mock
   });
 });
 ```

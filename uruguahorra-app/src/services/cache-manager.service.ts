@@ -21,10 +21,10 @@ class CacheManagerService {
   subscribe(callback: () => void): () => void {
     this.subscribers.push(callback);
     logger.info(LogModule.DB, 'Cache invalidation subscriber added');
-    
+
     // Return unsubscribe function
     return () => {
-      this.subscribers = this.subscribers.filter(cb => cb !== callback);
+      this.subscribers = this.subscribers.filter((cb) => cb !== callback);
       logger.info(LogModule.DB, 'Cache invalidation subscriber removed');
     };
   }
@@ -34,16 +34,27 @@ class CacheManagerService {
    * This is called when transactions are modified
    */
   invalidateAnalyticsCache(): void {
-    logger.info(LogModule.DB, 'Invalidating analytics cache across all stores', {
-      subscriberCount: this.subscribers.length
-    });
+    logger.info(
+      LogModule.DB,
+      'Invalidating analytics cache across all stores',
+      {
+        subscriberCount: this.subscribers.length,
+      }
+    );
 
     this.subscribers.forEach((callback, index) => {
       try {
         callback();
-        logger.debug(LogModule.DB, `Cache invalidation callback ${index + 1} executed`);
+        logger.debug(
+          LogModule.DB,
+          `Cache invalidation callback ${index + 1} executed`
+        );
       } catch (error) {
-        logger.error(LogModule.DB, `Cache invalidation callback ${index + 1} failed`, error);
+        logger.error(
+          LogModule.DB,
+          `Cache invalidation callback ${index + 1} failed`,
+          error
+        );
       }
     });
   }

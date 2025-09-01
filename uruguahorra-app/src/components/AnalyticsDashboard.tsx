@@ -234,11 +234,14 @@ export const AnalyticsDashboard: React.FC = () => {
   const { clearAnalyticsCache } = useTransactionsStore();
 
   const handleRefresh = async () => {
-    logger.info(LogModule.UI, 'Analytics dashboard refresh triggered - forcing complete cache invalidation');
-    
+    logger.info(
+      LogModule.UI,
+      'Analytics dashboard refresh triggered - forcing complete cache invalidation'
+    );
+
     // Limpiar cache del store de transacciones
     clearAnalyticsCache();
-    
+
     // Forzar refresh completo de analytics
     await refreshAnalytics();
   };

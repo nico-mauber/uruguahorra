@@ -97,7 +97,7 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
   const fetchAnalytics = useCallback(
     async (force = false) => {
       const currentUserId = userIdRef.current;
-      
+
       if (!currentUserId) {
         logger.warn(LogModule.DB, 'No user ID available for analytics fetch');
         return;
@@ -220,8 +220,11 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
   // Subscribe to cache manager for cross-store invalidation
   useEffect(() => {
     const unsubscribe = cacheManager.subscribe(() => {
-      logger.info(LogModule.DB, 'Cache invalidation received - clearing analytics state');
-      setState(prev => ({
+      logger.info(
+        LogModule.DB,
+        'Cache invalidation received - clearing analytics state'
+      );
+      setState((prev) => ({
         ...prev,
         spendingPatterns: [],
         monthlyInsights: [],
@@ -229,9 +232,9 @@ export const useSpendingAnalytics = (options?: AnalyticsOptions | null) => {
         forecast: null,
         lastFetch: null,
         isLoading: false,
-        error: null
+        error: null,
       }));
-      
+
       // Force refresh if user is available
       if (user?.id) {
         setTimeout(() => {

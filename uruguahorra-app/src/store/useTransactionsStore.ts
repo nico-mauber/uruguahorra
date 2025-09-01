@@ -747,14 +747,17 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
   },
 
   clearAnalyticsCache: () => {
-    logger.info(LogModule.TRANSACTIONS, 'Limpiando cache de analytics y notificando cross-store invalidation');
+    logger.info(
+      LogModule.TRANSACTIONS,
+      'Limpiando cache de analytics y notificando cross-store invalidation'
+    );
     set({
       lastBalanceFetch: null,
       lastInsightsFetch: null,
       spendingInsights: null,
       currentBalance: null,
     });
-    
+
     // Notify all analytics hooks and components to invalidate their cache
     cacheManager.invalidateAnalyticsCache();
   },

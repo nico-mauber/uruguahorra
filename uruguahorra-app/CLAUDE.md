@@ -46,6 +46,8 @@ npm run build:pwa      # Build full PWA
 - Challenge sessions with progress calculation
 - All corrected PostgreSQL functions
 - Complete RLS policies
+- **Enhanced Analytics System**: 25 Income+Expense insights with real-time calculations
+- **get_enhanced_user_analytics()** function with dynamic user data (not fixed test values)
 
 ## Architecture Overview
 

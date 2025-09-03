@@ -409,20 +409,30 @@ export const AnalyticsDashboard: React.FC = () => {
             ]}
             onPress={() => setActiveTab('insights')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                {
-                  color:
-                    activeTab === 'insights'
-                      ? colors.primary
-                      : colors.text.secondary,
-                },
-              ]}
-            >
-              {UI_CONFIG.DASHBOARD_TABS.INSIGHTS.icon}{' '}
-              {UI_CONFIG.DASHBOARD_TABS.INSIGHTS.title}
-            </Text>
+            <View style={styles.tabContent}>
+              <Ionicons
+                name={UI_CONFIG.DASHBOARD_TABS.INSIGHTS.icon as any}
+                size={18}
+                color={
+                  activeTab === 'insights'
+                    ? colors.primary
+                    : colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color:
+                      activeTab === 'insights'
+                        ? colors.primary
+                        : colors.text.secondary,
+                  },
+                ]}
+              >
+                {UI_CONFIG.DASHBOARD_TABS.INSIGHTS.title}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -435,20 +445,30 @@ export const AnalyticsDashboard: React.FC = () => {
             ]}
             onPress={() => setActiveTab('patterns')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                {
-                  color:
-                    activeTab === 'patterns'
-                      ? colors.primary
-                      : colors.text.secondary,
-                },
-              ]}
-            >
-              {UI_CONFIG.DASHBOARD_TABS.PATTERNS.icon}{' '}
-              {UI_CONFIG.DASHBOARD_TABS.PATTERNS.title}
-            </Text>
+            <View style={styles.tabContent}>
+              <Ionicons
+                name={UI_CONFIG.DASHBOARD_TABS.PATTERNS.icon as any}
+                size={18}
+                color={
+                  activeTab === 'patterns'
+                    ? colors.primary
+                    : colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color:
+                      activeTab === 'patterns'
+                        ? colors.primary
+                        : colors.text.secondary,
+                  },
+                ]}
+              >
+                {UI_CONFIG.DASHBOARD_TABS.PATTERNS.title}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {/* Show forecast tab only if enabled in preferences */}
@@ -463,26 +483,36 @@ export const AnalyticsDashboard: React.FC = () => {
               ]}
               onPress={() => setActiveTab('forecast')}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  {
-                    color:
-                      activeTab === 'forecast'
-                        ? colors.primary
-                        : colors.text.secondary,
-                  },
-                ]}
-              >
-                {UI_CONFIG.DASHBOARD_TABS.FORECAST.icon}{' '}
-                {UI_CONFIG.DASHBOARD_TABS.FORECAST.title}
-              </Text>
+              <View style={styles.tabContent}>
+                <Ionicons
+                  name={UI_CONFIG.DASHBOARD_TABS.FORECAST.icon as any}
+                  size={18}
+                  color={
+                    activeTab === 'forecast'
+                      ? colors.primary
+                      : colors.text.secondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color:
+                        activeTab === 'forecast'
+                          ? colors.primary
+                          : colors.text.secondary,
+                    },
+                  ]}
+                >
+                  {UI_CONFIG.DASHBOARD_TABS.FORECAST.title}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>
 
         {/* Tab Content */}
-        <View style={styles.tabContent}>
+        <View style={styles.tabContentOuter}>
           {activeTab === 'insights' && (
             <View>
               {featuresEnabled?.psychologicalInsights ? (
@@ -611,15 +641,22 @@ export const AnalyticsDashboard: React.FC = () => {
             <View>
               {forecast ? (
                 <Card style={styles.forecastCard}>
-                  <Text
-                    style={[
-                      styles.forecastTitle,
-                      { color: colors.text.primary },
-                    ]}
-                  >
-                    🔮 Proyección próximos {preferences?.forecast_days || 30}{' '}
-                    días
-                  </Text>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons
+                      name="analytics-outline"
+                      size={20}
+                      color={colors.text.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.forecastTitle,
+                        { color: colors.text.primary },
+                      ]}
+                    >
+                      Proyección próximos {preferences?.forecast_days || 30}{' '}
+                      días
+                    </Text>
+                  </View>
                   <Text
                     style={[styles.forecastAmount, { color: colors.primary }]}
                   >
@@ -648,10 +685,10 @@ export const AnalyticsDashboard: React.FC = () => {
                   >
                     Tendencia:{' '}
                     {forecast?.trend === 'up'
-                      ? '📈 Al alza'
+                      ? 'Al alza'
                       : forecast?.trend === 'down'
-                        ? '📉 A la baja'
-                        : '📊 Estable'}
+                        ? 'A la baja'
+                        : 'Estable'}
                   </Text>
                 </Card>
               ) : (
@@ -771,22 +808,31 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginBottom: 20,
+    gap: 4,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     alignItems: 'center',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
+    justifyContent: 'center',
   },
   tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tabContentOuter: {
     paddingHorizontal: 20,
   },
   insightCard: {
@@ -821,10 +867,16 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
+  forecastHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
   forecastTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
     textAlign: 'center',
   },
   forecastAmount: {

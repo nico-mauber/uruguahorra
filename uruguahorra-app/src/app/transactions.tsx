@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,13 +27,12 @@ export default function TransactionsScreen() {
   const {
     transactions,
     categories,
-    currentBalance,
     isLoading,
     error,
     fetchTransactions,
     fetchCategories,
-    getCurrentBalance,
     deleteTransaction,
+    calculateBalanceFromTransactions,
   } = useTransactionsStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -61,7 +60,6 @@ export default function TransactionsScreen() {
         await Promise.all([
           fetchTransactions(filters, true),
           fetchCategories(),
-          getCurrentBalance(user.id),
         ]);
 
         logger.success(LogModule.TRANSACTIONS, 'Transacciones inicializadas');
@@ -76,7 +74,7 @@ export default function TransactionsScreen() {
     };
 
     initializeTransactions();
-  }, [user?.id, selectedPeriod]);
+  }, [user?.id, selectedPeriod, fetchTransactions, fetchCategories]);
 
   // Refrescar datos
   const onRefresh = async () => {
@@ -90,10 +88,7 @@ export default function TransactionsScreen() {
         offset: 0,
       };
 
-      await Promise.all([
-        fetchTransactions(filters, true),
-        getCurrentBalance(user.id),
-      ]);
+      await fetchTransactions(filters, true);
 
       ToastService.quickSuccess('Transacciones actualizadas');
     } catch (error) {
@@ -166,9 +161,12 @@ export default function TransactionsScreen() {
     );
   };
 
-  const renderBalanceCard = () => {
-    if (!currentBalance) return null;
+  // Calcular balance con useMemo para re-renderizar automáticamente
+  const calculatedBalance = useMemo(() => {
+    return calculateBalanceFromTransactions(selectedPeriod);
+  }, [calculateBalanceFromTransactions, selectedPeriod]);
 
+  const renderBalanceCard = () => {
     return (
       <Card style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
@@ -217,7 +215,7 @@ export default function TransactionsScreen() {
               Ingresos
             </Text>
             <Text style={[styles.balanceValue, { color: '#51CF66' }]}>
-              +${currentBalance.income.toFixed(0)}
+              +${calculatedBalance.income.toFixed(0)}
             </Text>
           </View>
 
@@ -228,7 +226,7 @@ export default function TransactionsScreen() {
               Gastos
             </Text>
             <Text style={[styles.balanceValue, { color: '#FF6B6B' }]}>
-              -${currentBalance.expenses.toFixed(0)}
+              -${calculatedBalance.expenses.toFixed(0)}
             </Text>
           </View>
 
@@ -242,11 +240,13 @@ export default function TransactionsScreen() {
             <Text
               style={[
                 styles.balanceValue,
-                { color: currentBalance.balance >= 0 ? '#51CF66' : '#FF6B6B' },
+                {
+                  color: calculatedBalance.balance >= 0 ? '#51CF66' : '#FF6B6B',
+                },
               ]}
             >
-              {currentBalance.balance >= 0 ? '+' : ''}$
-              {currentBalance.balance.toFixed(0)}
+              {calculatedBalance.balance >= 0 ? '+' : ''}$
+              {calculatedBalance.balance.toFixed(0)}
             </Text>
           </View>
         </View>

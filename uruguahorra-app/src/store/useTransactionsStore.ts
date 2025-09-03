@@ -174,6 +174,16 @@ interface TransactionsStore {
    * Limpiar cache de analytics para forzar refresh
    */
   clearAnalyticsCache: () => void;
+
+  /**
+   * Calcular balance basado en transacciones cargadas
+   */
+  calculateBalanceFromTransactions: (period: 'week' | 'month' | 'year') => {
+    income: number;
+    expenses: number;
+    balance: number;
+    period: { start: string; end: string };
+  };
 }
 
 export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
@@ -760,5 +770,91 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
 
     // Notify all analytics hooks and components to invalidate their cache
     cacheManager.invalidateAnalyticsCache();
+  },
+
+  calculateBalanceFromTransactions: (period: 'week' | 'month' | 'year') => {
+    const { transactions } = get();
+
+    if (transactions.length === 0) {
+      return {
+        income: 0,
+        expenses: 0,
+        balance: 0,
+        period: { start: '2025-01-01', end: '2025-12-31' },
+      };
+    }
+
+    // Calcular fechas del período
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        endDate = new Date(now);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        break;
+    }
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // Filtrar transacciones por período
+    const filteredTransactions = transactions.filter((transaction) => {
+      const transactionDate =
+        transaction.transaction_date || transaction.created_at?.split('T')[0];
+
+      if (!transactionDate) return false;
+      return transactionDate >= startDateStr && transactionDate <= endDateStr;
+    });
+
+    // Calcular totales
+    let income = 0;
+    let expenses = 0;
+
+    filteredTransactions.forEach((transaction) => {
+      const amount = Number(transaction.amount) || 0;
+
+      if (amount > 0) {
+        if (transaction.type === 'income') {
+          income += amount;
+        } else if (transaction.type === 'expense') {
+          expenses += amount;
+        }
+      }
+    });
+
+    const balance = income - expenses;
+
+    logger.info(
+      LogModule.TRANSACTIONS,
+      `Balance calculado dinámicamente - Período: ${period}`,
+      {
+        period,
+        income,
+        expenses,
+        balance,
+        transactionsTotal: transactions.length,
+        transactionsFiltered: filteredTransactions.length,
+        startDate: startDateStr,
+        endDate: endDateStr,
+      }
+    );
+
+    return {
+      income,
+      expenses,
+      balance,
+      period: { start: startDateStr, end: endDateStr },
+    };
   },
 }));

@@ -83,17 +83,17 @@ export const UI_CONFIG = {
   DASHBOARD_TABS: {
     INSIGHTS: {
       key: 'insights' as const,
-      icon: '🧠',
+      icon: 'bulb-outline',
       title: 'Insights',
     },
     PATTERNS: {
       key: 'patterns' as const,
-      icon: '📈',
+      icon: 'trending-up-outline',
       title: 'Patrones',
     },
     FORECAST: {
       key: 'forecast' as const,
-      icon: '🔮',
+      icon: 'analytics-outline',
       title: 'Proyección',
     },
   },

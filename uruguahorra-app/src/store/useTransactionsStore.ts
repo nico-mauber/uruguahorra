@@ -178,7 +178,10 @@ interface TransactionsStore {
   /**
    * Calcular balance basado en transacciones cargadas
    */
-  calculateBalanceFromTransactions: (period: 'week' | 'month' | 'year') => {
+  calculateBalanceFromTransactions: (
+    startDate: Date,
+    endDate: Date
+  ) => {
     income: number;
     expenses: number;
     balance: number;
@@ -772,7 +775,7 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
     cacheManager.invalidateAnalyticsCache();
   },
 
-  calculateBalanceFromTransactions: (period: 'week' | 'month' | 'year') => {
+  calculateBalanceFromTransactions: (startDate: Date, endDate: Date) => {
     const { transactions } = get();
 
     if (transactions.length === 0) {
@@ -780,35 +783,18 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
         income: 0,
         expenses: 0,
         balance: 0,
-        period: { start: '2025-01-01', end: '2025-12-31' },
+        period: {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+        },
       };
     }
 
-    // Calcular fechas del período
-    const now = new Date();
-    let startDate: Date;
-    let endDate: Date;
-
-    switch (period) {
-      case 'week':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        endDate = new Date(now);
-        break;
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 11, 31);
-        break;
-    }
-
+    // Convertir fechas a strings para comparación
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    // Filtrar transacciones por período
+    // Filtrar transacciones por rango de fechas
     const filteredTransactions = transactions.filter((transaction) => {
       const transactionDate =
         transaction.transaction_date || transaction.created_at?.split('T')[0];
@@ -837,9 +823,8 @@ export const useTransactionsStore = create<TransactionsStore>((set, get) => ({
 
     logger.info(
       LogModule.TRANSACTIONS,
-      `Balance calculado dinámicamente - Período: ${period}`,
+      `Balance calculado dinámicamente - Rango: ${startDateStr} a ${endDateStr}`,
       {
-        period,
         income,
         expenses,
         balance,

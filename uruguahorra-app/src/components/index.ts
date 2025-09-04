@@ -47,3 +47,6 @@ export {
 
 // Challenge Components
 export { ChallengeCheckinModal } from './ChallengeCheckinModal';
+
+// Date Components
+export { DateRangeSelector } from './DateRangeSelector';

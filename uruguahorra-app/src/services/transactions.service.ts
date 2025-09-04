@@ -99,12 +99,12 @@ export class TransactionsService {
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Aplicar filtros
+      // Aplicar filtros de fecha - usar created_at ya que las transacciones lo usan
       if (filters.start_date) {
-        query = query.gte('transaction_date', filters.start_date);
+        query = query.gte('created_at', `${filters.start_date}T00:00:00Z`);
       }
       if (filters.end_date) {
-        query = query.lte('transaction_date', filters.end_date);
+        query = query.lte('created_at', `${filters.end_date}T23:59:59Z`);
       }
       if (filters.category_ids && filters.category_ids.length > 0) {
         query = query.in('category_id', filters.category_ids);

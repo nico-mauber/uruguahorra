@@ -672,6 +672,118 @@ export type Database = {
           completed_at?: string | null;
         };
       };
+      transaction_categories: {
+        Row: {
+          id: string;
+          name: string;
+          emoji: string;
+          color: string;
+          type: 'expense' | 'income' | 'transfer';
+          is_default: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          emoji: string;
+          color: string;
+          type: 'expense' | 'income' | 'transfer';
+          is_default?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          emoji?: string;
+          color?: string;
+          type?: 'expense' | 'income' | 'transfer';
+          is_default?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      transactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          goal_id: string | null;
+          squad_id: string | null;
+          amount: number;
+          description: string | null;
+          notes: string | null;
+          transaction_date: string;
+          category_id: string | null;
+          category_name: string | null;
+          category_emoji: string | null;
+          type: 'expense' | 'income' | 'transfer';
+          mood_before: number | null;
+          mood_after: number | null;
+          regret_level: number | null;
+          necessity_level: number | null;
+          location: string | null;
+          tags: string[] | null;
+          payment_method: string | null;
+          xp_earned: number;
+          achievements_unlocked: string[] | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          goal_id?: string | null;
+          squad_id?: string | null;
+          amount: number;
+          description?: string | null;
+          notes?: string | null;
+          transaction_date?: string;
+          category_id?: string | null;
+          category_name?: string | null;
+          category_emoji?: string | null;
+          type: 'expense' | 'income' | 'transfer';
+          mood_before?: number | null;
+          mood_after?: number | null;
+          regret_level?: number | null;
+          necessity_level?: number | null;
+          location?: string | null;
+          tags?: string[] | null;
+          payment_method?: string | null;
+          xp_earned?: number;
+          achievements_unlocked?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          goal_id?: string | null;
+          squad_id?: string | null;
+          amount?: number;
+          description?: string | null;
+          notes?: string | null;
+          transaction_date?: string;
+          category_id?: string | null;
+          category_name?: string | null;
+          category_emoji?: string | null;
+          type?: 'expense' | 'income' | 'transfer';
+          mood_before?: number | null;
+          mood_after?: number | null;
+          regret_level?: number | null;
+          necessity_level?: number | null;
+          location?: string | null;
+          tags?: string[] | null;
+          payment_method?: string | null;
+          xp_earned?: number;
+          achievements_unlocked?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+      };
     };
     Views: {
       user_dashboard: {

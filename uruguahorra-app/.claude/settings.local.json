@@ -34,7 +34,10 @@
       "Bash(mkdir:*)",
       "Bash(find:*)",
       "Bash(npm start)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm start:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": [],

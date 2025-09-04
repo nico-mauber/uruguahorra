@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, TransactionFAB } from '@components';
+import { Card, TransactionFAB, DateRangeSelector } from '@components';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
-import { useTransactionsStore } from '@store/useTransactionsStore';
-import { Transaction, TransactionFilters } from '@/schemas';
-import { logger, LogModule } from '@/utils/logger';
+import { Transaction, TransactionCategory } from '@/schemas';
+
+// Extend Transaction type to include joined category data
+type TransactionWithCategory = Transaction & {
+  category?: TransactionCategory;
+};
+import { supabase } from '@/lib/supabase';
 import { ToastService } from '@/utils/toast';
 
 export default function TransactionsScreen() {
@@ -24,101 +28,137 @@ export default function TransactionsScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const {
-    transactions,
-    categories,
-    isLoading,
-    error,
-    fetchTransactions,
-    fetchCategories,
-    deleteTransaction,
-    calculateBalanceFromTransactions,
-  } = useTransactionsStore();
-
+  const [transactions, setTransactions] = useState<TransactionWithCategory[]>(
+    []
+  );
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<
-    'week' | 'month' | 'year'
-  >('month');
 
-  // Inicializar datos
+  // Default date range: last 30 days
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultEndDate.getDate() - 30);
+
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+
+  const [balance, setBalance] = useState({
+    income: 0,
+    expenses: 0,
+    balance: 0,
+  });
+
+  // Single method to load transactions and calculate balance
+  const loadTransactions = useCallback(
+    async (start: Date, end: Date) => {
+      if (!user?.id) return;
+
+      setIsLoading(true);
+      try {
+        // Step 1: Fetch transactions filtered by date
+        const { data: transactionData, error } = await supabase
+          .from('transactions')
+          .select(
+            `
+          *,
+          category:transaction_categories(id, name, color, emoji)
+        `
+          )
+          .eq('user_id', user.id)
+          .gte('created_at', start.toISOString().split('T')[0])
+          .lte('created_at', end.toISOString().split('T')[0])
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Step 2: Calculate balance from results
+        let income = 0;
+        let expenses = 0;
+
+        (transactionData || []).forEach((transaction) => {
+          const amount = Number(transaction.amount) || 0;
+          if (transaction.type === 'income') {
+            income += amount;
+          } else if (transaction.type === 'expense') {
+            expenses += amount;
+          }
+        });
+
+        // Step 3: Update state to trigger render
+        setTransactions(transactionData || []);
+        setBalance({
+          income,
+          expenses,
+          balance: income - expenses,
+        });
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+        ToastService.handleError(error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user?.id]
+  );
+
+  // Load categories once
   useEffect(() => {
     if (!user?.id) return;
 
-    const initializeTransactions = async () => {
+    const loadCategories = async () => {
       try {
-        logger.start(
-          LogModule.TRANSACTIONS,
-          'Inicializando pantalla de transacciones'
-        );
+        const { data, error } = await supabase
+          .from('transaction_categories')
+          .select('*')
+          .order('name');
 
-        const filters: TransactionFilters = {
-          user_id: user.id,
-          limit: 50,
-          offset: 0,
-        };
-
-        await Promise.all([
-          fetchTransactions(filters, true),
-          fetchCategories(),
-        ]);
-
-        logger.success(LogModule.TRANSACTIONS, 'Transacciones inicializadas');
+        if (error) throw error;
+        setCategories(data || []);
       } catch (error) {
-        logger.error(
-          LogModule.TRANSACTIONS,
-          'Error inicializando transacciones',
-          error
-        );
-        ToastService.handleError(error);
+        console.error('Error loading categories:', error);
       }
     };
 
-    initializeTransactions();
-  }, [user?.id, selectedPeriod, fetchTransactions, fetchCategories]);
+    loadCategories();
+  }, [user?.id]);
 
-  // Refrescar datos
+  // Load transactions on mount and when dates change
+  useEffect(() => {
+    if (!user?.id) return;
+    loadTransactions(startDate, endDate);
+  }, [loadTransactions, startDate, endDate]);
+
   const onRefresh = async () => {
-    if (!user?.id) return;
-
     setRefreshing(true);
-    try {
-      const filters: TransactionFilters = {
-        user_id: user.id,
-        limit: 50,
-        offset: 0,
-      };
-
-      await fetchTransactions(filters, true);
-
-      ToastService.quickSuccess('Transacciones actualizadas');
-    } catch (error) {
-      ToastService.handleError(error);
-    } finally {
-      setRefreshing(false);
-    }
+    await loadTransactions(startDate, endDate);
+    setRefreshing(false);
   };
 
-  // Handler para eliminar transacción
-  const handleDeleteTransaction = async (transaction: Transaction) => {
+  const handleDeleteTransaction = async (transactionId: string) => {
     if (!user?.id) return;
 
     try {
-      await deleteTransaction(transaction.id, user.id);
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
       ToastService.quickSuccess('Transacción eliminada');
+      await loadTransactions(startDate, endDate);
     } catch (error) {
       ToastService.handleError(error);
     }
   };
 
-  // Handler para nueva transacción
   const handleTransactionCreated = () => {
     ToastService.quickSuccess('¡Transacción creada exitosamente!');
-    if (user?.id) {
-      onRefresh();
-    }
+    loadTransactions(startDate, endDate);
   };
 
-  // Formatear fecha
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Fecha desconocida';
 
@@ -137,15 +177,13 @@ export default function TransactionsScreen() {
     });
   };
 
-  // Obtener categoría por ID
   const getCategoryById = (categoryId?: string | null) => {
     if (!categoryId) return null;
     return categories.find((cat) => cat.id === categoryId);
   };
 
-  // Agrupar transacciones por fecha
   const groupTransactionsByDate = () => {
-    const grouped: { [key: string]: Transaction[] } = {};
+    const grouped: { [key: string]: TransactionWithCategory[] } = {};
 
     transactions.forEach((transaction) => {
       const dateStr = transaction.created_at || new Date().toISOString();
@@ -161,50 +199,20 @@ export default function TransactionsScreen() {
     );
   };
 
-  // Calcular balance con useMemo para re-renderizar automáticamente
-  const calculatedBalance = useMemo(() => {
-    return calculateBalanceFromTransactions(selectedPeriod);
-  }, [calculateBalanceFromTransactions, selectedPeriod]);
-
   const renderBalanceCard = () => {
     return (
       <Card style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
           <Text style={[styles.balanceTitle, { color: colors.text.primary }]}>
-            Balance del{' '}
-            {selectedPeriod === 'week'
-              ? 'período'
-              : selectedPeriod === 'month'
-                ? 'mes'
-                : 'año'}
+            Balance del período
           </Text>
-          <View style={styles.periodSelector}>
-            {(['week', 'month', 'year'] as const).map((period) => (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.periodButton,
-                  { borderColor: colors.primary },
-                  selectedPeriod === period && {
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-                onPress={() => setSelectedPeriod(period)}
-              >
-                <Text
-                  style={[
-                    styles.periodButtonText,
-                    {
-                      color:
-                        selectedPeriod === period ? '#FFFFFF' : colors.primary,
-                    },
-                  ]}
-                >
-                  {period === 'week' ? '7d' : period === 'month' ? '1M' : '1A'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <DateRangeSelector
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            maxHistoryYears={2}
+          />
         </View>
 
         <View style={styles.balanceRow}>
@@ -215,7 +223,7 @@ export default function TransactionsScreen() {
               Ingresos
             </Text>
             <Text style={[styles.balanceValue, { color: '#51CF66' }]}>
-              +${calculatedBalance.income.toFixed(0)}
+              +${balance.income.toFixed(0)}
             </Text>
           </View>
 
@@ -226,7 +234,7 @@ export default function TransactionsScreen() {
               Gastos
             </Text>
             <Text style={[styles.balanceValue, { color: '#FF6B6B' }]}>
-              -${calculatedBalance.expenses.toFixed(0)}
+              -${balance.expenses.toFixed(0)}
             </Text>
           </View>
 
@@ -234,19 +242,17 @@ export default function TransactionsScreen() {
             <Text
               style={[styles.balanceLabel, { color: colors.text.secondary }]}
             >
-              {' '}
               Balance
             </Text>
             <Text
               style={[
                 styles.balanceValue,
                 {
-                  color: calculatedBalance.balance >= 0 ? '#51CF66' : '#FF6B6B',
+                  color: balance.balance >= 0 ? '#51CF66' : '#FF6B6B',
                 },
               ]}
             >
-              {calculatedBalance.balance >= 0 ? '+' : ''}$
-              {calculatedBalance.balance.toFixed(0)}
+              {balance.balance >= 0 ? '+' : ''}${balance.balance.toFixed(0)}
             </Text>
           </View>
         </View>
@@ -254,8 +260,9 @@ export default function TransactionsScreen() {
     );
   };
 
-  const renderTransactionItem = (transaction: Transaction) => {
-    const category = getCategoryById(transaction.category_id);
+  const renderTransactionItem = (transaction: TransactionWithCategory) => {
+    const category =
+      getCategoryById(transaction.category_id) || transaction.category;
     const isExpense = transaction.type === 'expense';
 
     return (
@@ -305,7 +312,7 @@ export default function TransactionsScreen() {
 
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => handleDeleteTransaction(transaction)}
+              onPress={() => handleDeleteTransaction(transaction.id)}
             >
               <Ionicons
                 name="trash-outline"
@@ -383,15 +390,6 @@ export default function TransactionsScreen() {
       >
         {/* Balance Card */}
         {renderBalanceCard()}
-
-        {/* Error State */}
-        {error && (
-          <Card style={styles.errorCard}>
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {error}
-            </Text>
-          </Card>
-        )}
 
         {/* Transacciones agrupadas por fecha */}
         {groupedTransactions.length === 0 ? (
@@ -496,23 +494,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  periodSelector: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-
-  periodButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-
-  periodButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
   balanceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -612,16 +593,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-  },
-
-  errorCard: {
-    marginBottom: 20,
-    backgroundColor: '#FFE8E8',
-  },
-
-  errorText: {
-    textAlign: 'center',
-    fontSize: 14,
   },
 
   emptyCard: {

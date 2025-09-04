@@ -1814,12 +1814,12 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Datos iniciales - Categorías de retos (Challenge System V2)
 INSERT INTO public.challenge_categories (name, description, icon, color, sort_order) VALUES
-('Gastos Diarios', 'Controla y reduce gastos en compras cotidianas', 'shopping-cart', '#FF5722', 1),
-('Entretenimiento', 'Optimiza gastos en ocio y entretenimiento', 'movie', '#9C27B0', 2),
-('Ropa y Accesorios', 'Gestiona inteligentemente gastos en vestimenta', 'shirt', '#E91E63', 3),
-('Ahorro Sistemático', 'Desarrolla hábitos sólidos de ahorro regular', 'piggy-bank', '#4CAF50', 4),
-('Inversiones', 'Inicia o incrementa tu cartera de inversiones', 'trending-up', '#2196F3', 5),
-('Educación Financiera', 'Mejora tus conocimientos y habilidades financieras', 'book-open', '#FF9800', 6)
+('Gastos Diarios', 'Controla y reduce gastos en compras cotidianas', '🛒', '#FF5722', 1),
+('Entretenimiento', 'Optimiza gastos en ocio y entretenimiento', '🎬', '#9C27B0', 2),
+('Ropa y Accesorios', 'Gestiona inteligentemente gastos en vestimenta', '👕', '#E91E63', 3),
+('Ahorro Sistemático', 'Desarrolla hábitos sólidos de ahorro regular', '🐷', '#4CAF50', 4),
+('Inversiones', 'Inicia o incrementa tu cartera de inversiones', '📈', '#2196F3', 5),
+('Educación Financiera', 'Mejora tus conocimientos y habilidades financieras', '📚', '#FF9800', 6)
 ON CONFLICT (name) DO NOTHING;
 
 -- Challenges básicos actualizados con Challenge System V2

@@ -355,18 +355,27 @@ export default function ChallengesScreen() {
                 ]}
                 onPress={() => handleCategorySelect(category.id)}
               >
-                <Ionicons
-                  name={
-                    (category.icon as keyof typeof Ionicons.glyphMap) ||
-                    'help-circle'
-                  }
-                  size={24}
-                  color={
-                    selectedCategory === category.id
-                      ? colors.surface
-                      : colors.text.primary
-                  }
-                />
+                {/* Renderizar emoji o icono de Ionicons */}
+                {category.icon && category.icon.length <= 2 ? (
+                  // Es un emoji (1-2 caracteres)
+                  <Text style={{ fontSize: 24 }}>
+                    {category.icon}
+                  </Text>
+                ) : (
+                  // Es un nombre de icono de Ionicons
+                  <Ionicons
+                    name={
+                      (category.icon as keyof typeof Ionicons.glyphMap) ||
+                      'help-circle'
+                    }
+                    size={24}
+                    color={
+                      selectedCategory === category.id
+                        ? colors.surface
+                        : colors.text.primary
+                    }
+                  />
+                )}
                 <Text
                   style={[
                     styles.categoryName,

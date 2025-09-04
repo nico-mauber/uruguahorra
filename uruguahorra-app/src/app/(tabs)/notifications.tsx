@@ -275,14 +275,6 @@ export default function NotificationsScreen() {
             <Card style={styles.statusCard}>
               <Text style={styles.configTitle}>Configuración</Text>
 
-              <View style={styles.configItem}>
-                <Text style={styles.configLabel}>
-                  Recordatorio Diario
-                </Text>
-                <Text style={styles.configValue}>
-                  8:00 PM (fijo)
-                </Text>
-              </View>
 
               <View style={styles.configSection}>
                 <Text style={styles.configLabel}>

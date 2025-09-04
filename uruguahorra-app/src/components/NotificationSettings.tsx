@@ -163,21 +163,6 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
         {settings.enabled && permissionsGranted && (
           <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>⏰ Recordatorio Diario</Text>
-
-              <View style={styles.fixedTimeContainer}>
-                <Text style={styles.fixedTimeText}>8:00 PM</Text>
-                <Text style={styles.fixedTimeLabel}>Horario fijo</Text>
-              </View>
-
-              <Text style={styles.settingDescription}>
-                {Platform.OS === 'web'
-                  ? 'Recordatorios no disponibles en versión web'
-                  : 'Recibirás un recordatorio diario automático a las 8:00 PM'
-                }
-              </Text>
-            </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>⚠️ Alertas de Racha Automáticas</Text>
@@ -311,23 +296,6 @@ const styles = StyleSheet.create({
     color: '#92400E',
     marginLeft: 8,
     flex: 1,
-  },
-  fixedTimeContainer: {
-    backgroundColor: '#F3F4F6',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-    alignItems: 'center',
-  },
-  fixedTimeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  fixedTimeLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
   },
   alertsInfoContainer: {
     backgroundColor: '#F3F4F6',

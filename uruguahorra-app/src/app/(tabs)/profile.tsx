@@ -279,7 +279,10 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => router.push('/privacy-policy')}
+            >
               <Ionicons
                 name="shield-checkmark"
                 size={24}

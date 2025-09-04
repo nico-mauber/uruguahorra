@@ -203,16 +203,20 @@ export default function TransactionsScreen() {
     return (
       <Card style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
-          <Text style={[styles.balanceTitle, { color: colors.text.primary }]}>
-            Balance del período
-          </Text>
-          <DateRangeSelector
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            maxHistoryYears={2}
-          />
+          <View style={styles.headerRow}>
+            <Text style={[styles.balanceTitle, { color: colors.text.primary }]}>
+              Balance del período
+            </Text>
+            <View style={styles.dateRangeContainer}>
+              <DateRangeSelector
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                maxHistoryYears={2}
+              />
+            </View>
+          </View>
         </View>
 
         <View style={styles.balanceRow}>
@@ -483,10 +487,16 @@ const styles = StyleSheet.create({
   },
 
   balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
+  },
+
+  headerRow: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+
+  dateRangeContainer: {
+    alignSelf: 'stretch',
   },
 
   balanceTitle: {

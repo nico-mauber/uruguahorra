@@ -7,6 +7,7 @@ import {
   Switch,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,18 +27,12 @@ export default function NotificationsScreen() {
     scheduledNotifications,
     initialize,
     requestPermissions,
-    setupDailyReminder,
-    setupStreakWarning,
+    setupAutomaticStreakWarnings,
     cancelAllNotifications,
     updateSettings,
-    sendTestNotification,
-    sendTestStreakReminder,
-    sendTestStreakWarning,
-    scheduleQuickTest,
   } = useStreakNotifications();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showTimeOptions, setShowTimeOptions] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -75,38 +70,12 @@ export default function NotificationsScreen() {
     const newEnabled = !settings.enabled;
     await updateSettings({ enabled: newEnabled });
 
-    if (newEnabled) {
-      // Configurar notificaciones con la configuración actual
-      await setupDailyReminder(
-        settings.reminderTime.hour,
-        settings.reminderTime.minute
-      );
-      await setupStreakWarning(settings.warningHours);
-    } else {
+    if (!newEnabled) {
       await cancelAllNotifications();
     }
   };
 
-  const handleReminderTimeChange = async (hour: number, minute: number) => {
-    await updateSettings({
-      reminderTime: { hour, minute },
-    });
 
-    if (settings.enabled) {
-      await setupDailyReminder(hour, minute);
-    }
-    setShowTimeOptions(false);
-  };
-
-  const handleWarningHoursChange = async (hours: number) => {
-    await updateSettings({
-      warningHours: hours,
-    });
-
-    if (settings.enabled) {
-      await setupStreakWarning(hours);
-    }
-  };
 
   const getStatusColor = () => {
     if (!isInitialized) return '#FFA500'; // orange
@@ -122,19 +91,7 @@ export default function NotificationsScreen() {
     return 'Activas';
   };
 
-  const timeOptions = [
-    { hour: 8, minute: 0, label: '8:00 AM' },
-    { hour: 12, minute: 0, label: '12:00 PM' },
-    { hour: 18, minute: 0, label: '6:00 PM' },
-    { hour: 20, minute: 0, label: '8:00 PM' },
-  ];
 
-  const warningOptions = [
-    { hours: 2, label: '2 horas antes' },
-    { hours: 4, label: '4 horas antes' },
-    { hours: 6, label: '6 horas antes' },
-    { hours: 12, label: '12 horas antes' },
-  ];
 
   const styles = StyleSheet.create({
     container: {
@@ -224,63 +181,35 @@ export default function NotificationsScreen() {
       color: colors.primary,
       fontWeight: '500',
     },
-    timeOptionsContainer: {
-      marginTop: 12,
-    },
-    timeOption: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      backgroundColor: colors.background,
-      borderRadius: 8,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.border.primary,
-    },
-    timeOptionSelected: {
-      backgroundColor: colors.primary + '20',
-      borderColor: colors.primary,
-    },
-    timeOptionText: {
-      fontSize: 16,
-      color: colors.text.primary,
-      textAlign: 'center',
-    },
-    testSection: {
-      marginTop: 24,
-    },
-    testTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text.primary,
-      marginBottom: 12,
-    },
-    testButtons: {
-      gap: 12,
-    },
-    testButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    },
-    testButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '500',
-    },
-    actionButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-      marginBottom: 8,
-    },
     infoText: {
       fontSize: 14,
       color: colors.text.secondary,
       textAlign: 'center',
       marginTop: 16,
       lineHeight: 20,
+    },
+    automaticAlertsInfo: {
+      backgroundColor: colors.background,
+      padding: 12,
+      borderRadius: 8,
+      marginTop: 8,
+    },
+    automaticAlertsTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+      marginBottom: 8,
+    },
+    automaticAlertsItem: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      marginBottom: 2,
+    },
+    automaticAlertsNote: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      marginTop: 8,
+      fontStyle: 'italic',
     },
   });
 
@@ -346,125 +275,40 @@ export default function NotificationsScreen() {
             <Card style={styles.statusCard}>
               <Text style={styles.configTitle}>Configuración</Text>
 
-              <TouchableOpacity
-                style={styles.configItem}
-                onPress={() => setShowTimeOptions(!showTimeOptions)}
-                disabled={!settings.enabled}
-              >
-                <Text
-                  style={[
-                    styles.configLabel,
-                    !settings.enabled && { color: colors.text.secondary },
-                  ]}
-                >
-                  Horario de Recordatorio
+              <View style={styles.configItem}>
+                <Text style={styles.configLabel}>
+                  Recordatorio Diario
                 </Text>
-                <Text
-                  style={[
-                    styles.configValue,
-                    !settings.enabled && { color: colors.text.secondary },
-                  ]}
-                >
-                  {String(settings.reminderTime.hour).padStart(2, '0')}:
-                  {String(settings.reminderTime.minute).padStart(2, '0')}
+                <Text style={styles.configValue}>
+                  8:00 PM (fijo)
                 </Text>
-              </TouchableOpacity>
-
-              {showTimeOptions && settings.enabled && (
-                <View style={styles.timeOptionsContainer}>
-                  {timeOptions.map((option) => (
-                    <TouchableOpacity
-                      key={`${option.hour}-${option.minute}`}
-                      style={[
-                        styles.timeOption,
-                        settings.reminderTime.hour === option.hour &&
-                          settings.reminderTime.minute === option.minute &&
-                          styles.timeOptionSelected,
-                      ]}
-                      onPress={() =>
-                        handleReminderTimeChange(option.hour, option.minute)
-                      }
-                    >
-                      <Text style={styles.timeOptionText}>{option.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+              </View>
 
               <View style={styles.configSection}>
                 <Text style={styles.configLabel}>
-                  Alerta de Racha en Riesgo
+                  Alertas Automáticas de Racha
                 </Text>
-                <View style={styles.timeOptionsContainer}>
-                  {warningOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.hours}
-                      style={[
-                        styles.timeOption,
-                        settings.warningHours === option.hours &&
-                          styles.timeOptionSelected,
-                      ]}
-                      onPress={() => handleWarningHoursChange(option.hours)}
-                      disabled={!settings.enabled}
-                    >
-                      <Text
-                        style={[
-                          styles.timeOptionText,
-                          !settings.enabled && { color: colors.text.secondary },
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={styles.automaticAlertsInfo}>
+                  <Text style={styles.automaticAlertsTitle}>Sistema escalonado fijo:</Text>
+                  <Text style={styles.automaticAlertsItem}>• 12 horas antes de perder la racha</Text>
+                  <Text style={styles.automaticAlertsItem}>• 6 horas antes</Text>
+                  <Text style={styles.automaticAlertsItem}>• 3 horas antes</Text>
+                  <Text style={styles.automaticAlertsItem}>• 30 minutos antes</Text>
+                  <Text style={styles.automaticAlertsNote}>
+                    Se activan automáticamente cuando tienes una racha activa
+                  </Text>
                 </View>
               </View>
             </Card>
 
-            {/* Sección de pruebas (solo en desarrollo) */}
-            {__DEV__ && settings.enabled && (
-              <Card style={styles.statusCard}>
-                <Text style={styles.testTitle}>Pruebas (Desarrollo)</Text>
-
-                <View style={styles.testButtons}>
-                  <Button
-                    title="Enviar Notificación de Prueba"
-                    onPress={sendTestNotification}
-                    style={styles.actionButton}
-                    disabled={isLoading}
-                  />
-
-                  <Button
-                    title="Prueba Recordatorio de Racha (5s)"
-                    onPress={() => sendTestStreakReminder(5)}
-                    style={styles.actionButton}
-                    disabled={isLoading}
-                  />
-
-                  <Button
-                    title="Prueba Alerta de Riesgo (5s)"
-                    onPress={() => sendTestStreakWarning(5)}
-                    style={styles.actionButton}
-                    disabled={isLoading}
-                  />
-
-                  <Button
-                    title="Prueba Rápida Múltiple"
-                    onPress={scheduleQuickTest}
-                    style={styles.actionButton}
-                    disabled={isLoading}
-                  />
-                </View>
-              </Card>
-            )}
           </>
         )}
 
         <Text style={styles.infoText}>
-          Las notificaciones te ayudarán a mantener tu racha de ahorro activa.
-          {'\n\n'}
-          Recibirás recordatorios diarios y alertas cuando tu racha esté en
-          riesgo.
+          {Platform.OS === 'web' 
+            ? 'Las notificaciones locales no están disponibles en la versión web. Usa la app móvil para recibir recordatorios automáticos.'
+            : 'Las notificaciones te ayudarán a mantener tu racha de ahorro activa. Recibirás recordatorios diarios y alertas cuando tu racha esté en riesgo.'
+          }
         </Text>
       </ScrollView>
     </SafeAreaView>

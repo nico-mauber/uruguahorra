@@ -37,7 +37,8 @@
       "Bash(sed:*)",
       "Bash(npx eslint:*)",
       "Bash(npm start:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npx web-push:*)"
     ],
     "deny": [],
     "ask": [],

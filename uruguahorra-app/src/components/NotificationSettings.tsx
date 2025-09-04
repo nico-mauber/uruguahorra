@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { Button } from '@/components/Button';
@@ -67,19 +68,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     setIsLoading(false);
   };
 
-  const handleTimeChange = async (_hour: number, _minute: number) => {
-    setIsLoading(true);
-    // TODO: Implement time change functionality
-    setIsLoading(false);
-  };
 
-  const handleWarningHoursChange = async (hours: number) => {
-    setIsLoading(true);
-    await updateSettings({
-      warningHours: hours,
-    });
-    setIsLoading(false);
-  };
 
   const handleTestNotification = async () => {
     if (!permissionsGranted) {
@@ -119,9 +108,6 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     );
   };
 
-  const formatTime = (hour: number, minute: number) => {
-    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  };
 
   if (!isInitialized) {
     return (
@@ -180,60 +166,35 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>⏰ Recordatorio Diario</Text>
 
-              <TouchableOpacity
-                style={styles.timeSelector}
-                onPress={() => {
-                  // Aquí podrías abrir un picker de tiempo
-                  Alert.alert(
-                    'Cambiar hora',
-                    'Esta funcionalidad se implementaría con un time picker nativo o modal.'
-                  );
-                }}
-              >
-                <Text style={styles.timeText}>
-                  {formatTime(
-                    settings.reminderTime.hour,
-                    settings.reminderTime.minute
-                  )}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
-              </TouchableOpacity>
+              <View style={styles.fixedTimeContainer}>
+                <Text style={styles.fixedTimeText}>8:00 PM</Text>
+                <Text style={styles.fixedTimeLabel}>Horario fijo</Text>
+              </View>
 
               <Text style={styles.settingDescription}>
-                Te recordaremos hacer tu microaporte diario a esta hora
+                {Platform.OS === 'web'
+                  ? 'Recordatorios no disponibles en versión web'
+                  : 'Recibirás un recordatorio diario automático a las 8:00 PM'
+                }
               </Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>⚠️ Alerta de Racha</Text>
-
-              <View style={styles.warningHoursContainer}>
-                {[1, 2, 4, 6].map((hours) => (
-                  <TouchableOpacity
-                    key={hours}
-                    style={[
-                      styles.hourOption,
-                      settings.warningHours === hours &&
-                        styles.hourOptionSelected,
-                    ]}
-                    onPress={() => handleWarningHoursChange(hours)}
-                    disabled={isLoading}
-                  >
-                    <Text
-                      style={[
-                        styles.hourOptionText,
-                        settings.warningHours === hours &&
-                          styles.hourOptionTextSelected,
-                      ]}
-                    >
-                      {hours}h
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={styles.sectionTitle}>⚠️ Alertas de Racha Automáticas</Text>
+              
+              <View style={styles.alertsInfoContainer}>
+                <Text style={styles.alertsInfoTitle}>Sistema de alertas escalonadas:</Text>
+                <Text style={styles.alertsInfoItem}>• 12 horas antes de perder la racha</Text>
+                <Text style={styles.alertsInfoItem}>• 6 horas antes</Text>
+                <Text style={styles.alertsInfoItem}>• 3 horas antes</Text>
+                <Text style={styles.alertsInfoItem}>• 30 minutos antes</Text>
               </View>
 
               <Text style={styles.settingDescription}>
-                Te avisaremos cuando tu racha esté a punto de romperse
+                {Platform.OS === 'web'
+                  ? 'Alertas no disponibles en versión web - usa la app móvil'
+                  : 'Las alertas se configuran automáticamente cuando tienes una racha activa'
+                }
               </Text>
             </View>
 
@@ -351,41 +312,39 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  timeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  fixedTimeContainer: {
     backgroundColor: '#F3F4F6',
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
+    alignItems: 'center',
   },
-  timeText: {
+  fixedTimeText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
   },
-  warningHoursContainer: {
-    flexDirection: 'row',
+  fixedTimeLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  alertsInfoContainer: {
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 8,
   },
-  hourOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  hourOptionSelected: {
-    backgroundColor: '#6366F1',
-  },
-  hourOptionText: {
+  alertsInfoTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#374151',
+    marginBottom: 8,
   },
-  hourOptionTextSelected: {
-    color: '#FFFFFF',
+  alertsInfoItem: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2,
   },
   statusContainer: {
     backgroundColor: '#F3F4F6',

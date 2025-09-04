@@ -9,11 +9,6 @@ import { storage } from '@/lib/storage';
 
 export interface StreakNotificationSettings {
   enabled: boolean;
-  reminderTime: {
-    hour: number;
-    minute: number;
-  };
-  warningHours: number;
 }
 
 export interface UseStreakNotificationsReturn {
@@ -26,33 +21,42 @@ export interface UseStreakNotificationsReturn {
   // Acciones
   initialize: () => Promise<boolean>;
   requestPermissions: () => Promise<boolean>;
-  setupDailyReminder: (hour: number, minute: number) => Promise<boolean>;
-  setupStreakWarning: (hoursBeforeBreak: number) => Promise<boolean>;
+  setupDailyReminder: () => Promise<boolean>;
+  setupAutomaticStreakWarnings: (userId: string) => Promise<boolean>;
   cancelAllNotifications: () => Promise<void>;
   updateSettings: (
     newSettings: Partial<StreakNotificationSettings>
   ) => Promise<void>;
   checkUserStreakStatus: () => Promise<void>;
 
-  // Testing y desarrollo
-  sendTestNotification: () => Promise<void>;
-  sendTestStreakReminder: (delaySeconds?: number) => Promise<void>;
-  sendTestStreakWarning: (delaySeconds?: number) => Promise<void>;
-  startDevReminder: (intervalMinutes?: number) => Promise<void>;
-  stopDevReminder: () => Promise<void>;
-  scheduleQuickTest: () => Promise<void>;
 }
 
 const DEFAULT_SETTINGS: StreakNotificationSettings = {
   enabled: true,
-  reminderTime: {
-    hour: 20, // 8:00 PM
-    minute: 0,
-  },
-  warningHours: 2, // 2 horas antes de que se rompa
 };
 
+// Configuración fija para recordatorio diario
+const DAILY_REMINDER_TIME = {
+  hour: 20, // 8:00 PM
+  minute: 0,
+} as const;
+
+// Configuración fija de alertas escalonadas antes de perder la racha
+const STREAK_WARNING_INTERVALS = [
+  { hours: 12, title: '🔥 Tu racha necesita atención', body: 'Tu racha se romperá en 12 horas. ¡Haz tu microaporte pronto!' },
+  { hours: 6, title: '⚠️ Racha en riesgo', body: 'Solo quedan 6 horas para mantener tu racha. ¡No la pierdas!' },
+  { hours: 3, title: '🚨 ¡Últimas horas!', body: 'Tu racha se romperá en 3 horas. ¡Actúa ahora!' },
+  { hours: 0.5, title: '💥 ¡URGENTE!', body: '¡Solo 30 minutos para salvar tu racha! Haz tu microaporte YA.' },
+] as const;
+
 const SETTINGS_STORAGE_KEY = 'streak_notification_settings';
+
+/**
+ * Verificar si la plataforma soporta notificaciones locales
+ */
+function isPlatformSupported(): boolean {
+  return Platform.OS === 'ios' || Platform.OS === 'android';
+}
 
 export function useStreakNotifications(): UseStreakNotificationsReturn {
   const { user } = useAuth();
@@ -182,7 +186,7 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
         setIsInitialized(true);
 
         // Si las notificaciones están habilitadas y el usuario las quiere
-        if (granted && settings.enabled) {
+        if (granted && settings.enabled && user) {
           await setupNotifications();
         }
 
@@ -209,7 +213,7 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
       const granted = await NotificationsService.requestPermissions();
       setPermissionsGranted(granted);
 
-      if (granted && settings.enabled) {
+      if (granted && settings.enabled && user) {
         await setupNotifications();
       }
 
@@ -224,12 +228,10 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
    * Configurar todas las notificaciones según la configuración actual
    */
   const setupNotifications = async () => {
-    if (!permissionsGranted || !settings.enabled) return;
+    if (!permissionsGranted || !settings.enabled || !user) return;
 
-    await setupDailyReminder(
-      settings.reminderTime.hour,
-      settings.reminderTime.minute
-    );
+    await setupDailyReminder();
+    await setupAutomaticStreakWarnings(user.id);
     await updateScheduledCount();
   };
 
@@ -237,8 +239,14 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
    * Configurar recordatorio diario
    */
   const setupDailyReminder = useCallback(
-    async (hour: number, minute: number): Promise<boolean> => {
+    async (): Promise<boolean> => {
       try {
+        // Verificar compatibilidad de plataforma
+        if (!isPlatformSupported()) {
+          logger.info(LogModule.API, 'Recordatorio no disponible en web');
+          return false;
+        }
+
         if (!permissionsGranted) {
           logger.warn(
             LogModule.API,
@@ -247,13 +255,13 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
           return false;
         }
 
-        // Usar notificaciones locales con un enfoque más simple
+        // Cancelar recordatorio anterior
         await NotificationsService.cancelStreakReminder();
 
-        // Programar notificación diaria usando el trigger apropiado
+        // Programar notificación diaria a horario fijo
         const trigger = {
-          hour,
-          minute,
+          hour: DAILY_REMINDER_TIME.hour,
+          minute: DAILY_REMINDER_TIME.minute,
           repeats: true,
         };
 
@@ -269,9 +277,9 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
           trigger,
         });
 
-        logger.success(LogModule.API, 'Recordatorio diario configurado', {
+        logger.success(LogModule.API, 'Recordatorio diario configurado (horario fijo)', {
           notificationId,
-          time: `${hour}:${minute.toString().padStart(2, '0')}`,
+          time: `${DAILY_REMINDER_TIME.hour}:${DAILY_REMINDER_TIME.minute.toString().padStart(2, '0')}`,
         });
 
         await updateScheduledCount();
@@ -289,70 +297,102 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
   );
 
   /**
-   * Configurar alerta de racha en peligro
+   * Configurar alertas automáticas escalonadas de racha
    */
-  const setupStreakWarning = useCallback(
-    async (hoursBeforeBreak: number): Promise<boolean> => {
+  const setupAutomaticStreakWarnings = useCallback(
+    async (userId: string): Promise<boolean> => {
       try {
-        if (!permissionsGranted || !user) {
+        // Verificar compatibilidad de plataforma
+        if (!isPlatformSupported()) {
+          logger.info(LogModule.API, 'Alertas no disponibles en web');
           return false;
         }
+
+        if (!permissionsGranted) {
+          return false;
+        }
+
+        // Cancelar alertas anteriores
+        await NotificationsService.cancelAllStreakWarnings();
 
         // Obtener información de la racha actual
-        const streak = await StreaksService.getUserStreak(user.id);
+        const streak = await StreaksService.getUserStreak(userId);
         if (!streak || streak.current_streak === 0) {
-          return false; // No hay racha que proteger
-        }
-
-        // Calcular cuándo programar la alerta (basado en última actividad)
-        const lastActivity = new Date(streak.last_activity_at);
-        const alertTime = new Date(lastActivity);
-        alertTime.setHours(lastActivity.getHours() + 24 - hoursBeforeBreak);
-
-        const now = new Date();
-        if (alertTime <= now) {
-          // La alerta debería haber sido ya mostrada
+          logger.info(LogModule.API, 'No hay racha activa para proteger');
           return false;
         }
 
-        const secondsUntilAlert = Math.floor(
-          (alertTime.getTime() - now.getTime()) / 1000
-        );
+        const lastActivity = new Date(streak.last_activity_at);
+        const now = new Date();
+        const streakDeadline = new Date(lastActivity);
+        streakDeadline.setHours(lastActivity.getHours() + 24);
 
-        const notificationId = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: '⚠️ ¡Tu racha está en peligro!',
-            body: `Tu racha de ${streak.current_streak} días se romperá en ${hoursBeforeBreak} horas. ¡Haz un microaporte ahora!`,
-            data: {
-              type: 'streak_warning',
-              timestamp: Date.now(),
-              hoursLeft: hoursBeforeBreak,
-              currentStreak: streak.current_streak,
-            },
-          },
-          trigger: {
-            seconds: secondsUntilAlert,
-          },
+        // Verificar si la racha ya expiró
+        if (streakDeadline <= now) {
+          logger.warn(LogModule.API, 'La racha ya ha expirado');
+          return false;
+        }
+
+        let scheduledCount = 0;
+
+        // Programar cada alerta del sistema escalonado
+        for (const warning of STREAK_WARNING_INTERVALS) {
+          const alertTime = new Date(streakDeadline);
+          const hoursInMs = warning.hours * 60 * 60 * 1000;
+          alertTime.setTime(alertTime.getTime() - hoursInMs);
+
+          // Solo programar si la alerta es en el futuro
+          if (alertTime > now) {
+            const secondsUntilAlert = Math.floor(
+              (alertTime.getTime() - now.getTime()) / 1000
+            );
+
+            const notificationId = await Notifications.scheduleNotificationAsync({
+              content: {
+                title: warning.title,
+                body: warning.body.replace(
+                  /\d+/,
+                  streak.current_streak.toString()
+                ),
+                data: {
+                  type: 'streak_warning_auto',
+                  timestamp: Date.now(),
+                  hoursLeft: warning.hours,
+                  currentStreak: streak.current_streak,
+                  warningLevel: warning.hours,
+                },
+              },
+              trigger: {
+                seconds: secondsUntilAlert,
+              },
+            });
+
+            scheduledCount++;
+            logger.info(LogModule.API, `Alerta ${warning.hours}h programada`, {
+              notificationId,
+              alertTime: alertTime.toISOString(),
+              secondsUntilAlert,
+            });
+          }
+        }
+
+        logger.success(LogModule.API, 'Alertas automáticas de racha configuradas', {
+          streakLength: streak.current_streak,
+          scheduledWarnings: scheduledCount,
+          streakDeadline: streakDeadline.toISOString(),
         });
 
-        logger.success(LogModule.API, 'Alerta de racha configurada', {
-          notificationId,
-          alertTime: alertTime.toISOString(),
-          currentStreak: streak.current_streak,
-        });
-
-        await updateScheduledCount();
-        return true;
+        return scheduledCount > 0;
       } catch (error) {
         logger.error(
           LogModule.API,
-          'Error configurando alerta de racha',
+          'Error configurando alertas automáticas de racha',
           error
         );
         return false;
       }
     },
-    [permissionsGranted, user]
+    [permissionsGranted]
   );
 
   /**
@@ -372,7 +412,7 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
       await saveSettings(updatedSettings);
 
       // Reconfigurar notificaciones si están habilitadas
-      if (updatedSettings.enabled && permissionsGranted) {
+      if (updatedSettings.enabled && permissionsGranted && user) {
         await setupNotifications();
       } else if (!updatedSettings.enabled) {
         await cancelAllNotifications();
@@ -382,30 +422,17 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
   );
 
   /**
-   * Verificar estado de racha del usuario y configurar alertas apropiadas
+   * Verificar estado de racha del usuario y configurar alertas automáticas
    */
   const checkUserStreakStatus = useCallback(async (): Promise<void> => {
     if (!user || !settings.enabled || !permissionsGranted) return;
 
     try {
-      const streak = await StreaksService.getUserStreak(user.id);
-
-      if (streak && streak.current_streak > 0) {
-        // El usuario tiene una racha activa, configurar alerta si es necesario
-        const lastActivity = new Date(streak.last_activity_at);
-        const now = new Date();
-        const hoursSinceLastActivity =
-          (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
-
-        // Si han pasado más de 20 horas desde la última actividad, configurar alerta
-        if (hoursSinceLastActivity > 20 && hoursSinceLastActivity < 24) {
-          await setupStreakWarning(settings.warningHours);
-        }
-      }
+      await setupAutomaticStreakWarnings(user.id);
     } catch (error) {
       logger.error(LogModule.API, 'Error verificando estado de racha', error);
     }
-  }, [user, settings, permissionsGranted]);
+  }, [user, settings, permissionsGranted, setupAutomaticStreakWarnings]);
 
   /**
    * Actualizar contador de notificaciones programadas
@@ -423,102 +450,6 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
     }
   };
 
-  /**
-   * Enviar notificación de prueba
-   */
-  const sendTestNotification = useCallback(async (): Promise<void> => {
-    if (!permissionsGranted) {
-      logger.warn(
-        LogModule.API,
-        'No hay permisos para enviar notificación de prueba'
-      );
-      return;
-    }
-
-    await NotificationsService.scheduleTestNotification(3);
-    logger.info(LogModule.API, 'Notificación de prueba programada');
-  }, [permissionsGranted]);
-
-  /**
-   * Funciones de desarrollo/testing
-   */
-  const sendTestStreakReminder = useCallback(
-    async (delaySeconds: number = 10): Promise<void> => {
-      if (!permissionsGranted) {
-        logger.warn(
-          LogModule.API,
-          'No hay permisos para enviar recordatorio de prueba'
-        );
-        return;
-      }
-
-      await NotificationsService.scheduleTestStreakReminder(delaySeconds);
-      await updateScheduledCount();
-      logger.info(LogModule.API, 'Recordatorio de prueba programado', {
-        delaySeconds,
-      });
-    },
-    [permissionsGranted]
-  );
-
-  const sendTestStreakWarning = useCallback(
-    async (delaySeconds: number = 15): Promise<void> => {
-      if (!permissionsGranted) {
-        logger.warn(
-          LogModule.API,
-          'No hay permisos para enviar alerta de prueba'
-        );
-        return;
-      }
-
-      await NotificationsService.scheduleTestStreakWarning(delaySeconds);
-      await updateScheduledCount();
-      logger.info(LogModule.API, 'Alerta de prueba programada', {
-        delaySeconds,
-      });
-    },
-    [permissionsGranted]
-  );
-
-  const startDevReminder = useCallback(
-    async (intervalMinutes: number = 1): Promise<void> => {
-      if (!permissionsGranted) {
-        logger.warn(
-          LogModule.API,
-          'No hay permisos para recordatorio de desarrollo'
-        );
-        return;
-      }
-
-      await NotificationsService.scheduleDevReminder(intervalMinutes);
-      await updateScheduledCount();
-      logger.info(LogModule.API, 'Recordatorio de desarrollo iniciado', {
-        intervalMinutes,
-      });
-    },
-    [permissionsGranted]
-  );
-
-  const stopDevReminder = useCallback(async (): Promise<void> => {
-    await NotificationsService.cancelDevReminder();
-    await updateScheduledCount();
-    logger.info(LogModule.API, 'Recordatorio de desarrollo detenido');
-  }, []);
-
-  const scheduleQuickTest = useCallback(async (): Promise<void> => {
-    if (!permissionsGranted) {
-      logger.warn(LogModule.API, 'No hay permisos para prueba rápida');
-      return;
-    }
-
-    // Programar 3 notificaciones de prueba en secuencia
-    await NotificationsService.scheduleTestNotification(5); // 5 segundos
-    await NotificationsService.scheduleTestStreakReminder(15); // 15 segundos
-    await NotificationsService.scheduleTestStreakWarning(25); // 25 segundos
-
-    await updateScheduledCount();
-    logger.info(LogModule.API, 'Secuencia de prueba programada (5s, 15s, 25s)');
-  }, [permissionsGranted]);
 
   return {
     // Estado
@@ -531,17 +462,10 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
     initialize,
     requestPermissions,
     setupDailyReminder,
-    setupStreakWarning,
+    setupAutomaticStreakWarnings,
     cancelAllNotifications,
     updateSettings,
     checkUserStreakStatus,
 
-    // Testing y desarrollo
-    sendTestNotification,
-    sendTestStreakReminder,
-    sendTestStreakWarning,
-    startDevReminder,
-    stopDevReminder,
-    scheduleQuickTest,
   };
 }

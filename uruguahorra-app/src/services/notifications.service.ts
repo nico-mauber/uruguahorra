@@ -26,7 +26,6 @@ export interface NotificationScheduleConfig {
 
 export class NotificationsService {
   private static readonly STORAGE_KEYS = {
-    PUSH_TOKEN: 'notification_push_token',
     PERMISSIONS_GRANTED: 'notification_permissions',
     STREAK_REMINDER_ID: 'streak_reminder_notification_id',
     STREAK_WARNING_ID: 'streak_warning_notification_id',
@@ -43,6 +42,13 @@ export class NotificationsService {
   private static isInitialized = false;
 
   /**
+   * Verificar si la plataforma soporta notificaciones locales programadas
+   */
+  private static isPlatformSupported(): boolean {
+    return Platform.OS === 'ios' || Platform.OS === 'android';
+  }
+
+  /**
    * Inicializar el servicio de notificaciones
    * Solicitar permisos y registrar token
    */
@@ -55,9 +61,22 @@ export class NotificationsService {
 
       logger.start(LogModule.API, 'Inicializando servicio de notificaciones');
 
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        const now = Date.now();
+        if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
+          logger.info(
+            LogModule.API,
+            'Notificaciones locales no disponibles en web - funcionalidad deshabilitada'
+          );
+          this.lastPermissionWarning = now;
+        }
+        this.isInitialized = true;
+        return false;
+      }
+
       // Verificar si es dispositivo físico
       if (!Device.isDevice) {
-        // Solo loggear una vez cada 30 segundos para evitar spam
         const now = Date.now();
         if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
           logger.warn(
@@ -72,7 +91,6 @@ export class NotificationsService {
       // Solicitar permisos
       const permissionsGranted = await this.requestPermissions();
       if (!permissionsGranted) {
-        // Solo loggear una vez cada 30 segundos para evitar spam
         const now = Date.now();
         if (now - this.lastPermissionWarning > this.WARNING_INTERVAL) {
           logger.warn(LogModule.API, 'Permisos de notificación no concedidos');
@@ -81,8 +99,8 @@ export class NotificationsService {
         return false;
       }
 
-      // Registrar token para notificaciones push (si se necesita en el futuro)
-      await this.registerPushToken();
+      // Configurar canales de notificación
+      await this.setupNotificationChannels();
 
       this.isInitialized = true;
       logger.success(
@@ -137,9 +155,9 @@ export class NotificationsService {
   }
 
   /**
-   * Registrar token de notificaciones push
+   * Configurar canales de notificación (solo Android)
    */
-  private static async registerPushToken(): Promise<string | null> {
+  private static async setupNotificationChannels(): Promise<void> {
     try {
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -148,23 +166,15 @@ export class NotificationsService {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#6366F1',
         });
+        
+        logger.info(LogModule.API, 'Canal de notificación Android configurado');
       }
-
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
-      await storage.setItem(this.STORAGE_KEYS.PUSH_TOKEN, token);
-
-      logger.info(LogModule.API, 'Token de notificación registrado', {
-        tokenPrefix: token.substring(0, 20) + '...',
-      });
-
-      return token;
     } catch (error) {
       logger.error(
         LogModule.API,
-        'Error registrando token de notificación',
+        'Error configurando canales de notificación',
         error
       );
-      return null;
     }
   }
 
@@ -176,6 +186,12 @@ export class NotificationsService {
     minute: number = 0
   ): Promise<boolean> {
     try {
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        logger.info(LogModule.API, 'Notificaciones no disponibles en esta plataforma');
+        return false;
+      }
+
       logger.start(LogModule.API, 'Programando recordatorio diario de racha', {
         hour,
         minute,
@@ -280,6 +296,12 @@ export class NotificationsService {
    */
   static async cancelStreakReminder(): Promise<void> {
     try {
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        logger.info(LogModule.API, 'Cancelación no necesaria - plataforma no compatible');
+        return;
+      }
+
       const notificationId = await storage.getItem(
         this.STORAGE_KEYS.STREAK_REMINDER_ID
       );
@@ -311,6 +333,11 @@ export class NotificationsService {
    */
   static async cancelStreakWarning(): Promise<void> {
     try {
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        return;
+      }
+
       const notificationId = await storage.getItem(
         this.STORAGE_KEYS.STREAK_WARNING_ID
       );
@@ -334,12 +361,44 @@ export class NotificationsService {
   }
 
   /**
+   * Cancelar todas las alertas de racha (múltiples)
+   */
+  static async cancelAllStreakWarnings(): Promise<void> {
+    try {
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        return;
+      }
+
+      // Obtener todas las notificaciones programadas
+      const notifications = await this.getScheduledNotifications();
+      
+      // Filtrar solo las de alerta de racha
+      const warningNotifications = notifications.filter(notif => 
+        notif.content.data?.type === 'streak_warning_auto' || 
+        notif.content.data?.type === 'streak_warning'
+      );
+      
+      // Cancelar cada una
+      for (const notification of warningNotifications) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      }
+      
+      logger.info(LogModule.API, 'Alertas de racha canceladas', {
+        count: warningNotifications.length
+      });
+    } catch (error) {
+      logger.error(LogModule.API, 'Error cancelando alertas de racha', error);
+    }
+  }
+
+  /**
    * Cancelar todas las notificaciones de racha
    */
   static async cancelAllStreakNotifications(): Promise<void> {
     await Promise.all([
       this.cancelStreakReminder(),
-      this.cancelStreakWarning(),
+      this.cancelAllStreakWarnings(),
     ]);
   }
 
@@ -350,6 +409,12 @@ export class NotificationsService {
     Notifications.NotificationRequest[]
   > {
     try {
+      // Verificar compatibilidad de plataforma
+      if (!this.isPlatformSupported()) {
+        logger.info(LogModule.API, 'Notificaciones no disponibles en esta plataforma');
+        return [];
+      }
+
       const notifications =
         await Notifications.getAllScheduledNotificationsAsync();
 

@@ -326,25 +326,48 @@ export default function DashboardScreen() {
           amount
         );
 
+      // NUEVA FUNCIONALIDAD: Actualizar racha después de contribución
+      let updatedStreak = null;
+      try {
+        const { StreaksService } = await import('@/features/gamification/services/streaks.service');
+        updatedStreak = await StreaksService.updateStreak(user.id);
+        logger.success(LogModule.UI, 'Racha actualizada después de contribución', { updatedStreak });
+      } catch (error) {
+        logger.warn(LogModule.UI, 'Error actualizando racha, continuando', error);
+      }
+
       // 3. OPTIMIZACIÓN: Solo recargar goals, las stats se actualizan localmente
       await fetchGoals(user.id, true);
 
       // 4. Actualizar el estado local de gamificationStats inmediatamente SIN recargar
-      if (gamificationResult.xpEarned > 0) {
-        setGamificationStats((prevStats) => {
-          if (!prevStats) return prevStats;
-          const newTotalXP = prevStats.totalXP + gamificationResult.xpEarned;
-          const newLevel = LevelsService.getLevel(newTotalXP);
-          const newLevelInfo = LevelsService.getLevelProgress(newTotalXP);
+      setGamificationStats((prevStats) => {
+        if (!prevStats) return prevStats;
+        
+        const newTotalXP = prevStats.totalXP + (gamificationResult.xpEarned || 0);
+        const newLevel = LevelsService.getLevel(newTotalXP);
+        const newLevelInfo = LevelsService.getLevelProgress(newTotalXP);
 
-          return {
-            ...prevStats,
-            totalXP: newTotalXP,
-            level: newLevel,
-            levelInfo: newLevelInfo,
-          };
-        });
-      }
+        return {
+          ...prevStats,
+          totalXP: newTotalXP,
+          level: newLevel,
+          levelInfo: newLevelInfo,
+          // Actualizar racha si se obtuvo
+          ...(updatedStreak && {
+            streak: {
+              current_streak: updatedStreak.current_streak,
+              longest_streak: updatedStreak.longest_streak,
+              last_activity_at: updatedStreak.last_activity_at,
+              streak_protections_used: updatedStreak.streak_protections_used,
+              protection_reset_date: updatedStreak.protection_reset_date,
+              id: updatedStreak.id,
+              user_id: updatedStreak.user_id,
+              created_at: updatedStreak.created_at,
+              updated_at: updatedStreak.updated_at,
+            }
+          }),
+        };
+      });
 
       // 5. Las contribuciones ya no están ligadas a retos
       // Los retos requieren check-in manual diario desde la pestaña Retos

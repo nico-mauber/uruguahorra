@@ -28,7 +28,6 @@ export interface UseStreakNotificationsReturn {
     newSettings: Partial<StreakNotificationSettings>
   ) => Promise<void>;
   checkUserStreakStatus: () => Promise<void>;
-
 }
 
 const DEFAULT_SETTINGS: StreakNotificationSettings = {
@@ -43,10 +42,26 @@ const DAILY_REMINDER_TIME = {
 
 // Configuración fija de alertas escalonadas antes de perder la racha
 const STREAK_WARNING_INTERVALS = [
-  { hours: 12, title: '🔥 Tu racha necesita atención', body: 'Tu racha se romperá en 12 horas. ¡Haz tu microaporte pronto!' },
-  { hours: 6, title: '⚠️ Racha en riesgo', body: 'Solo quedan 6 horas para mantener tu racha. ¡No la pierdas!' },
-  { hours: 3, title: '🚨 ¡Últimas horas!', body: 'Tu racha se romperá en 3 horas. ¡Actúa ahora!' },
-  { hours: 0.5, title: '💥 ¡URGENTE!', body: '¡Solo 30 minutos para salvar tu racha! Haz tu microaporte YA.' },
+  {
+    hours: 12,
+    title: '🔥 Tu racha necesita atención',
+    body: 'Tu racha se romperá en 12 horas. ¡Haz tu microaporte pronto!',
+  },
+  {
+    hours: 6,
+    title: '⚠️ Racha en riesgo',
+    body: 'Solo quedan 6 horas para mantener tu racha. ¡No la pierdas!',
+  },
+  {
+    hours: 3,
+    title: '🚨 ¡Últimas horas!',
+    body: 'Tu racha se romperá en 3 horas. ¡Actúa ahora!',
+  },
+  {
+    hours: 0.5,
+    title: '💥 ¡URGENTE!',
+    body: '¡Solo 30 minutos para salvar tu racha! Haz tu microaporte YA.',
+  },
 ] as const;
 
 const SETTINGS_STORAGE_KEY = 'streak_notification_settings';
@@ -238,63 +253,64 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
   /**
    * Configurar recordatorio diario
    */
-  const setupDailyReminder = useCallback(
-    async (): Promise<boolean> => {
-      try {
-        // Verificar compatibilidad de plataforma
-        if (!isPlatformSupported()) {
-          logger.info(LogModule.API, 'Recordatorio no disponible en web');
-          return false;
-        }
+  const setupDailyReminder = useCallback(async (): Promise<boolean> => {
+    try {
+      // Verificar compatibilidad de plataforma
+      if (!isPlatformSupported()) {
+        logger.info(LogModule.API, 'Recordatorio no disponible en web');
+        return false;
+      }
 
-        if (!permissionsGranted) {
-          logger.warn(
-            LogModule.API,
-            'No hay permisos para programar notificación'
-          );
-          return false;
-        }
-
-        // Cancelar recordatorio anterior
-        await NotificationsService.cancelStreakReminder();
-
-        // Programar notificación diaria a horario fijo
-        const trigger = {
-          hour: DAILY_REMINDER_TIME.hour,
-          minute: DAILY_REMINDER_TIME.minute,
-          repeats: true,
-        };
-
-        const notificationId = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: '🔥 ¡Mantén tu racha viva!',
-            body: '¿Ya hiciste tu microaporte de hoy? No dejes que se rompa tu racha de ahorro.',
-            data: {
-              type: 'streak_reminder',
-              timestamp: Date.now(),
-            },
-          },
-          trigger,
-        });
-
-        logger.success(LogModule.API, 'Recordatorio diario configurado (horario fijo)', {
-          notificationId,
-          time: `${DAILY_REMINDER_TIME.hour}:${DAILY_REMINDER_TIME.minute.toString().padStart(2, '0')}`,
-        });
-
-        await updateScheduledCount();
-        return true;
-      } catch (error) {
-        logger.error(
+      if (!permissionsGranted) {
+        logger.warn(
           LogModule.API,
-          'Error configurando recordatorio diario',
-          error
+          'No hay permisos para programar notificación'
         );
         return false;
       }
-    },
-    [permissionsGranted]
-  );
+
+      // Cancelar recordatorio anterior
+      await NotificationsService.cancelStreakReminder();
+
+      // Programar notificación diaria a horario fijo
+      const trigger = {
+        hour: DAILY_REMINDER_TIME.hour,
+        minute: DAILY_REMINDER_TIME.minute,
+        repeats: true,
+      };
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🔥 ¡Mantén tu racha viva!',
+          body: '¿Ya hiciste tu microaporte de hoy? No dejes que se rompa tu racha de ahorro.',
+          data: {
+            type: 'streak_reminder',
+            timestamp: Date.now(),
+          },
+        },
+        trigger,
+      });
+
+      logger.success(
+        LogModule.API,
+        'Recordatorio diario configurado (horario fijo)',
+        {
+          notificationId,
+          time: `${DAILY_REMINDER_TIME.hour}:${DAILY_REMINDER_TIME.minute.toString().padStart(2, '0')}`,
+        }
+      );
+
+      await updateScheduledCount();
+      return true;
+    } catch (error) {
+      logger.error(
+        LogModule.API,
+        'Error configurando recordatorio diario',
+        error
+      );
+      return false;
+    }
+  }, [permissionsGranted]);
 
   /**
    * Configurar alertas automáticas escalonadas de racha
@@ -347,25 +363,26 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
               (alertTime.getTime() - now.getTime()) / 1000
             );
 
-            const notificationId = await Notifications.scheduleNotificationAsync({
-              content: {
-                title: warning.title,
-                body: warning.body.replace(
-                  /\d+/,
-                  streak.current_streak.toString()
-                ),
-                data: {
-                  type: 'streak_warning_auto',
-                  timestamp: Date.now(),
-                  hoursLeft: warning.hours,
-                  currentStreak: streak.current_streak,
-                  warningLevel: warning.hours,
+            const notificationId =
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: warning.title,
+                  body: warning.body.replace(
+                    /\d+/,
+                    streak.current_streak.toString()
+                  ),
+                  data: {
+                    type: 'streak_warning_auto',
+                    timestamp: Date.now(),
+                    hoursLeft: warning.hours,
+                    currentStreak: streak.current_streak,
+                    warningLevel: warning.hours,
+                  },
                 },
-              },
-              trigger: {
-                seconds: secondsUntilAlert,
-              },
-            });
+                trigger: {
+                  seconds: secondsUntilAlert,
+                },
+              });
 
             scheduledCount++;
             logger.info(LogModule.API, `Alerta ${warning.hours}h programada`, {
@@ -376,11 +393,15 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
           }
         }
 
-        logger.success(LogModule.API, 'Alertas automáticas de racha configuradas', {
-          streakLength: streak.current_streak,
-          scheduledWarnings: scheduledCount,
-          streakDeadline: streakDeadline.toISOString(),
-        });
+        logger.success(
+          LogModule.API,
+          'Alertas automáticas de racha configuradas',
+          {
+            streakLength: streak.current_streak,
+            scheduledWarnings: scheduledCount,
+            streakDeadline: streakDeadline.toISOString(),
+          }
+        );
 
         return scheduledCount > 0;
       } catch (error) {
@@ -450,7 +471,6 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
     }
   };
 
-
   return {
     // Estado
     isInitialized,
@@ -466,6 +486,5 @@ export function useStreakNotifications(): UseStreakNotificationsReturn {
     cancelAllNotifications,
     updateSettings,
     checkUserStreakStatus,
-
   };
 }

@@ -166,7 +166,7 @@ export class NotificationsService {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#6366F1',
         });
-        
+
         logger.info(LogModule.API, 'Canal de notificación Android configurado');
       }
     } catch (error) {
@@ -188,7 +188,10 @@ export class NotificationsService {
     try {
       // Verificar compatibilidad de plataforma
       if (!this.isPlatformSupported()) {
-        logger.info(LogModule.API, 'Notificaciones no disponibles en esta plataforma');
+        logger.info(
+          LogModule.API,
+          'Notificaciones no disponibles en esta plataforma'
+        );
         return false;
       }
 
@@ -298,7 +301,10 @@ export class NotificationsService {
     try {
       // Verificar compatibilidad de plataforma
       if (!this.isPlatformSupported()) {
-        logger.info(LogModule.API, 'Cancelación no necesaria - plataforma no compatible');
+        logger.info(
+          LogModule.API,
+          'Cancelación no necesaria - plataforma no compatible'
+        );
         return;
       }
 
@@ -372,20 +378,23 @@ export class NotificationsService {
 
       // Obtener todas las notificaciones programadas
       const notifications = await this.getScheduledNotifications();
-      
+
       // Filtrar solo las de alerta de racha
-      const warningNotifications = notifications.filter(notif => 
-        notif.content.data?.type === 'streak_warning_auto' || 
-        notif.content.data?.type === 'streak_warning'
+      const warningNotifications = notifications.filter(
+        (notif) =>
+          notif.content.data?.type === 'streak_warning_auto' ||
+          notif.content.data?.type === 'streak_warning'
       );
-      
+
       // Cancelar cada una
       for (const notification of warningNotifications) {
-        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        await Notifications.cancelScheduledNotificationAsync(
+          notification.identifier
+        );
       }
-      
+
       logger.info(LogModule.API, 'Alertas de racha canceladas', {
-        count: warningNotifications.length
+        count: warningNotifications.length,
       });
     } catch (error) {
       logger.error(LogModule.API, 'Error cancelando alertas de racha', error);
@@ -411,7 +420,10 @@ export class NotificationsService {
     try {
       // Verificar compatibilidad de plataforma
       if (!this.isPlatformSupported()) {
-        logger.info(LogModule.API, 'Notificaciones no disponibles en esta plataforma');
+        logger.info(
+          LogModule.API,
+          'Notificaciones no disponibles en esta plataforma'
+        );
         return [];
       }
 

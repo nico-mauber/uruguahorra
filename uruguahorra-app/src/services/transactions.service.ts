@@ -50,7 +50,7 @@ export class TransactionsService {
   static async hasUserTransactions(userId: string): Promise<boolean> {
     try {
       const { count, error } = await supabase
-        .from('transactions_with_categories')
+        .from('transactions')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .is('deleted_at', null)
@@ -92,8 +92,20 @@ export class TransactionsService {
       );
 
       let query = supabase
-        .from('transactions_with_categories')
-        .select('*', { count: 'exact' })
+        .from('transactions')
+        .select(
+          `
+          *,
+          category:transaction_categories(
+            id,
+            name,
+            emoji,
+            type,
+            color
+          )
+        `,
+          { count: 'exact' }
+        )
         .eq('user_id', filters.user_id)
         .is('deleted_at', null)
         .order('transaction_date', { ascending: false })
@@ -149,8 +161,20 @@ export class TransactionsService {
         `${data?.length || 0} transacciones obtenidas (total: ${count})`
       );
 
+      // Transform the nested category structure to match the expected Transaction format
+      const transformedTransactions = (data || []).map((transaction: any) => {
+        const categoryData = transaction.category;
+        return {
+          ...transaction,
+          category_name: categoryData?.name || transaction.category_name || 'Sin categoría',
+          category_emoji: categoryData?.emoji || transaction.category_emoji || '💳',
+          category_full_name: categoryData?.name || transaction.category_name || 'Sin categoría',
+          category_emoji_full: categoryData?.emoji || transaction.category_emoji || '💳',
+        };
+      });
+
       return {
-        transactions: (data || []) as Transaction[],
+        transactions: transformedTransactions as Transaction[],
         total: count || 0,
       };
     } catch (error) {
@@ -177,8 +201,19 @@ export class TransactionsService {
       });
 
       const { data, error } = await supabase
-        .from('transactions_with_categories')
-        .select('*')
+        .from('transactions')
+        .select(
+          `
+          *,
+          category:transaction_categories(
+            id,
+            name,
+            emoji,
+            type,
+            color
+          )
+        `
+        )
         .eq('id', id)
         .eq('user_id', userId)
         .is('deleted_at', null)
@@ -199,11 +234,23 @@ export class TransactionsService {
         throw error;
       }
 
+      // Transform the nested category structure to match the expected Transaction format
+      const transformedTransaction = {
+        ...data,
+        category_name:
+          data.category?.name || data.category_name || 'Sin categoría',
+        category_emoji: data.category?.emoji || data.category_emoji || '💳',
+        category_full_name:
+          data.category?.name || data.category_name || 'Sin categoría',
+        category_emoji_full:
+          data.category?.emoji || data.category_emoji || '💳',
+      };
+
       logger.success(
         LogModule.TRANSACTIONS,
         'Transacción obtenida correctamente'
       );
-      return data as Transaction;
+      return transformedTransaction as Transaction;
     } catch (error) {
       logger.error(
         LogModule.TRANSACTIONS,

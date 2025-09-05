@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { usePostHog } from 'posthog-react-native';
+import PostHog from 'posthog-react-native';
 
 // Common properties that will be merged with all events
 interface CommonProps {
@@ -14,6 +15,7 @@ class AnalyticsClient {
   private isInitialized = false;
   private commonProps: CommonProps = {};
   private userId: string | null = null;
+  private posthogInstance: typeof PostHog | null = null;
 
   /**
    * Initialize PostHog analytics
@@ -39,6 +41,7 @@ class AnalyticsClient {
         flushInterval: 30,
       });
 
+      this.posthogInstance = PostHog;
       this.isInitialized = true;
 
       // Set common properties
@@ -117,7 +120,7 @@ class AnalyticsClient {
    * Check if a feature flag is enabled
    */
   isFeatureEnabled(flagKey: string): boolean {
-    if (!this.isInitialized || !posthogInstance) {
+    if (!this.isInitialized || !this.posthogInstance) {
       console.log(
         `[Analytics] Feature flag ${flagKey} defaulting to false - not initialized`
       );
@@ -125,7 +128,7 @@ class AnalyticsClient {
     }
 
     try {
-      return posthogInstance.isFeatureEnabled(flagKey) || false;
+      return this.posthogInstance.isFeatureEnabled(flagKey) || false;
     } catch (error) {
       console.error(
         `[Analytics] Error checking feature flag ${flagKey}:`,
@@ -139,12 +142,12 @@ class AnalyticsClient {
    * Reset analytics (logout)
    */
   reset(): void {
-    if (!this.isInitialized || !posthogInstance) {
+    if (!this.isInitialized || !this.posthogInstance) {
       return;
     }
 
     try {
-      posthogInstance.reset();
+      this.posthogInstance.reset();
       this.userId = null;
       console.log('[Analytics] Analytics reset');
     } catch (error) {

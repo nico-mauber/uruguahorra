@@ -358,9 +358,7 @@ export default function ChallengesScreen() {
                 {/* Renderizar emoji o icono de Ionicons */}
                 {category.icon && category.icon.length <= 2 ? (
                   // Es un emoji (1-2 caracteres)
-                  <Text style={{ fontSize: 24 }}>
-                    {category.icon}
-                  </Text>
+                  <Text style={{ fontSize: 24 }}>{category.icon}</Text>
                 ) : (
                   // Es un nombre de icono de Ionicons
                   <Ionicons

@@ -7,16 +7,16 @@ import {
   QuestsService,
 } from '@/features/gamification';
 import {
-  AnalyticsService,
   AnalyticsEvents,
-} from '@/services/analytics.service';
+  trackChallengeEvent as trackEvent,
+} from '@/lib/analytics';
 
 // Helper function for challenge tracking
 const trackChallengeEvent = (
   event: string,
   props?: Record<string, unknown>
 ) => {
-  AnalyticsService.track(event, props);
+  trackEvent(event, props as any);
 };
 
 type Challenge = Database['public']['Tables']['challenges']['Row'];

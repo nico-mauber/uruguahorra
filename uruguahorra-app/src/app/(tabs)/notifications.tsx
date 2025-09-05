@@ -75,8 +75,6 @@ export default function NotificationsScreen() {
     }
   };
 
-
-
   const getStatusColor = () => {
     if (!isInitialized) return '#FFA500'; // orange
     if (!permissionsGranted) return '#EF4444'; // red
@@ -90,8 +88,6 @@ export default function NotificationsScreen() {
     if (!settings.enabled) return 'Desactivadas';
     return 'Activas';
   };
-
-
 
   const styles = StyleSheet.create({
     container: {
@@ -275,32 +271,39 @@ export default function NotificationsScreen() {
             <Card style={styles.statusCard}>
               <Text style={styles.configTitle}>Configuración</Text>
 
-
               <View style={styles.configSection}>
                 <Text style={styles.configLabel}>
                   Alertas Automáticas de Racha
                 </Text>
                 <View style={styles.automaticAlertsInfo}>
-                  <Text style={styles.automaticAlertsTitle}>Sistema escalonado fijo:</Text>
-                  <Text style={styles.automaticAlertsItem}>• 12 horas antes de perder la racha</Text>
-                  <Text style={styles.automaticAlertsItem}>• 6 horas antes</Text>
-                  <Text style={styles.automaticAlertsItem}>• 3 horas antes</Text>
-                  <Text style={styles.automaticAlertsItem}>• 30 minutos antes</Text>
+                  <Text style={styles.automaticAlertsTitle}>
+                    Sistema escalonado fijo:
+                  </Text>
+                  <Text style={styles.automaticAlertsItem}>
+                    • 12 horas antes de perder la racha
+                  </Text>
+                  <Text style={styles.automaticAlertsItem}>
+                    • 6 horas antes
+                  </Text>
+                  <Text style={styles.automaticAlertsItem}>
+                    • 3 horas antes
+                  </Text>
+                  <Text style={styles.automaticAlertsItem}>
+                    • 30 minutos antes
+                  </Text>
                   <Text style={styles.automaticAlertsNote}>
                     Se activan automáticamente cuando tienes una racha activa
                   </Text>
                 </View>
               </View>
             </Card>
-
           </>
         )}
 
         <Text style={styles.infoText}>
-          {Platform.OS === 'web' 
+          {Platform.OS === 'web'
             ? 'Las notificaciones locales no están disponibles en la versión web. Usa la app móvil para recibir recordatorios automáticos.'
-            : 'Las notificaciones te ayudarán a mantener tu racha de ahorro activa. Recibirás recordatorios diarios y alertas cuando tu racha esté en riesgo.'
-          }
+            : 'Las notificaciones te ayudarán a mantener tu racha de ahorro activa. Recibirás recordatorios diarios y alertas cuando tu racha esté en riesgo.'}
         </Text>
       </ScrollView>
     </SafeAreaView>

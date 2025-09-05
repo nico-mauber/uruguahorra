@@ -5,7 +5,7 @@ import {
   AnalyticsEvents,
   trackGoalEvent,
   trackContributionEvent,
-} from '@/services/analytics.service';
+} from '@/lib/analytics';
 import { SquadsService } from '@/services/squads.service';
 import { SquadGamificationService } from '@/services/squad-gamification.service';
 

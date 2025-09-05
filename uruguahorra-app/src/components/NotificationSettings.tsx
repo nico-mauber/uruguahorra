@@ -68,8 +68,6 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     setIsLoading(false);
   };
 
-
-
   const handleTestNotification = async () => {
     if (!permissionsGranted) {
       Alert.alert(
@@ -107,7 +105,6 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       ]
     );
   };
-
 
   if (!isInitialized) {
     return (
@@ -163,13 +160,18 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
         {settings.enabled && permissionsGranted && (
           <>
-
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>⚠️ Alertas de Racha Automáticas</Text>
-              
+              <Text style={styles.sectionTitle}>
+                ⚠️ Alertas de Racha Automáticas
+              </Text>
+
               <View style={styles.alertsInfoContainer}>
-                <Text style={styles.alertsInfoTitle}>Sistema de alertas escalonadas:</Text>
-                <Text style={styles.alertsInfoItem}>• 12 horas antes de perder la racha</Text>
+                <Text style={styles.alertsInfoTitle}>
+                  Sistema de alertas escalonadas:
+                </Text>
+                <Text style={styles.alertsInfoItem}>
+                  • 12 horas antes de perder la racha
+                </Text>
                 <Text style={styles.alertsInfoItem}>• 6 horas antes</Text>
                 <Text style={styles.alertsInfoItem}>• 3 horas antes</Text>
                 <Text style={styles.alertsInfoItem}>• 30 minutos antes</Text>
@@ -178,8 +180,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               <Text style={styles.settingDescription}>
                 {Platform.OS === 'web'
                   ? 'Alertas no disponibles en versión web - usa la app móvil'
-                  : 'Las alertas se configuran automáticamente cuando tienes una racha activa'
-                }
+                  : 'Las alertas se configuran automáticamente cuando tienes una racha activa'}
               </Text>
             </View>
 

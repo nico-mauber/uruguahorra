@@ -20,7 +20,7 @@ import { Transaction, TransactionCategory } from '@/schemas';
 type TransactionWithCategory = Transaction & {
   category?: TransactionCategory;
 };
-import { supabase } from '@/lib/supabase';
+import { TransactionsService } from '@/services/transactions.service';
 import { ToastService } from '@/utils/toast';
 
 export default function TransactionsScreen() {
@@ -49,34 +49,28 @@ export default function TransactionsScreen() {
     balance: 0,
   });
 
-  // Single method to load transactions and calculate balance
+  // Single method to load transactions and calculate balance using TransactionsService
   const loadTransactions = useCallback(
     async (start: Date, end: Date) => {
       if (!user?.id) return;
 
       setIsLoading(true);
       try {
-        // Step 1: Fetch transactions filtered by date
-        const { data: transactionData, error } = await supabase
-          .from('transactions')
-          .select(
-            `
-          *,
-          category:transaction_categories(id, name, color, emoji)
-        `
-          )
-          .eq('user_id', user.id)
-          .gte('created_at', start.toISOString().split('T')[0])
-          .lte('created_at', end.toISOString().split('T')[0])
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
+        // Step 1: Use TransactionsService to fetch transactions
+        const { transactions: transactionData } =
+          await TransactionsService.getUserTransactions({
+            user_id: user.id,
+            start_date: start.toISOString().split('T')[0],
+            end_date: end.toISOString().split('T')[0],
+            offset: 0,
+            limit: 1000, // Load all transactions for the period
+          });
 
         // Step 2: Calculate balance from results
         let income = 0;
         let expenses = 0;
 
-        (transactionData || []).forEach((transaction) => {
+        transactionData.forEach((transaction) => {
           const amount = Number(transaction.amount) || 0;
           if (transaction.type === 'income') {
             income += amount;
@@ -86,7 +80,7 @@ export default function TransactionsScreen() {
         });
 
         // Step 3: Update state to trigger render
-        setTransactions(transactionData || []);
+        setTransactions(transactionData as TransactionWithCategory[]);
         setBalance({
           income,
           expenses,
@@ -102,26 +96,19 @@ export default function TransactionsScreen() {
     [user?.id]
   );
 
-  // Load categories once
+  // Load categories once using TransactionsService
   useEffect(() => {
-    if (!user?.id) return;
-
     const loadCategories = async () => {
       try {
-        const { data, error } = await supabase
-          .from('transaction_categories')
-          .select('*')
-          .order('name');
-
-        if (error) throw error;
-        setCategories(data || []);
+        const categoriesData = await TransactionsService.getCategories();
+        setCategories(categoriesData);
       } catch (error) {
         console.error('Error loading categories:', error);
       }
     };
 
     loadCategories();
-  }, [user?.id]);
+  }, []);
 
   // Load transactions on mount and when dates change
   useEffect(() => {
@@ -139,14 +126,7 @@ export default function TransactionsScreen() {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
+      await TransactionsService.deleteTransaction(transactionId, user.id);
       ToastService.quickSuccess('Transacción eliminada');
       await loadTransactions(startDate, endDate);
     } catch (error) {

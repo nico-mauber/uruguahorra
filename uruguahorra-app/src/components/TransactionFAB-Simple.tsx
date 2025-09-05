@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { QuickTransactionModal } from './QuickTransactionModal';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
 
@@ -25,6 +26,7 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'expense' | 'income' | null>(null);
+  const router = useRouter();
 
   const { frequentCategories } = useTransactionsStore();
 
@@ -69,6 +71,22 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
+  };
+
+  const handleNewGoal = () => {
+    setIsExpanded(false);
+    // Reset animations
+    Animated.parallel([
+      Animated.spring(expandAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+      Animated.spring(rotateAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    router.push('/create-goal');
   };
 
   const handleTransactionCreated = (transaction: any) => {
@@ -137,24 +155,15 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
             <Text style={styles.actionButtonText}>Ingreso</Text>
           </TouchableOpacity>
 
-          {/* Categorías frecuentes */}
-          {frequentCategories.slice(0, 2).map((category, index) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.actionButton,
-                styles.categoryButton,
-                { backgroundColor: category.color },
-              ]}
-              onPress={() => openModal(category.type)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-              <Text style={styles.actionButtonText} numberOfLines={1}>
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {/* Nueva meta */}
+          <TouchableOpacity
+            style={[styles.actionButton, styles.goalButton]}
+            onPress={handleNewGoal}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="flag" size={20} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Nueva meta</Text>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Botón principal FAB */}
@@ -250,8 +259,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#51CF66',
   },
 
-  categoryButton: {
-    backgroundColor: '#339AF0',
+  goalButton: {
+    backgroundColor: '#8B5CF6',
   },
 
   actionButtonText: {
@@ -259,10 +268,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
-  },
-
-  categoryEmoji: {
-    fontSize: 18,
   },
 
   fab: {

@@ -947,6 +947,7 @@ export default function DashboardScreen() {
         <TransactionFAB
           userId={user.id}
           onTransactionCreated={handleTransactionCreated}
+          showGoalOption={true}
         />
       )}
 

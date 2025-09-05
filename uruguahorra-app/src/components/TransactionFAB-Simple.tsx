@@ -17,11 +17,13 @@ const { width, height } = Dimensions.get('window');
 interface TransactionFABProps {
   userId: string;
   onTransactionCreated?: (transaction: any) => void;
+  showGoalOption?: boolean;
 }
 
 export const TransactionFAB: React.FC<TransactionFABProps> = ({
   userId,
   onTransactionCreated,
+  showGoalOption = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -155,15 +157,18 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
             <Text style={styles.actionButtonText}>Ingreso</Text>
           </TouchableOpacity>
 
-          {/* Nueva meta */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.goalButton]}
-            onPress={handleNewGoal}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="flag" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Nueva meta</Text>
-          </TouchableOpacity>
+          {/* Nueva meta - Solo si showGoalOption es true */}
+          {showGoalOption && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.goalButton]}
+              onPress={handleNewGoal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flag" size={20} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Nueva meta</Text>
+            </TouchableOpacity>
+          )}
+
         </Animated.View>
 
         {/* Botón principal FAB */}

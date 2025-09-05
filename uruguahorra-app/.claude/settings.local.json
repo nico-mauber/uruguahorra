@@ -1,17 +1,4 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cat comportamientoClaude.txt"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
@@ -53,10 +40,24 @@
       "Bash(pkill:*)",
       "Bash(npx web-push:*)",
       "Bash(git checkout:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(sudo npm uninstall:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat comportamientoClaude.txt"
+          }
+        ]
+      }
+    ]
   }
 }

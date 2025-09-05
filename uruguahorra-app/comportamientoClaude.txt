@@ -7,6 +7,7 @@ Los puntos principales para desarrollar pedidos y soluciones en este proyecto so
 7. Siempre busca optimizar y mejorar las soluciones propuestas.
 8. Mantente actualizado con las mejores prácticas y tendencias en el área relevante.
 9. No crees documentos innecesarios; enfócate en lo esencial.
+10. No debes ejecutar comandos de git sin permiso.
 
 Algo importantisimo que debes saber es que la unica fuente de verdad de la base de datos y su estructura esta dentro del archivo "complete_database_schema.sql".
 Siempre que tengas dudas sobre la estructura de la base de datos, debes remitirte a ese archivo.

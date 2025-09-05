@@ -52,7 +52,7 @@ export default function PaywallScreen() {
 
   const checkPremiumStatus = async () => {
     if (!user?.id) return;
-    
+
     try {
       const isPremium = await SubscriptionsService.isPremiumUser(user.id);
       setIsPremiumUser(isPremium);

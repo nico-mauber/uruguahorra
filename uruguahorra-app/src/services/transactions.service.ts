@@ -166,10 +166,14 @@ export class TransactionsService {
         const categoryData = transaction.category;
         return {
           ...transaction,
-          category_name: categoryData?.name || transaction.category_name || 'Sin categoría',
-          category_emoji: categoryData?.emoji || transaction.category_emoji || '💳',
-          category_full_name: categoryData?.name || transaction.category_name || 'Sin categoría',
-          category_emoji_full: categoryData?.emoji || transaction.category_emoji || '💳',
+          category_name:
+            categoryData?.name || transaction.category_name || 'Sin categoría',
+          category_emoji:
+            categoryData?.emoji || transaction.category_emoji || '💳',
+          category_full_name:
+            categoryData?.name || transaction.category_name || 'Sin categoría',
+          category_emoji_full:
+            categoryData?.emoji || transaction.category_emoji || '💳',
         };
       });
 

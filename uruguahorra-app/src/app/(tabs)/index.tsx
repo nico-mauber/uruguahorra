@@ -468,9 +468,18 @@ export default function DashboardScreen() {
     quickSaveSection: {
       marginBottom: 24,
     },
-    quickSaveButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    quickSaveMainButton: {
+      marginTop: 8,
+      minHeight: 56,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 4,
     },
     goalsSection: {
       marginBottom: 24,
@@ -783,40 +792,16 @@ export default function DashboardScreen() {
 
         {goals.length > 0 && (
           <View style={styles.quickSaveSection}>
-            <Text style={styles.sectionTitle}>Ahorro rápido</Text>
-            <View style={styles.quickSaveButtons}>
-              <Button
-                title="$50"
-                variant="outline"
-                onPress={() => handleQuickSave(50)}
-                style={{ flex: 1, marginRight: 8 }}
-                disabled={isSaving}
-                loading={isSaving}
-              />
-              <Button
-                title="$100"
-                variant="outline"
-                onPress={() => handleQuickSave(100)}
-                style={{ flex: 1, marginHorizontal: 8 }}
-                disabled={isSaving}
-                loading={isSaving}
-              />
-              <Button
-                title="$200"
-                variant="outline"
-                onPress={() => handleQuickSave(200)}
-                style={{ flex: 1, marginLeft: 8 }}
-                disabled={isSaving}
-                loading={isSaving}
-              />
-            </View>
+            <Text style={styles.sectionTitle}>
+              Ahorro rápido para tus metas
+            </Text>
 
             {!showManualInput ? (
               <Button
-                title="💵 Otro monto"
-                variant="outline"
+                title="💵 Ingresa tu monto"
+                variant="primary"
                 onPress={() => setShowManualInput(true)}
-                style={{ marginTop: 12 }}
+                style={styles.quickSaveMainButton}
                 disabled={isSaving}
               />
             ) : (

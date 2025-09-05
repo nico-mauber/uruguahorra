@@ -149,6 +149,22 @@ CREATE TABLE public.users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- TABLA GOAL_TYPES (NUEVA - PARA TIPOS PERSONALIZADOS)
+CREATE TABLE public.goal_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    emoji TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    category TEXT NOT NULL,
+    is_system BOOLEAN DEFAULT false,
+    suggested_duration_months INTEGER DEFAULT 6,
+    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- TABLA GOALS (CON TODAS LAS COLUMNAS NECESARIAS)
 CREATE TABLE public.goals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -161,6 +177,7 @@ CREATE TABLE public.goals (
     category TEXT DEFAULT 'general',
     color TEXT DEFAULT '#3B82F6',
     icon TEXT DEFAULT 'shield',
+    goal_type_id UUID REFERENCES public.goal_types(id) ON DELETE SET NULL,
     deadline DATE,
     target_date DATE,
     is_completed BOOLEAN DEFAULT false,
@@ -650,6 +667,7 @@ CREATE INDEX idx_paywall_events_type ON public.paywall_events(event_type);
 
 -- Habilitar RLS en todas las tablas
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.goal_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.micro_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.challenge_categories ENABLE ROW LEVEL SECURITY;
@@ -708,6 +726,27 @@ CREATE POLICY "goals_delete_own" ON public.goals
 
 -- Política para service role (funciones del servidor)
 CREATE POLICY "service_role_all_goals" ON public.goals
+    FOR ALL
+    USING (auth.jwt() ->> 'role' = 'service_role');
+
+-- Políticas para GOAL_TYPES
+CREATE POLICY "goal_types_select_all" ON public.goal_types
+    FOR SELECT 
+    USING (true); -- Todos pueden ver los tipos de metas
+
+CREATE POLICY "goal_types_insert_authenticated" ON public.goal_types
+    FOR INSERT 
+    WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "goal_types_update_creator" ON public.goal_types
+    FOR UPDATE 
+    USING (auth.uid() = created_by OR is_system = true);
+
+CREATE POLICY "goal_types_delete_creator" ON public.goal_types
+    FOR DELETE 
+    USING (auth.uid() = created_by AND is_system = false);
+
+CREATE POLICY "service_role_all_goal_types" ON public.goal_types
     FOR ALL
     USING (auth.jwt() ->> 'role' = 'service_role');
 
@@ -2762,6 +2801,24 @@ BEGIN
     RAISE NOTICE '📊 Vistas de analytics disponibles';
     RAISE NOTICE '🛡️ RLS habilitado para seguridad';
 END $$;
+
+-- ============================================
+-- DATOS INICIALES PARA GOAL_TYPES
+-- ============================================
+
+-- Insertar tipos de metas del sistema
+INSERT INTO public.goal_types (name, description, emoji, icon, color, category, is_system, suggested_duration_months) VALUES
+('Colchón de emergencia', 'Ahorro para imprevistos y emergencias financieras', '🛡️', 'shield', '#3B82F6', 'emergency', true, 6),
+('Viaje', 'Ahorro para vacaciones y experiencias de viaje', '✈️', 'airplane', '#10B981', 'travel', true, 12),
+('Pagar deudas', 'Eliminar deudas y alcanzar libertad financiera', '💳', 'card', '#EF4444', 'debt', true, 24),
+('Compra importante', 'Ahorro para una compra específica de valor', '🛍️', 'cart', '#8B5CF6', 'purchase', true, 8),
+('Casa propia', 'Ahorro para entrada de casa o propiedad', '🏠', 'home', '#F59E0B', 'housing', true, 36),
+('Educación', 'Inversión en estudios y formación académica', '🎓', 'school', '#06B6D4', 'education', true, 24),
+('Salud y bienestar', 'Ahorro para gastos médicos y cuidado personal', '💪', 'fitness', '#EC4899', 'health', true, 12),
+('Jubilación', 'Fondo de retiro y pensión complementaria', '🌅', 'star', '#6B7280', 'retirement', true, 120),
+('Auto o vehículo', 'Ahorro para compra de automóvil', '🚗', 'car', '#7C3AED', 'vehicle', true, 18),
+('Negocio propio', 'Capital inicial para emprendimiento', '💼', 'briefcase', '#059669', 'business', true, 24)
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
 -- MENSAJE FINAL

@@ -350,7 +350,9 @@ export default function GoalsScreen() {
         </Card>
         <Card style={styles.statCard} padding="none">
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>💰 ${getTotalSaved().toFixed(0)}</Text>
+            <Text style={styles.statValue}>
+              💰 ${getTotalSaved().toFixed(0)}
+            </Text>
             <Text style={styles.statLabel}>Total Ahorrado</Text>
           </View>
         </Card>
@@ -385,7 +387,8 @@ export default function GoalsScreen() {
             />
             <Text style={styles.emptyTitle}>🌟 ¡Empieza tu viaje!</Text>
             <Text style={styles.emptyText}>
-              🚀 Crea tu primera meta de ahorro y comienza a construir tu futuro financiero con objetivos claros y motivadores
+              🚀 Crea tu primera meta de ahorro y comienza a construir tu futuro
+              financiero con objetivos claros y motivadores
             </Text>
             <Button
               title="🎯 Crear mi primera meta"

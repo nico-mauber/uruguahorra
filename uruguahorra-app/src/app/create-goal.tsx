@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
 import { GoalsService } from '@/services/goals.service';
+import { GoalTypesService, type GoalType } from '@/services/goal-types.service';
 import { logger, LogModule } from '@/utils/logger';
 
 export default function CreateGoalScreen() {
@@ -28,11 +29,19 @@ export default function CreateGoalScreen() {
 
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingGoalTypes, setLoadingGoalTypes] = useState(true);
+  const [availableGoalTypes, setAvailableGoalTypes] = useState<GoalType[]>([]);
 
-  // Step 1: Tipo de meta
+  // Step 1: Tipo de meta (híbrido: legacy + dinámico)
+  const [selectedGoalType, setSelectedGoalType] = useState<GoalType | null>(
+    null
+  );
   const [goalType, setGoalType] = useState<
-    'emergency' | 'travel' | 'debt' | 'purchase'
+    'emergency' | 'travel' | 'debt' | 'purchase' | 'custom'
   >('emergency');
+  const [customCategory, setCustomCategory] = useState('');
+  const [customIcon, setCustomIcon] = useState('flag');
+  const [customColor, setCustomColor] = useState('#339AF0');
 
   // Step 2: Detalles de meta
   const [goalName, setGoalName] = useState('');
@@ -44,12 +53,85 @@ export default function CreateGoalScreen() {
   const [debtInterestRate, setDebtInterestRate] = useState('');
   const [purchaseDescription, setPurchaseDescription] = useState('');
 
-  const goalOptions = [
+  // Tipos legacy para compatibilidad hacia atrás
+  const legacyGoalOptions = [
     { id: 'emergency', label: '🛡️ Colchón de emergencia', value: 'emergency' },
     { id: 'travel', label: '✈️ Viaje', value: 'travel' },
     { id: 'debt', label: '💳 Pagar deudas', value: 'debt' },
     { id: 'purchase', label: '🛍️ Compra importante', value: 'purchase' },
+    { id: 'custom', label: '🎨 Meta personalizada', value: 'custom' },
   ];
+
+  // Opciones dinámicas basadas en tipos de BD + opción custom (personalizada primero)
+  const goalOptions =
+    availableGoalTypes.length > 0
+      ? [
+          {
+            id: 'custom',
+            label: '🎨 Meta personalizada',
+            value: 'custom',
+            goalType: null,
+          },
+          ...availableGoalTypes.map((type) => ({
+            id: type.id,
+            label: `${type.emoji} ${type.name}`,
+            value: type.id,
+            goalType: type,
+          })),
+        ]
+      : [
+          { id: 'custom', label: '🎨 Meta personalizada', value: 'custom' },
+          ...legacyGoalOptions.filter(opt => opt.id !== 'custom')
+        ]; // Fallback al sistema legacy con custom primero
+
+  const iconOptions = [
+    { name: 'flag', icon: '🎯' },
+    { name: 'home', icon: '🏠' },
+    { name: 'car', icon: '🚗' },
+    { name: 'school', icon: '🎓' },
+    { name: 'fitness', icon: '💪' },
+    { name: 'heart', icon: '❤️' },
+    { name: 'star', icon: '⭐' },
+    { name: 'gift', icon: '🎁' },
+  ];
+
+  const colorOptions = [
+    '#339AF0',
+    '#51CF66',
+    '#FF6B6B',
+    '#8B5CF6',
+    '#FFB84D',
+    '#FF8CC8',
+    '#20C997',
+    '#6C757D',
+  ];
+
+  // Cargar tipos de metas dinámicamente
+  useEffect(() => {
+    const loadGoalTypes = async () => {
+      try {
+        setLoadingGoalTypes(true);
+        const types = await GoalTypesService.getAllGoalTypes(user?.id);
+        setAvailableGoalTypes(types);
+
+        // Seleccionar el primer tipo por defecto si hay tipos disponibles
+        if (types.length > 0 && !selectedGoalType) {
+          setSelectedGoalType(types[0]);
+        }
+      } catch (error) {
+        logger.error(LogModule.GOALS, 'Error cargando tipos de metas', error);
+        // En caso de error, mantener el sistema legacy
+      } finally {
+        setLoadingGoalTypes(false);
+      }
+    };
+
+    if (user?.id) {
+      loadGoalTypes();
+    } else {
+      setLoadingGoalTypes(false);
+    }
+  }, [user?.id]);
 
   const handleCreateGoal = async () => {
     logger.start(
@@ -107,11 +189,37 @@ export default function CreateGoalScreen() {
       // Personalizar el nombre de la meta según el tipo y los detalles adicionales
       let finalGoalName = goalName.trim();
 
-      // Agregar información adicional al nombre de la meta
+      // Agregar información adicional al nombre de la meta (solo para tipos legacy)
       if (goalType === 'travel' && travelDestination) {
         finalGoalName = `${finalGoalName} - ${travelDestination}`;
       } else if (goalType === 'purchase' && purchaseDescription) {
         finalGoalName = `${finalGoalName} - ${purchaseDescription}`;
+      }
+
+      // Determinar propiedades según si usamos tipo dinámico o legacy
+      let goalColor,
+        goalIcon,
+        goalCategory,
+        goalTypeId = null;
+
+      if (selectedGoalType && goalType !== 'custom') {
+        // Usar tipo dinámico de la base de datos
+        goalColor = selectedGoalType.color;
+        goalIcon = selectedGoalType.icon;
+        goalCategory = selectedGoalType.category;
+        goalTypeId = selectedGoalType.id;
+      } else if (goalType === 'custom') {
+        // Usar personalización manual
+        goalColor = customColor;
+        goalIcon = customIcon;
+        goalCategory = customCategory || 'custom';
+      } else {
+        // Fallback al sistema legacy
+        const legacyMapping = GoalTypesService.getLegacyGoalTypeMapping();
+        const legacyType = legacyMapping[goalType] || legacyMapping.emergency;
+        goalColor = legacyType.color!;
+        goalIcon = legacyType.icon!;
+        goalCategory = legacyType.category!;
       }
 
       const goalData = {
@@ -120,24 +228,10 @@ export default function CreateGoalScreen() {
         target_date: targetDate.toISOString().split('T')[0],
         saved_amount: 0,
         is_active: true,
-        category: goalType,
-        // Establecer color e ícono según el tipo
-        color:
-          goalType === 'travel'
-            ? '#10B981'
-            : goalType === 'debt'
-              ? '#EF4444'
-              : goalType === 'purchase'
-                ? '#8B5CF6'
-                : '#3B82F6',
-        icon:
-          goalType === 'travel'
-            ? 'airplane'
-            : goalType === 'debt'
-              ? 'card'
-              : goalType === 'purchase'
-                ? 'cart'
-                : 'shield',
+        category: goalCategory,
+        color: goalColor,
+        icon: goalIcon,
+        goal_type_id: goalTypeId,
       };
 
       logger.debug(LogModule.GOALS, 'Datos de la meta a crear', {
@@ -194,35 +288,30 @@ export default function CreateGoalScreen() {
   };
 
   const handleNext = () => {
-    if (step === 1 && goalType) {
-      // Pre-llenar nombre y configuraciones según el tipo de meta
-      const defaultConfigs = {
-        emergency: {
-          name: 'Mi Fondo de Emergencia',
-          months: '6',
-          amount: '',
-        },
-        travel: {
-          name: 'Mi Viaje Soñado',
-          months: '12',
-          amount: '',
-        },
-        debt: {
-          name: 'Libertad Financiera',
-          months: '24',
-          amount: '',
-        },
-        purchase: {
-          name: 'Mi Gran Compra',
-          months: '8',
-          amount: '',
-        },
-      };
+    if (step === 1) {
+      // Pre-llenar nombre y configuraciones según el tipo de meta seleccionado
+      if (selectedGoalType && goalType !== 'custom') {
+        // Usar datos del tipo dinámico
+        setGoalName(`Mi ${selectedGoalType.name}`);
+        setTargetMonths(selectedGoalType.suggested_duration_months.toString());
+      } else if (goalType === 'custom') {
+        // Meta personalizada
+        setGoalName('Mi Meta Personal');
+        setTargetMonths('6');
+      } else {
+        // Fallback al sistema legacy
+        const defaultConfigs = {
+          emergency: { name: 'Mi Fondo de Emergencia', months: '6' },
+          travel: { name: 'Mi Viaje Soñado', months: '12' },
+          debt: { name: 'Libertad Financiera', months: '24' },
+          purchase: { name: 'Mi Gran Compra', months: '8' },
+        };
+        const config = defaultConfigs[goalType] || defaultConfigs.emergency;
+        setGoalName(config.name);
+        setTargetMonths(config.months);
+      }
 
-      const config = defaultConfigs[goalType];
-      setGoalName(config.name);
-      setTargetMonths(config.months);
-      setGoalAmount(config.amount);
+      setGoalAmount('');
       setStep(2);
     } else if (step === 2) {
       handleCreateGoal();
@@ -383,6 +472,54 @@ export default function CreateGoalScreen() {
       fontSize: 14,
       color: colors.text.secondary,
     },
+    // Estilos para personalización de metas
+    customSectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text.primary,
+      marginTop: 16,
+      marginBottom: 12,
+    },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      marginBottom: 20,
+    },
+    iconOption: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '20',
+    },
+    iconEmoji: {
+      fontSize: 24,
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      marginBottom: 20,
+    },
+    colorOption: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 2,
+      borderColor: colors.border.primary,
+    },
+    colorSelected: {
+      borderWidth: 3,
+      borderColor: colors.text.primary,
+    },
   });
 
   // Verificar autenticación
@@ -438,34 +575,63 @@ export default function CreateGoalScreen() {
 
           {step === 1 && (
             <>
-              {goalOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.goalOptionCard,
-                    goalType === option.value && styles.selectedGoal,
-                  ]}
-                  onPress={() => {
-                    if (!isLoading) {
-                      logger.debug(LogModule.UI, 'Tipo de meta seleccionado', {
-                        type: option.value,
-                      });
-                      setGoalType(
-                        option.value as
-                          | 'emergency'
-                          | 'travel'
-                          | 'debt'
-                          | 'purchase'
-                      );
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  <View style={styles.goalOptionContent}>
-                    <Text style={styles.goalOptionText}>{option.label}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {loadingGoalTypes ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.loadingText}>
+                    Cargando tipos de metas...
+                  </Text>
+                </View>
+              ) : (
+                goalOptions.map((option) => {
+                  const isSelected =
+                    selectedGoalType?.id === option.id ||
+                    (option.value === 'custom' && goalType === 'custom');
+
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.goalOptionCard,
+                        isSelected && styles.selectedGoal,
+                      ]}
+                      onPress={() => {
+                        if (!isLoading && !loadingGoalTypes) {
+                          logger.debug(
+                            LogModule.UI,
+                            'Tipo de meta seleccionado',
+                            {
+                              type: option.value,
+                              goalType: option.goalType,
+                            }
+                          );
+
+                          if (option.value === 'custom') {
+                            // Selección de meta personalizada
+                            setGoalType('custom');
+                            setSelectedGoalType(null);
+                          } else if (option.goalType) {
+                            // Selección de tipo dinámico
+                            setSelectedGoalType(option.goalType);
+                            setGoalType(option.goalType.category as 'emergency' | 'travel' | 'debt' | 'purchase' | 'custom');
+                          } else {
+                            // Fallback a tipo legacy
+                            setGoalType(option.value as 'emergency' | 'travel' | 'debt' | 'purchase' | 'custom');
+                            setSelectedGoalType(null);
+                          }
+                        }
+                      }}
+                      disabled={isLoading || loadingGoalTypes}
+                    >
+                      <View style={styles.goalOptionContent}>
+                        <Text style={styles.goalOptionText}>
+                          {option.label}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </>
           )}
 
@@ -474,23 +640,70 @@ export default function CreateGoalScreen() {
               {/* Consejo específico por tipo de meta */}
               <Card style={styles.tipCard} variant="outlined">
                 <Text style={styles.tipTitle}>
-                  {goalType === 'emergency' &&
-                    '💡 Consejo para Fondo de Emergencia'}
-                  {goalType === 'travel' && '💡 Consejo para tu Viaje'}
-                  {goalType === 'debt' && '💡 Consejo para Pagar Deudas'}
-                  {goalType === 'purchase' && '💡 Consejo para tu Compra'}
+                  💡 Consejo para {selectedGoalType?.name || 'tu Meta'}
                 </Text>
                 <Text style={styles.tipText}>
-                  {goalType === 'emergency' &&
-                    'Idealmente 3-6 meses de gastos mensuales. Esto te protege ante imprevistos.'}
-                  {goalType === 'travel' &&
-                    'Investiga costos de vuelos, alojamiento y actividades. ¡Planificar te ayuda a ahorrar más!'}
-                  {goalType === 'debt' &&
-                    'Pagar deudas rápido te ahorra intereses. Considera empezar por la de mayor tasa.'}
-                  {goalType === 'purchase' &&
-                    'Comprar al contado suele tener descuentos. ¡Tu paciencia será recompensada!'}
+                  {selectedGoalType?.description ||
+                    (goalType === 'emergency' &&
+                      'Idealmente 3-6 meses de gastos mensuales. Esto te protege ante imprevistos.') ||
+                    (goalType === 'travel' &&
+                      'Investiga costos de vuelos, alojamiento y actividades. ¡Planificar te ayuda a ahorrar más!') ||
+                    (goalType === 'debt' &&
+                      'Pagar deudas rápido te ahorra intereses. Considera empezar por la de mayor tasa.') ||
+                    (goalType === 'purchase' &&
+                      'Comprar al contado suele tener descuentos. ¡Tu paciencia será recompensada!') ||
+                    'Define claramente tu objetivo y establece un plan realista. ¡Cada peso ahorrado te acerca más!'}
                 </Text>
               </Card>
+
+              {/* Campos de personalización para meta custom */}
+              {goalType === 'custom' && (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Categoría de tu meta (ej: Educación, Salud, Hogar)"
+                    placeholderTextColor={colors.text.secondary}
+                    value={customCategory}
+                    onChangeText={setCustomCategory}
+                    editable={!isLoading}
+                  />
+
+                  <Text style={styles.customSectionTitle}>
+                    🎨 Elige un ícono:
+                  </Text>
+                  <View style={styles.iconGrid}>
+                    {iconOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.name}
+                        style={[
+                          styles.iconOption,
+                          customIcon === option.name && styles.iconSelected,
+                        ]}
+                        onPress={() => setCustomIcon(option.name)}
+                      >
+                        <Text style={styles.iconEmoji}>{option.icon}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.customSectionTitle}>
+                    🌈 Elige un color:
+                  </Text>
+                  <View style={styles.colorGrid}>
+                    {colorOptions.map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        style={[
+                          styles.colorOption,
+                          { backgroundColor: color },
+                          customColor === color && styles.colorSelected,
+                        ]}
+                        onPress={() => setCustomColor(color)}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
 
               <TextInput
                 style={styles.input}
@@ -501,7 +714,9 @@ export default function CreateGoalScreen() {
                       ? 'Ej: Viaje a Europa 2025'
                       : goalType === 'debt'
                         ? 'Ej: Eliminar deuda tarjeta de crédito'
-                        : 'Ej: Auto nuevo'
+                        : goalType === 'purchase'
+                          ? 'Ej: Auto nuevo'
+                          : 'Ej: Mi objetivo personal'
                 }
                 placeholderTextColor={colors.text.secondary}
                 value={goalName}

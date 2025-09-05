@@ -95,8 +95,8 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
     onTransactionCreated?.(transaction);
   };
 
-  // Posición optimizada para el pulgar (zona thumb-friendly)
-  const bottomOffset = 120; // Altura desde el bottom para zona cómoda
+  // Posición discreta como sidebar pequeño
+  const bottomOffset = 150; // Altura desde el bottom, más arriba para no estorbar
 
   return (
     <>
@@ -109,8 +109,8 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
         />
       )}
 
-      {/* Container principal */}
-      <View style={[styles.container, { bottom: bottomOffset }]}>
+      {/* Container principal - estilo sidebar discreto */}
+      <View style={[styles.container, { bottom: bottomOffset, right: 16 }]}>
         {/* Botones de acción rápida */}
         <Animated.View
           style={[
@@ -189,7 +189,7 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
                 },
               ]}
             >
-              <Ionicons name="add" size={28} color="#FFFFFF" />
+              <Ionicons name="add" size={24} color="#FFFFFF" />
             </Animated.View>
           </View>
 
@@ -271,35 +271,38 @@ const styles = StyleSheet.create({
   },
 
   fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#339AF0',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 6,
   },
 
   fabExpanded: {
-    shadowOpacity: 0.4,
-    elevation: 12,
+    shadowOpacity: 0.25,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
   },
 
   fabGradient: {
     width: '100%',
     height: '100%',
-    borderRadius: 30,
-    backgroundColor: '#339AF0', // Fallback color
+    borderRadius: 24,
+    backgroundColor: '#339AF0',
     justifyContent: 'center',
     alignItems: 'center',
-    // Simular gradiente con múltiples capas
     position: 'relative',
+    borderWidth: 2,
+    borderColor: '#74C0FC',
+    opacity: 0.9,
   },
 
   fabIcon: {

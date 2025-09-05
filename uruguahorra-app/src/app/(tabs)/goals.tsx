@@ -525,7 +525,7 @@ export default function GoalsScreen() {
           }
         }}
       >
-        <Text style={{ fontSize: 32, color: '#FFFFFF' }}>➕</Text>
+        <Ionicons name="add" size={32} color="#FFFFFF" />
       </TouchableOpacity>
 
       {selectedGoal && (

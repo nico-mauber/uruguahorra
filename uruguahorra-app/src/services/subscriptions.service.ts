@@ -9,6 +9,10 @@ type SubscriptionUpdate =
   Database['public']['Tables']['subscriptions']['Update'];
 
 export class SubscriptionsService {
+  // Cache simple para evitar requests repetidos
+  private static premiumStatusCache = new Map<string, { value: boolean; timestamp: number }>();
+  private static readonly CACHE_DURATION = 30000; // 30 seconds
+
   /**
    * Obtener suscripción activa del usuario
    */
@@ -239,10 +243,19 @@ export class SubscriptionsService {
   }
 
   /**
-   * Verificar si el usuario es premium
+   * Verificar si el usuario es premium (con cache)
    */
   static async isPremiumUser(userId: string): Promise<boolean> {
     try {
+      // Check cache first
+      const cached = this.premiumStatusCache.get(userId);
+      const now = Date.now();
+      
+      if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+        logger.debug(LogModule.DB, 'Estado premium desde cache', { userId, isPremium: cached.value });
+        return cached.value;
+      }
+
       logger.debug(LogModule.DB, 'Verificando estado premium', { userId });
 
       const { data, error } = await supabase
@@ -268,15 +281,37 @@ export class SubscriptionsService {
           logger.warn(LogModule.DB, 'Suscripción expirada', {
             periodEnd: data.current_period_end,
           });
+          
+          // Cache the false result
+          this.premiumStatusCache.set(userId, { value: false, timestamp: Date.now() });
           return false;
         }
       }
 
+      // Cache the result
+      this.premiumStatusCache.set(userId, { value: isPremium, timestamp: Date.now() });
+      
       logger.debug(LogModule.DB, 'Estado premium verificado', { isPremium });
       return isPremium;
     } catch (error) {
       logger.error(LogModule.DB, 'Error verificando estado premium', error);
+      
+      // Cache false result on error to prevent repeated failed requests
+      this.premiumStatusCache.set(userId, { value: false, timestamp: Date.now() });
       return false;
+    }
+  }
+
+  /**
+   * Limpiar cache de estado premium (útil después de cambios de suscripción)
+   */
+  static clearPremiumStatusCache(userId?: string): void {
+    if (userId) {
+      this.premiumStatusCache.delete(userId);
+      logger.debug(LogModule.DB, 'Cache premium limpiado para usuario', { userId });
+    } else {
+      this.premiumStatusCache.clear();
+      logger.debug(LogModule.DB, 'Cache premium limpiado completamente');
     }
   }
 

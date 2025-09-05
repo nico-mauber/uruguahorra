@@ -39,7 +39,7 @@ export default function PaywallScreen() {
       user_id: user?.id,
       source: 'paywall_screen',
     });
-  }, [user?.id, analytics]);
+  }, [user?.id]);
 
   const loadPlans = async () => {
     try {
@@ -51,13 +51,14 @@ export default function PaywallScreen() {
   };
 
   const checkPremiumStatus = async () => {
-    if (user?.id) {
-      try {
-        const isPremium = await SubscriptionsService.isPremiumUser(user.id);
-        setIsPremiumUser(isPremium);
-      } catch (error) {
-        console.error('Error verificando estado premium:', error);
-      }
+    if (!user?.id) return;
+    
+    try {
+      const isPremium = await SubscriptionsService.isPremiumUser(user.id);
+      setIsPremiumUser(isPremium);
+    } catch (error) {
+      console.error('Error verificando estado premium:', error);
+      setIsPremiumUser(false); // Fallback to false on error
     }
   };
 

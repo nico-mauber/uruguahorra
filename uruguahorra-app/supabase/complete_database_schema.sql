@@ -3212,13 +3212,15 @@ BEGIN
     RETURN QUERY
     WITH period_data AS (
         SELECT 
-            COALESCE(t.category_name, 'Sin categoría') as cat_name,
+            COALESCE(tc.name, 'Sin categoría') as cat_name,
             t.amount as transaction_amount,
             t.transaction_date
         FROM public.transactions t
+        LEFT JOIN public.transaction_categories tc ON t.category_id = tc.id
         WHERE t.user_id = user_uuid 
             AND t.type = 'expense'
             AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
+            AND t.deleted_at IS NULL
     ),
     category_stats AS (
         SELECT 
@@ -3268,6 +3270,7 @@ BEGIN
         FROM public.transactions t
         WHERE t.user_id = user_uuid 
             AND t.transaction_date >= CURRENT_DATE - (months_back || ' months')::INTERVAL
+            AND t.deleted_at IS NULL
         GROUP BY month_key, month_display
     ),
     monthly_categories AS (
@@ -3275,24 +3278,28 @@ BEGIN
             TO_CHAR(t.transaction_date, 'YYYY-MM') as month_key,
             JSONB_AGG(
                 JSONB_BUILD_OBJECT(
-                    'category', COALESCE(t.category_name, 'Sin categoría'),
+                    'category', COALESCE(tc.name, 'Sin categoría'),
                     'amount', cat_totals.total,
                     'percentage', ROUND((cat_totals.total / md.expenses * 100)::NUMERIC, 0)
                 )
                 ORDER BY cat_totals.total DESC
             ) as top_cats
         FROM public.transactions t
+        LEFT JOIN public.transaction_categories tc ON t.category_id = tc.id
         JOIN monthly_data md ON TO_CHAR(t.transaction_date, 'YYYY-MM') = md.month_key
         JOIN LATERAL (
             SELECT SUM(t2.amount) as total
             FROM public.transactions t2
+            LEFT JOIN public.transaction_categories tc2 ON t2.category_id = tc2.id
             WHERE t2.user_id = user_uuid
                 AND t2.type = 'expense'
                 AND TO_CHAR(t2.transaction_date, 'YYYY-MM') = TO_CHAR(t.transaction_date, 'YYYY-MM')
-                AND COALESCE(t2.category_name, 'Sin categoría') = COALESCE(t.category_name, 'Sin categoría')
+                AND COALESCE(tc2.name, 'Sin categoría') = COALESCE(tc.name, 'Sin categoría')
+                AND t2.deleted_at IS NULL
         ) cat_totals ON true
         WHERE t.user_id = user_uuid 
             AND t.type = 'expense'
+            AND t.deleted_at IS NULL
             AND cat_totals.total > 0
         GROUP BY TO_CHAR(t.transaction_date, 'YYYY-MM'), md.expenses
     )
@@ -3337,14 +3344,17 @@ BEGIN
         FROM public.transactions t
         WHERE t.user_id = user_uuid 
             AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
+            AND t.deleted_at IS NULL
     ),
     top_cat AS (
-        SELECT COALESCE(category_name, 'Sin categoría') as cat_name
+        SELECT COALESCE(tc.name, 'Sin categoría') as cat_name
         FROM public.transactions t
+        LEFT JOIN public.transaction_categories tc ON t.category_id = tc.id
         WHERE t.user_id = user_uuid 
             AND t.type = 'expense'
             AND t.transaction_date >= CURRENT_DATE - (days_back || ' days')::INTERVAL
-        GROUP BY COALESCE(category_name, 'Sin categoría')
+            AND t.deleted_at IS NULL
+        GROUP BY COALESCE(tc.name, 'Sin categoría')
         ORDER BY SUM(amount) DESC
         LIMIT 1
     )

@@ -1,0 +1,14 @@
+Si lees este archivo es porque te pedi que desarrollaras algo.
+Los puntos principales para desarrollar pedidos y soluciones en este proyecto soluciones son:
+1. Sé claro y específico en tus solicitudes.
+4. Mantente profesional y analitico en tus soluciones.
+5. No des cosas por sentado; si algo no está claro, pide aclaraciones.
+6. Asegurate que lo que desarrolles sean soluciones de raiz y no parches superficiales.
+7. Siempre busca optimizar y mejorar las soluciones propuestas.
+8. Mantente actualizado con las mejores prácticas y tendencias en el área relevante.
+9. No crees documentos innecesarios; enfócate en lo esencial.
+
+Algo importantisimo que debes saber es que la unica fuente de verdad de la base de datos y su estructura esta dentro del archivo "complete_database_schema.sql".
+Siempre que tengas dudas sobre la estructura de la base de datos, debes remitirte a ese archivo.
+Nunca debes asumir nada sobre la base de datos que no esté en ese archivo. Todasolucion que pienses debe estar basada en la estructura y datos que se encuentran en ese archivo.
+Si es necesario modificar la estructura se cauto y asegúrate de que los cambios sean necesarios y beneficiosos.

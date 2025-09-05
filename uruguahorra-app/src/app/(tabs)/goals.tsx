@@ -130,12 +130,13 @@ export default function GoalsScreen() {
     headerTitle: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: colors.text.primary,
+      color: colors.primary,
       marginBottom: 8,
     },
     headerSubtitle: {
       fontSize: 16,
       color: colors.text.secondary,
+      opacity: 0.8,
     },
     statsContainer: {
       flexDirection: 'row',
@@ -145,6 +146,10 @@ export default function GoalsScreen() {
     },
     statCard: {
       flex: 1,
+      backgroundColor: colors.savings.background,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.savings.light,
     },
     statCardContent: {
       alignItems: 'center',
@@ -153,12 +158,13 @@ export default function GoalsScreen() {
     statValue: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: colors.text.primary,
+      color: colors.savings.primary,
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
       color: colors.text.secondary,
+      fontWeight: '600',
     },
     scrollContent: {
       padding: 20,
@@ -167,9 +173,17 @@ export default function GoalsScreen() {
     goalCard: {
       marginBottom: 16,
       overflow: 'hidden',
+      borderRadius: 20,
+      backgroundColor: colors.card,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 8,
     },
     goalCardContent: {
-      padding: 16,
+      padding: 20,
+      backgroundColor: 'rgba(51, 154, 240, 0.02)',
     },
     goalHeader: {
       flexDirection: 'row',
@@ -182,23 +196,28 @@ export default function GoalsScreen() {
       marginRight: 12,
     },
     goalName: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: 20,
+      fontWeight: 'bold',
       color: colors.text.primary,
       marginBottom: 4,
+      letterSpacing: 0.5,
     },
     goalCategory: {
-      fontSize: 12,
-      color: colors.text.secondary,
+      fontSize: 13,
+      color: colors.primary,
       textTransform: 'capitalize',
+      fontWeight: '600',
+      opacity: 0.8,
     },
     goalIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.primary + '20',
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primary + '15',
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.primary + '30',
     },
     amountsContainer: {
       flexDirection: 'row',
@@ -212,10 +231,13 @@ export default function GoalsScreen() {
       fontSize: 12,
       color: colors.text.secondary,
       marginBottom: 2,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
     amountValue: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 18,
+      fontWeight: 'bold',
       color: colors.text.primary,
     },
     progressSection: {
@@ -227,19 +249,23 @@ export default function GoalsScreen() {
       alignItems: 'center',
     },
     daysLeft: {
-      fontSize: 12,
+      fontSize: 13,
       color: colors.text.secondary,
+      fontWeight: '500',
     },
     completedBadge: {
       backgroundColor: colors.success + '20',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.success + '40',
     },
     completedText: {
-      fontSize: 12,
+      fontSize: 13,
       color: colors.success,
-      fontWeight: '600',
+      fontWeight: 'bold',
+      letterSpacing: 0.3,
     },
     emptyContainer: {
       flex: 1,
@@ -248,20 +274,23 @@ export default function GoalsScreen() {
       padding: 40,
     },
     emptyIcon: {
-      marginBottom: 16,
+      marginBottom: 20,
+      opacity: 0.6,
     },
     emptyTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: colors.text.primary,
-      marginBottom: 8,
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginBottom: 12,
       textAlign: 'center',
     },
     emptyText: {
       fontSize: 16,
       color: colors.text.secondary,
       textAlign: 'center',
-      marginBottom: 24,
+      marginBottom: 32,
+      lineHeight: 24,
+      opacity: 0.8,
     },
     loadingContainer: {
       flex: 1,
@@ -272,17 +301,19 @@ export default function GoalsScreen() {
       position: 'absolute',
       bottom: 24,
       right: 20,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
+      elevation: 12,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      borderWidth: 3,
+      borderColor: colors.primaryLight,
     },
   });
 
@@ -304,28 +335,28 @@ export default function GoalsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Metas</Text>
+        <Text style={styles.headerTitle}>🎯 Mis Metas</Text>
         <Text style={styles.headerSubtitle}>
-          Administra y sigue el progreso de tus objetivos de ahorro
+          ✨ Administra y sigue el progreso de tus objetivos de ahorro
         </Text>
       </View>
 
       <View style={styles.statsContainer}>
         <Card style={styles.statCard} padding="none">
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>{activeGoals.length}</Text>
+            <Text style={styles.statValue}>🎯 {activeGoals.length}</Text>
             <Text style={styles.statLabel}>Metas Activas</Text>
           </View>
         </Card>
         <Card style={styles.statCard} padding="none">
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>${getTotalSaved().toFixed(0)}</Text>
+            <Text style={styles.statValue}>💰 ${getTotalSaved().toFixed(0)}</Text>
             <Text style={styles.statLabel}>Total Ahorrado</Text>
           </View>
         </Card>
         <Card style={styles.statCard} padding="none">
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>{completedGoals}</Text>
+            <Text style={styles.statValue}>🏆 {completedGoals}</Text>
             <Text style={styles.statLabel}>Completadas</Text>
           </View>
         </Card>
@@ -348,17 +379,16 @@ export default function GoalsScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons
               name="flag-outline"
-              size={64}
-              color={colors.text.secondary}
+              size={80}
+              color={colors.primary}
               style={styles.emptyIcon}
             />
-            <Text style={styles.emptyTitle}>No tienes metas activas</Text>
+            <Text style={styles.emptyTitle}>🌟 ¡Empieza tu viaje!</Text>
             <Text style={styles.emptyText}>
-              Crea tu primera meta de ahorro y comienza a construir tu futuro
-              financiero
+              🚀 Crea tu primera meta de ahorro y comienza a construir tu futuro financiero con objetivos claros y motivadores
             </Text>
             <Button
-              title="Crear mi primera meta"
+              title="🎯 Crear mi primera meta"
               onPress={() => router.push('/create-goal')}
               variant="primary"
             />
@@ -454,14 +484,14 @@ export default function GoalsScreen() {
                         {isCompleted ? (
                           <View style={styles.completedBadge}>
                             <Text style={styles.completedText}>
-                              ✓ Completada
+                              🎉 ¡Completada!
                             </Text>
                           </View>
                         ) : (
                           <Text style={styles.daysLeft}>
                             {daysLeft > 0
-                              ? `${daysLeft} días restantes`
-                              : 'Meta vencida'}
+                              ? `⏰ ${daysLeft} días restantes`
+                              : '⚠️ Meta vencida'}
                           </Text>
                         )}
                         <Ionicons
@@ -495,7 +525,7 @@ export default function GoalsScreen() {
           }
         }}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Text style={{ fontSize: 32, color: '#FFFFFF' }}>➕</Text>
       </TouchableOpacity>
 
       {selectedGoal && (

@@ -24,8 +24,8 @@ export class AITranscriptionService {
     try {
       if (Platform.OS === 'web') {
         // On web, we need to handle the audio file differently
-        logger.info(LogModule.TRANSACTIONS, 'Preparing web audio file', { 
-          originalUri: audioUri.substring(0, 100) + '...' 
+        logger.info(LogModule.TRANSACTIONS, 'Preparing web audio file', {
+          originalUri: audioUri.substring(0, 100) + '...',
         });
 
         // For web, try to read the file as a blob and ensure correct format
@@ -33,11 +33,11 @@ export class AITranscriptionService {
         if (!response.ok) {
           throw new Error(`Failed to read audio file: ${response.status}`);
         }
-        
+
         const blob = await response.blob();
-        logger.info(LogModule.TRANSACTIONS, 'Audio blob details', { 
-          size: blob.size, 
-          type: blob.type 
+        logger.info(LogModule.TRANSACTIONS, 'Audio blob details', {
+          size: blob.size,
+          type: blob.type,
         });
 
         // Ensure we have some audio data
@@ -48,7 +48,7 @@ export class AITranscriptionService {
         // For OpenAI Whisper, we need to support: mp3, mp4, mpeg, mpga, m4a, wav, or webm
         let mimeType = blob.type;
         let extension = 'wav';
-        
+
         if (mimeType.includes('webm')) {
           extension = 'webm';
         } else if (mimeType.includes('wav')) {
@@ -103,16 +103,20 @@ export class AITranscriptionService {
 
       // Prepare audio file for the specific platform
       const audioFile = await this.prepareAudioFile(audioUri);
-      logger.info(LogModule.TRANSACTIONS, 'Audio file prepared for transcription', {
-        platform: Platform.OS,
-        type: audioFile.type,
-        name: audioFile.name,
-        uriLength: audioFile.uri.length,
-      });
-      
+      logger.info(
+        LogModule.TRANSACTIONS,
+        'Audio file prepared for transcription',
+        {
+          platform: Platform.OS,
+          type: audioFile.type,
+          name: audioFile.name,
+          uriLength: audioFile.uri.length,
+        }
+      );
+
       // Prepare form data for audio file
       const formData = new FormData();
-      
+
       if (Platform.OS === 'web') {
         // For web, we need to handle the file as a blob
         const response = await fetch(audioFile.uri);
@@ -181,9 +185,9 @@ export class AITranscriptionService {
    */
   static async validateAudioFile(audioUri: string): Promise<boolean> {
     try {
-      logger.info(LogModule.TRANSACTIONS, 'Validating audio file', { 
+      logger.info(LogModule.TRANSACTIONS, 'Validating audio file', {
         audioUri: audioUri.substring(0, 100) + '...',
-        platform: Platform.OS 
+        platform: Platform.OS,
       });
 
       // Basic validation - check if URI exists
@@ -196,13 +200,19 @@ export class AITranscriptionService {
       if (Platform.OS === 'web') {
         // Web uses blob: or data: URLs
         if (!audioUri.startsWith('blob:') && !audioUri.startsWith('data:')) {
-          logger.warn(LogModule.TRANSACTIONS, 'Web audio URI invalid format', { audioUri });
+          logger.warn(LogModule.TRANSACTIONS, 'Web audio URI invalid format', {
+            audioUri,
+          });
           return false;
         }
       } else {
         // Mobile uses file:// URIs
         if (!audioUri.includes('file://')) {
-          logger.warn(LogModule.TRANSACTIONS, 'Mobile audio URI invalid format', { audioUri });
+          logger.warn(
+            LogModule.TRANSACTIONS,
+            'Mobile audio URI invalid format',
+            { audioUri }
+          );
           return false;
         }
       }
@@ -212,24 +222,32 @@ export class AITranscriptionService {
         try {
           const response = await fetch(audioUri);
           if (!response.ok) {
-            logger.warn(LogModule.TRANSACTIONS, 'Web audio URL fetch failed', { 
-              status: response.status 
+            logger.warn(LogModule.TRANSACTIONS, 'Web audio URL fetch failed', {
+              status: response.status,
             });
             return false;
           }
-          
+
           const blob = await response.blob();
           if (blob.size === 0) {
             logger.warn(LogModule.TRANSACTIONS, 'Web audio blob is empty');
             return false;
           }
-          
-          logger.info(LogModule.TRANSACTIONS, 'Web audio validation successful', { 
-            blobSize: blob.size,
-            blobType: blob.type 
-          });
+
+          logger.info(
+            LogModule.TRANSACTIONS,
+            'Web audio validation successful',
+            {
+              blobSize: blob.size,
+              blobType: blob.type,
+            }
+          );
         } catch (fetchError) {
-          logger.warn(LogModule.TRANSACTIONS, 'Web audio fetch validation failed', fetchError);
+          logger.warn(
+            LogModule.TRANSACTIONS,
+            'Web audio fetch validation failed',
+            fetchError
+          );
           return false;
         }
       }
@@ -237,7 +255,11 @@ export class AITranscriptionService {
       logger.info(LogModule.TRANSACTIONS, 'Audio file validation successful');
       return true;
     } catch (error) {
-      logger.error(LogModule.TRANSACTIONS, 'Error validating audio file', error);
+      logger.error(
+        LogModule.TRANSACTIONS,
+        'Error validating audio file',
+        error
+      );
       return false;
     }
   }

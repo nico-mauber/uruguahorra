@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Card, Button } from '@components';
+import { Card } from '@components';
 import { useTheme } from '@theme';
 import { Ionicons } from '@expo/vector-icons';
 

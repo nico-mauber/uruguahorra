@@ -22,7 +22,9 @@
     "functions:serve": "supabase functions serve billing-webhooks",
     "functions:deploy": "supabase functions deploy billing-webhooks",
     "billing:setup": "node scripts/setup-billing.bat",
-    "billing:test": "echo \"Ejecuta las pruebas desde docs/billing-testing.md\""
+    "billing:test": "echo \"Ejecuta las pruebas desde docs/billing-testing.md\"",
+    "mcp:server": "node scripts/mcp-server-example.js",
+    "mcp:install": "npm install express cors helmet compression morgan"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -30,6 +32,7 @@
     "@supabase/supabase-js": "^2.56.0",
     "expo": "~53.0.0",
     "expo-application": "~6.1.5",
+    "expo-av": "^15.1.7",
     "expo-clipboard": "^7.1.5",
     "expo-constants": "~17.1.7",
     "expo-device": "~7.1.4",

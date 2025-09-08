@@ -81,7 +81,7 @@ export default function CreateGoalScreen() {
         ]
       : [
           { id: 'custom', label: '🎨 Meta personalizada', value: 'custom' },
-          ...legacyGoalOptions.filter(opt => opt.id !== 'custom')
+          ...legacyGoalOptions.filter((opt) => opt.id !== 'custom'),
         ]; // Fallback al sistema legacy con custom primero
 
   const iconOptions = [
@@ -613,10 +613,24 @@ export default function CreateGoalScreen() {
                           } else if (option.goalType) {
                             // Selección de tipo dinámico
                             setSelectedGoalType(option.goalType);
-                            setGoalType(option.goalType.category as 'emergency' | 'travel' | 'debt' | 'purchase' | 'custom');
+                            setGoalType(
+                              option.goalType.category as
+                                | 'emergency'
+                                | 'travel'
+                                | 'debt'
+                                | 'purchase'
+                                | 'custom'
+                            );
                           } else {
                             // Fallback a tipo legacy
-                            setGoalType(option.value as 'emergency' | 'travel' | 'debt' | 'purchase' | 'custom');
+                            setGoalType(
+                              option.value as
+                                | 'emergency'
+                                | 'travel'
+                                | 'debt'
+                                | 'purchase'
+                                | 'custom'
+                            );
                             setSelectedGoalType(null);
                           }
                         }

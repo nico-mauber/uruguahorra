@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.uruguahorra.app"
+      "bundleIdentifier": "com.uruguahorra.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Esta app necesita acceso al micrófono para crear transacciones por voz"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +25,11 @@
         "backgroundColor": "#6366F1"
       },
       "package": "com.uruguahorra.app",
-      "permissions": ["RECEIVE_BOOT_COMPLETED", "WAKE_LOCK"]
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED", 
+        "WAKE_LOCK", 
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -55,6 +62,7 @@
     "plugins": [
       "expo-router",
       "expo-localization",
+      "expo-av",
       [
         "expo-notifications",
         {

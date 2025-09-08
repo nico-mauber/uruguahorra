@@ -27,10 +27,12 @@ export { PodsList } from './PodsList';
 export { SquadStatsCard } from './SquadStatsCard';
 
 // Transactions (Psychologically Enhanced)
-export { TransactionFAB } from './TransactionFAB-Simple';
+export { TransactionFAB } from './TransactionFAB';
 export { QuickTransactionModal } from './QuickTransactionModal';
 export { EnhancedTransactionModal } from './EnhancedTransactionModal';
 export { SimpleTransactionItem } from './SimpleTransactionItem';
+export { VoiceTransactionModal } from './VoiceTransactionModal';
+export { AudioTransactionComponent } from './AudioTransactionComponent';
 
 // Analytics & Gamification
 export { SpendingAnalytics } from './SpendingAnalytics';

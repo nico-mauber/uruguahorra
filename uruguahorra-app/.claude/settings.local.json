@@ -41,7 +41,8 @@
       "Bash(npx web-push:*)",
       "Bash(git checkout:*)",
       "Bash(git restore:*)",
-      "Bash(sudo npm uninstall:*)"
+      "Bash(sudo npm uninstall:*)",
+      "Bash(sudo npm install:*)"
     ],
     "deny": [],
     "ask": [],

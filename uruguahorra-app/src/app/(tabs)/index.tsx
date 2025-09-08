@@ -329,11 +329,21 @@ export default function DashboardScreen() {
       // NUEVA FUNCIONALIDAD: Actualizar racha después de contribución
       let updatedStreak = null;
       try {
-        const { StreaksService } = await import('@/features/gamification/services/streaks.service');
+        const { StreaksService } = await import(
+          '@/features/gamification/services/streaks.service'
+        );
         updatedStreak = await StreaksService.updateStreak(user.id);
-        logger.success(LogModule.UI, 'Racha actualizada después de contribución', { updatedStreak });
+        logger.success(
+          LogModule.UI,
+          'Racha actualizada después de contribución',
+          { updatedStreak }
+        );
       } catch (error) {
-        logger.warn(LogModule.UI, 'Error actualizando racha, continuando', error);
+        logger.warn(
+          LogModule.UI,
+          'Error actualizando racha, continuando',
+          error
+        );
       }
 
       // 3. OPTIMIZACIÓN: Solo recargar goals, las stats se actualizan localmente
@@ -342,8 +352,9 @@ export default function DashboardScreen() {
       // 4. Actualizar el estado local de gamificationStats inmediatamente SIN recargar
       setGamificationStats((prevStats) => {
         if (!prevStats) return prevStats;
-        
-        const newTotalXP = prevStats.totalXP + (gamificationResult.xpEarned || 0);
+
+        const newTotalXP =
+          prevStats.totalXP + (gamificationResult.xpEarned || 0);
         const newLevel = LevelsService.getLevel(newTotalXP);
         const newLevelInfo = LevelsService.getLevelProgress(newTotalXP);
 
@@ -364,7 +375,7 @@ export default function DashboardScreen() {
               user_id: updatedStreak.user_id,
               created_at: updatedStreak.created_at,
               updated_at: updatedStreak.updated_at,
-            }
+            },
           }),
         };
       });

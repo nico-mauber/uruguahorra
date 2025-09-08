@@ -168,7 +168,6 @@ export const TransactionFAB: React.FC<TransactionFABProps> = ({
               <Text style={styles.actionButtonText}>Nueva meta</Text>
             </TouchableOpacity>
           )}
-
         </Animated.View>
 
         {/* Botón principal FAB */}

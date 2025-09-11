@@ -1,53 +1,61 @@
 #!/usr/bin/env node
 
-const { spawn } = require('child_process');
+const { execSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
-// Try different ways to find and run expo export
+console.log('🚀 Starting Expo web build...');
+
+// Check if we have expo CLI available
 const expoPaths = [
   'node_modules/.bin/expo',
-  'node_modules/@expo/cli/bin/cli.js',
+  'node_modules/@expo/cli/bin/cli.js', 
   'node_modules/expo/bin/cli.js'
 ];
 
-async function runExpoExport() {
-  for (const expoPath of expoPaths) {
-    const fullPath = path.join(__dirname, expoPath);
-    
-    console.log(`Trying expo path: ${fullPath}`);
-    
-    try {
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('node', [fullPath, 'export', '--platform', 'web', '--output-dir', 'dist'], {
-          stdio: 'inherit',
-          cwd: __dirname
-        });
-        
-        child.on('close', (code) => {
-          if (code === 0) {
-            resolve(true);
-          } else {
-            reject(new Error(`Expo export failed with code ${code}`));
-          }
-        });
-        
-        child.on('error', reject);
-      });
-      
-      if (result) {
-        console.log('✅ Expo export completed successfully');
-        return;
-      }
-    } catch (error) {
-      console.log(`❌ Failed with ${expoPath}: ${error.message}`);
-      continue;
-    }
-  }
+let expoCmd = null;
+
+for (const expoPath of expoPaths) {
+  const fullPath = path.join(__dirname, expoPath);
+  console.log(`Checking: ${fullPath}`);
   
-  throw new Error('Could not find working expo CLI');
+  if (fs.existsSync(fullPath)) {
+    if (expoPath.includes('.bin')) {
+      expoCmd = fullPath;
+    } else {
+      expoCmd = `node ${fullPath}`;
+    }
+    console.log(`✅ Found Expo CLI: ${expoCmd}`);
+    break;
+  }
 }
 
-runExpoExport().catch(error => {
-  console.error('Build failed:', error.message);
+if (!expoCmd) {
+  console.error('❌ No Expo CLI found. Installing @expo/cli...');
+  try {
+    execSync('npm install @expo/cli --no-save', { 
+      stdio: 'inherit',
+      cwd: __dirname 
+    });
+    expoCmd = `node node_modules/@expo/cli/bin/cli.js`;
+  } catch (error) {
+    console.error('Failed to install @expo/cli:', error.message);
+    process.exit(1);
+  }
+}
+
+// Run expo export
+const exportCmd = `${expoCmd} export --platform web --output-dir dist`;
+console.log(`Executing: ${exportCmd}`);
+
+try {
+  execSync(exportCmd, { 
+    stdio: 'inherit',
+    cwd: __dirname,
+    env: { ...process.env, NODE_ENV: 'production' }
+  });
+  console.log('✅ Expo export completed successfully!');
+} catch (error) {
+  console.error('❌ Expo export failed:', error.message);
   process.exit(1);
-});
+}

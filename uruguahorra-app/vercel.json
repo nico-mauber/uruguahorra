@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npm install --legacy-peer-deps --no-package-lock && npm run build:web",
+  "buildCommand": "npm install --legacy-peer-deps --no-package-lock && node build-web.js",
   "outputDirectory": "dist",
   "installCommand": "npm install --legacy-peer-deps --no-package-lock",
   "env": {

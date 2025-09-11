@@ -13,7 +13,7 @@
     "test": "jest",
     "build:ios": "eas build --platform ios",
     "build:android": "eas build --platform android",
-    "build:web": "npx expo export --platform web --output-dir dist",
+    "build:web": "node build-web.js",
     "generate-sw": "workbox generateSW workbox-config.js",
     "build:pwa": "npm run build:web && npm run generate-sw",
     "supabase:start": "supabase start",

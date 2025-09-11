@@ -61,7 +61,13 @@
       "Bash(SUPABASE_ACCESS_TOKEN=\"sbp_9cdca10bc54c141762f7047ae47ba2c0b7b2c9a3\" npx supabase secrets set MERCADOPAGO_ACCESS_TOKEN=\"TEST-851855966058735-091015-fc996c7d987202e7391c0c7a1e36bfb9-2126477990\" --project-ref ebkzqfmppdntmynfjehh)",
       "Read(/mnt/c/Develop/uruguahorra/uruguahorra-app-v54/**)",
       "Read(/mnt/c/Develop/uruguahorra/uruguahorra-app-v54/**)",
-      "Bash(sudo rm:*)"
+      "Bash(sudo rm:*)",
+      "Bash(yarn install)",
+      "Bash(export NVM_DIR=\"$HOME/.nvm\")",
+      "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash(nvm install:*)",
+      "Bash(nvm use:*)"
     ],
     "deny": [],
     "ask": [],

@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npm install --legacy-peer-deps --force && npx @expo/cli@latest export --platform web --output-dir dist",
+  "buildCommand": "npm install --legacy-peer-deps && npm run build:web",
   "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps --force"
+  "installCommand": "npm install --legacy-peer-deps"
 }

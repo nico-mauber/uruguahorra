@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
     const plans = {
       monthly: {
         reason: 'Uruguahorra Premium - Plan Mensual',
-        transaction_amount: 99, // $99 UYU por mes
+        transaction_amount: 15, // $15 UYU por mes
         frequency: 1,
         frequency_type: 'months',
         free_trial: 7, // 7 días de prueba gratis

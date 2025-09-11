@@ -3,7 +3,7 @@
     "name": "Uruguahorra",
     "slug": "uruguahorra-app",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "50.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -51,17 +51,7 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
-      "expo-localization",
-      "expo-av",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#6366F1",
-          "defaultChannel": "default"
-        }
-      ]
+      "expo-router"
     ],
     "extra": {
       "appVersion": "1.0.0",

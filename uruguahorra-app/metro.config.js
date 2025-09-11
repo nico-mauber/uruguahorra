@@ -44,6 +44,10 @@ config.resolver = {
     ...config.resolver.assetExts.filter((ext) => ext !== 'svg'),
     'svg',
   ],
+  // Configuración específica para builds web en Vercel
+  platforms: ['web', 'native', 'ios', 'android'],
+  disableHierarchicalLookup: false,
+  unstable_enablePackageExports: true,
   // Ignorar archivos problemáticos
   blacklistRE: /node_modules[\/\\]@expo[\/\\]ngrok.*|\.bin.*/,
 };

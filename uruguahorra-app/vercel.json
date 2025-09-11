@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npm install && npx expo export:web",
+  "buildCommand": "npx @expo/cli@latest export --platform web --output-dir dist",
   "outputDirectory": "dist",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci --legacy-peer-deps"
 }

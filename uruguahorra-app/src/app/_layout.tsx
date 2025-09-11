@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { ErrorBoundary, PWAStatus } from '@components';
 import { PostHogProvider } from 'posthog-react-native';
 import { useAnalytics, AnalyticsEvents } from '@/hooks/useAnalytics';
+import { useDeepLinking } from '@/hooks/useDeepLinking';
 import { toastConfig } from '@/utils/toast';
 
 // Configurar logging mejorado en desarrollo
@@ -146,11 +147,32 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
-        name="squad"
+        name="squad/[id]"
         options={{
           presentation: 'modal',
           headerShown: true,
           title: 'Pod de Ahorro',
+        }}
+      />
+      <Stack.Screen
+        name="subscription-success"
+        options={{
+          presentation: 'modal',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="subscription-failure"
+        options={{
+          presentation: 'modal',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="subscription-pending"
+        options={{
+          presentation: 'modal',
+          headerShown: false,
         }}
       />
       {/* <Stack.Screen
@@ -167,6 +189,9 @@ function RootLayoutNav() {
 
 function AppContent() {
   const { track } = useAnalytics();
+  
+  // Initialize deep linking
+  useDeepLinking();
 
   useEffect(() => {
     // Log de inicio y estado de la red
@@ -226,9 +251,9 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <PostHogProvider
-      apiKey="phc_Bpl5uyxSSfEXZelS6NlzphDCTwrhI1mhbGoItaoriTx"
+      apiKey={process.env.POSTHOG_API_KEY || "phc_Bpl5uyxSSfEXZelS6NlzphDCTwrhI1mhbGoItaoriTx"}
       options={{
-        host: 'https://us.i.posthog.com',
+        host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
       }}
     >
       <ThemeProvider>

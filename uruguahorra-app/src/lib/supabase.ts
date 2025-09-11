@@ -84,6 +84,11 @@ export type Database = {
           country: string | null;
           currency: string | null;
           premium: boolean;
+          total_xp: number;
+          current_level: number;
+          current_streak: number;
+          longest_streak: number;
+          last_activity_at: string;
           created_at: string;
           updated_at: string;
         };
@@ -93,6 +98,11 @@ export type Database = {
           country?: string | null;
           currency?: string | null;
           premium?: boolean;
+          total_xp?: number;
+          current_level?: number;
+          current_streak?: number;
+          longest_streak?: number;
+          last_activity_at?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -102,6 +112,11 @@ export type Database = {
           country?: string | null;
           currency?: string | null;
           premium?: boolean;
+          total_xp?: number;
+          current_level?: number;
+          current_streak?: number;
+          longest_streak?: number;
+          last_activity_at?: string;
           created_at?: string;
           updated_at?: string;
         };

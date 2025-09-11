@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.uruguahorra.app",
+      "associatedDomains": ["applinks:uruguahorra.com"],
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Esta app necesita acceso al micrófono para crear transacciones por voz"
       }
@@ -26,6 +27,19 @@
         "backgroundColor": "#6366F1"
       },
       "package": "com.uruguahorra.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "uruguahorra.com"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "RECEIVE_BOOT_COMPLETED", 
         "WAKE_LOCK", 

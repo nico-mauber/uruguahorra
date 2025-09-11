@@ -5,7 +5,7 @@
 export const AI_CONFIG = {
   // OpenAI Configuration
   OPENAI_API_KEY:
-    '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',
+    process.env.OPENAI_API_KEY || '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',
   OPENAI_BASE_URL: 'https://api.openai.com/v1',
 
   // Transcription Configuration

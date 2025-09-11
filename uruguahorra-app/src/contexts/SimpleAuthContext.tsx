@@ -95,6 +95,8 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({
     }
   };
 
+
+
   // Cargar perfil del usuario
   const loadUserProfile = async (userId: string) => {
     // Evitar llamadas duplicadas
@@ -282,7 +284,7 @@ export const useAuth = () => {
         ? {
             ...context.profile,
             id: context.user.id, // Usar SIEMPRE el ID del usuario autenticado de Supabase
-            level: 1,
+            level: context.profile.current_level || 1,
             totalXP: context.profile.total_xp || 0,
             streak: context.profile.current_streak || 0,
           }

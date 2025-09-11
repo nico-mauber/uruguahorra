@@ -137,26 +137,51 @@ Deno.serve(async (req) => {
       endDate.setMonth(endDate.getMonth() + 1);
     }
 
-    // Get the origin URL and validate it
+    // Detect platform and set appropriate redirect URLs
+    const userAgent = req.headers.get('user-agent') || '';
     const origin = req.headers.get('origin') || '';
+    const referer = req.headers.get('referer') || '';
+    
+    // Check if request comes from mobile app or web
+    const isMobileApp = userAgent.includes('Expo') || 
+                       userAgent.includes('com.uruguahorra.app') ||
+                       referer.includes('uruguahorra://');
+    
+    let backUrl = '';
+    let successUrl = '';
+    let failureUrl = '';
+    let pendingUrl = '';
 
-    // For local development, use a placeholder URL that MercadoPago will accept
-    // In production, use the actual origin
-    let backUrl = 'https://uruguahorra.com/subscription-success';
-
-    if (
-      origin &&
-      !origin.includes('localhost') &&
-      !origin.includes('127.0.0.1')
-    ) {
-      // Use the actual origin if it's not localhost
-      backUrl = `${origin}/subscription-success`;
+    if (isMobileApp) {
+      // Deep links for mobile app (iOS/Android)
+      successUrl = 'uruguahorra://subscription-success';
+      failureUrl = 'uruguahorra://subscription-failure';  
+      pendingUrl = 'uruguahorra://subscription-pending';
+      backUrl = successUrl; // Default to success for MercadoPago back_url
     } else {
-      // For local development, you can use your Supabase URL or any valid HTTPS URL
-      backUrl = `${supabaseUrl}/subscription-success`;
+      // Web URLs
+      if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        // Production web
+        successUrl = `${origin}/subscription-success`;
+        failureUrl = `${origin}/subscription-failure`;
+        pendingUrl = `${origin}/subscription-pending`;
+      } else {
+        // Development - use uruguahorra.com for MercadoPago compatibility
+        successUrl = 'https://uruguahorra.com/subscription-success';
+        failureUrl = 'https://uruguahorra.com/subscription-failure';
+        pendingUrl = 'https://uruguahorra.com/subscription-pending';
+      }
+      backUrl = successUrl;
     }
 
-    console.log('Using back_url:', backUrl);
+    console.log('Platform detection:', {
+      userAgent: userAgent.substring(0, 100),
+      isMobileApp,
+      origin,
+      successUrl,
+      failureUrl,
+      pendingUrl
+    });
 
     // Create preapproval in Mercado Pago with metadata for webhook
     const preapprovalData = {

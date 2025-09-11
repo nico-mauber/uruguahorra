@@ -1,9 +1,10 @@
 {
   "framework": null,
-  "buildCommand": "npm ci --legacy-peer-deps || npm install --legacy-peer-deps --no-package-lock && npm run build:web",
+  "buildCommand": "npm install --legacy-peer-deps --no-package-lock && npm run build:web",
   "outputDirectory": "dist",
-  "installCommand": "npm ci --legacy-peer-deps || npm install --legacy-peer-deps --no-package-lock",
+  "installCommand": "npm install --legacy-peer-deps --no-package-lock",
   "env": {
-    "NPM_CONFIG_CACHE": "/tmp/.npm"
+    "NPM_CONFIG_CACHE": "/tmp/.npm",
+    "NODE_ENV": "production"
   }
 }

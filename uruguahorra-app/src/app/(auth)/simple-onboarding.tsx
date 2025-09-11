@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button } from '@components';
 import { useTheme } from '@theme';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts';
 
 export default function SimpleOnboardingScreen() {
@@ -258,7 +259,7 @@ export default function SimpleOnboardingScreen() {
                   }
                   onPress={handleSubmit}
                   disabled={isLoading}
-                  icon={isLoading ? undefined : 'arrow-forward'}
+                  icon={isLoading ? undefined : <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" />}
                 />
               </View>
 

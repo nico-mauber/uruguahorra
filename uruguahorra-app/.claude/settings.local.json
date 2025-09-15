@@ -72,7 +72,8 @@
       "Bash(export:*)",
       "Bash(SUPABASE_ACCESS_TOKEN=\"sbp_9cdca10bc54c141762f7047ae47ba2c0b7b2c9a3\" npx supabase sql --project-ref ebkzqfmppdntmynfjehh --file education_cards_system_complete.sql)",
       "WebFetch(domain:expo.dev)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(./node_modules/.bin/tsc:*)"
     ],
     "deny": [],
     "ask": [],

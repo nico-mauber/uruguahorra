@@ -242,7 +242,7 @@ export default function ProfileScreen() {
               onPress={() => router.push('/paywall')}
             >
               <Ionicons
-                name="diamond"
+                name="star"
                 size={24}
                 color={colors.warning}
                 style={styles.menuIcon}

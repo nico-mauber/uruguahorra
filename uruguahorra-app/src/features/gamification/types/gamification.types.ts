@@ -3,7 +3,9 @@ export type XPEventType =
   | 'challenge_complete'
   | 'challenge_session_complete'
   | 'daily_streak'
-  | 'quest_complete';
+  | 'quest_complete'
+  | 'education_lesson_complete'
+  | 'education_module_complete';
 
 export interface XPLogEntry {
   id: string;

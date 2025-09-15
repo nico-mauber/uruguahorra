@@ -3707,5 +3707,391 @@ GRANT EXECUTE ON FUNCTION cleanup_today_transactions(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_analytics_stats(UUID) TO authenticated;
 
 -- ============================================
+-- SISTEMA DE EDUCACIÓN FINANCIERA - ACADEMIA
+-- ============================================
+
+-- Tabla de módulos educativos
+CREATE TABLE IF NOT EXISTS public.education_modules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT '🎓',
+    order_index INTEGER NOT NULL,
+    difficulty_level TEXT NOT NULL CHECK (difficulty_level IN ('principiante', 'intermedio', 'avanzado', 'experto')),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    estimated_duration_minutes INTEGER DEFAULT 30,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de lecciones individuales
+CREATE TABLE IF NOT EXISTS public.education_lessons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    module_id UUID NOT NULL REFERENCES public.education_modules(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    content_type TEXT NOT NULL CHECK (content_type IN ('concept', 'quiz', 'interactive', 'video', 'calculator')),
+    content_data JSONB NOT NULL DEFAULT '{}',
+    order_index INTEGER NOT NULL,
+    xp_reward INTEGER NOT NULL DEFAULT 15,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    prerequisite_lesson_id UUID REFERENCES public.education_lessons(id),
+    estimated_duration_minutes INTEGER DEFAULT 5,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de progreso del usuario en lecciones
+CREATE TABLE IF NOT EXISTS public.user_education_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    lesson_id UUID NOT NULL REFERENCES public.education_lessons(id) ON DELETE CASCADE,
+    module_id UUID NOT NULL REFERENCES public.education_modules(id) ON DELETE CASCADE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    score INTEGER DEFAULT 0 CHECK (score >= 0 AND score <= 100),
+    attempts INTEGER DEFAULT 0,
+    time_spent_seconds INTEGER DEFAULT 0,
+    is_completed BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, lesson_id)
+);
+
+-- Tabla de estadísticas de educación del usuario
+CREATE TABLE IF NOT EXISTS public.user_education_stats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    lives_remaining INTEGER NOT NULL DEFAULT 5 CHECK (lives_remaining >= 0 AND lives_remaining <= 5),
+    study_streak INTEGER NOT NULL DEFAULT 0,
+    longest_study_streak INTEGER NOT NULL DEFAULT 0,
+    last_study_date DATE,
+    last_life_lost_at TIMESTAMP WITH TIME ZONE,
+    total_lessons_completed INTEGER DEFAULT 0,
+    total_modules_completed INTEGER DEFAULT 0,
+    total_study_time_minutes INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de badges/logros educativos
+CREATE TABLE IF NOT EXISTS public.education_badges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    requirements JSONB NOT NULL DEFAULT '{}',
+    xp_reward INTEGER DEFAULT 50,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de badges obtenidos por usuarios
+CREATE TABLE IF NOT EXISTS public.user_education_badges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    badge_id UUID NOT NULL REFERENCES public.education_badges(id) ON DELETE CASCADE,
+    earned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, badge_id)
+);
+
+-- Índices para optimización
+CREATE INDEX IF NOT EXISTS idx_education_lessons_module_order ON public.education_lessons(module_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_user_education_progress_user ON public.user_education_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_education_progress_lesson ON public.user_education_progress(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_user_education_progress_completed ON public.user_education_progress(user_id, is_completed);
+CREATE INDEX IF NOT EXISTS idx_user_education_stats_user ON public.user_education_stats(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_education_badges_user ON public.user_education_badges(user_id);
+
+-- ============================================
+-- FUNCIONES PARA SISTEMA DE EDUCACIÓN
+-- ============================================
+
+-- Función para inicializar estadísticas de educación del usuario
+CREATE OR REPLACE FUNCTION public.get_or_create_education_stats(
+    p_user_id UUID
+)
+RETURNS public.user_education_stats
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_stats public.user_education_stats;
+BEGIN
+    -- Intentar obtener estadísticas existentes
+    SELECT * INTO v_stats FROM public.user_education_stats WHERE user_id = p_user_id;
+    
+    IF FOUND THEN
+        RETURN v_stats;
+    END IF;
+    
+    -- Crear nuevas estadísticas
+    INSERT INTO public.user_education_stats (
+        user_id,
+        lives_remaining,
+        study_streak,
+        longest_study_streak,
+        last_study_date,
+        total_lessons_completed,
+        total_modules_completed,
+        total_study_time_minutes
+    )
+    VALUES (
+        p_user_id,
+        5,
+        0,
+        0,
+        NULL,
+        0,
+        0,
+        0
+    )
+    RETURNING * INTO v_stats;
+    
+    RETURN v_stats;
+END;
+$$;
+
+-- Función para completar una lección
+CREATE OR REPLACE FUNCTION public.complete_education_lesson(
+    p_user_id UUID,
+    p_lesson_id UUID,
+    p_score INTEGER DEFAULT 100,
+    p_time_spent_seconds INTEGER DEFAULT 0
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_lesson public.education_lessons;
+    v_progress public.user_education_progress;
+    v_stats public.user_education_stats;
+    v_xp_earned INTEGER := 0;
+    v_first_completion BOOLEAN := false;
+    v_module_completed BOOLEAN := false;
+    v_badge_earned TEXT := NULL;
+BEGIN
+    -- Obtener información de la lección
+    SELECT * INTO v_lesson FROM public.education_lessons WHERE id = p_lesson_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Lección no encontrada: %', p_lesson_id;
+    END IF;
+    
+    -- Obtener o crear progreso
+    SELECT * INTO v_progress 
+    FROM public.user_education_progress 
+    WHERE user_id = p_user_id AND lesson_id = p_lesson_id;
+    
+    IF NOT FOUND THEN
+        -- Primera vez completando esta lección
+        v_first_completion := true;
+        INSERT INTO public.user_education_progress (
+            user_id,
+            lesson_id,
+            module_id,
+            completed_at,
+            score,
+            attempts,
+            time_spent_seconds,
+            is_completed
+        )
+        VALUES (
+            p_user_id,
+            p_lesson_id,
+            v_lesson.module_id,
+            NOW(),
+            p_score,
+            1,
+            p_time_spent_seconds,
+            true
+        )
+        RETURNING * INTO v_progress;
+    ELSE
+        -- Actualizar progreso existente
+        UPDATE public.user_education_progress
+        SET 
+            completed_at = NOW(),
+            score = GREATEST(score, p_score),
+            attempts = attempts + 1,
+            time_spent_seconds = time_spent_seconds + p_time_spent_seconds,
+            is_completed = true,
+            updated_at = NOW()
+        WHERE user_id = p_user_id AND lesson_id = p_lesson_id
+        RETURNING * INTO v_progress;
+    END IF;
+    
+    -- Solo otorgar XP si es primera completación
+    IF v_first_completion THEN
+        v_xp_earned := v_lesson.xp_reward;
+        
+        -- Registrar XP ganado
+        INSERT INTO public.user_xp_log (
+            user_id,
+            event_type,
+            xp_earned,
+            event_data
+        )
+        VALUES (
+            p_user_id,
+            'education_lesson_complete',
+            v_xp_earned,
+            jsonb_build_object(
+                'lesson_id', p_lesson_id,
+                'lesson_title', v_lesson.title,
+                'score', p_score
+            )
+        );
+        
+        -- Actualizar XP total del usuario
+        UPDATE public.users
+        SET 
+            total_xp = total_xp + v_xp_earned,
+            updated_at = NOW()
+        WHERE id = p_user_id;
+    END IF;
+    
+    -- Actualizar estadísticas de educación
+    v_stats := public.get_or_create_education_stats(p_user_id);
+    
+    UPDATE public.user_education_stats
+    SET 
+        total_lessons_completed = (
+            SELECT COUNT(*) 
+            FROM public.user_education_progress 
+            WHERE user_id = p_user_id AND is_completed = true
+        ),
+        total_study_time_minutes = total_study_time_minutes + (p_time_spent_seconds / 60),
+        last_study_date = CURRENT_DATE,
+        updated_at = NOW()
+    WHERE user_id = p_user_id;
+    
+    -- Verificar si se completó el módulo
+    SELECT COUNT(*) = COUNT(CASE WHEN uep.is_completed THEN 1 END) INTO v_module_completed
+    FROM public.education_lessons el
+    LEFT JOIN public.user_education_progress uep ON (el.id = uep.lesson_id AND uep.user_id = p_user_id)
+    WHERE el.module_id = v_lesson.module_id AND el.is_active = true;
+    
+    -- Si se completó el módulo, otorgar XP bonus
+    IF v_module_completed THEN
+        v_xp_earned := v_xp_earned + 25; -- Bonus por completar módulo
+        
+        INSERT INTO public.user_xp_log (
+            user_id,
+            event_type,
+            xp_earned,
+            event_data
+        )
+        VALUES (
+            p_user_id,
+            'education_module_complete',
+            25,
+            jsonb_build_object('module_id', v_lesson.module_id)
+        );
+        
+        UPDATE public.users
+        SET total_xp = total_xp + 25
+        WHERE id = p_user_id;
+        
+        -- Actualizar contador de módulos completados
+        UPDATE public.user_education_stats
+        SET total_modules_completed = total_modules_completed + 1
+        WHERE user_id = p_user_id;
+    END IF;
+    
+    RETURN jsonb_build_object(
+        'success', true,
+        'xp_earned', v_xp_earned,
+        'first_completion', v_first_completion,
+        'module_completed', v_module_completed,
+        'score', p_score
+    );
+END;
+$$;
+
+-- Función para perder una vida (respuesta incorrecta)
+CREATE OR REPLACE FUNCTION public.lose_education_life(
+    p_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_stats public.user_education_stats;
+    v_lives_remaining INTEGER;
+BEGIN
+    -- Obtener o crear estadísticas
+    v_stats := public.get_or_create_education_stats(p_user_id);
+    
+    -- Reducir vidas si tiene disponibles
+    IF v_stats.lives_remaining > 0 THEN
+        UPDATE public.user_education_stats
+        SET 
+            lives_remaining = lives_remaining - 1,
+            last_life_lost_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = p_user_id
+        RETURNING lives_remaining INTO v_lives_remaining;
+    ELSE
+        v_lives_remaining := 0;
+    END IF;
+    
+    RETURN jsonb_build_object(
+        'lives_remaining', v_lives_remaining,
+        'lives_depleted', v_lives_remaining = 0
+    );
+END;
+$$;
+
+-- Función para regenerar vidas (cada 30 minutos)
+CREATE OR REPLACE FUNCTION public.regenerate_education_lives()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_updated_count INTEGER := 0;
+BEGIN
+    -- Regenerar una vida para usuarios que perdieron vidas hace más de 30 minutos
+    UPDATE public.user_education_stats
+    SET 
+        lives_remaining = LEAST(lives_remaining + 1, 5),
+        updated_at = NOW()
+    WHERE 
+        lives_remaining < 5 
+        AND (last_life_lost_at IS NULL OR last_life_lost_at < NOW() - INTERVAL '30 minutes');
+    
+    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+    
+    RETURN v_updated_count;
+END;
+$$;
+
+-- Políticas RLS para las nuevas tablas
+ALTER TABLE public.education_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.education_lessons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_education_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_education_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.education_badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_education_badges ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de lectura para todos los usuarios autenticados
+CREATE POLICY "education_modules_read" ON public.education_modules FOR SELECT TO authenticated USING (is_active = true);
+CREATE POLICY "education_lessons_read" ON public.education_lessons FOR SELECT TO authenticated USING (is_active = true);
+CREATE POLICY "education_badges_read" ON public.education_badges FOR SELECT TO authenticated USING (is_active = true);
+
+-- Políticas para progreso y estadísticas del usuario
+CREATE POLICY "user_education_progress_own" ON public.user_education_progress FOR ALL TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "user_education_stats_own" ON public.user_education_stats FOR ALL TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "user_education_badges_own" ON public.user_education_badges FOR ALL TO authenticated USING (auth.uid() = user_id);
+
+-- Grants para las funciones de educación
+GRANT EXECUTE ON FUNCTION public.get_or_create_education_stats(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_education_lesson(UUID, UUID, INTEGER, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.lose_education_life(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.regenerate_education_lives() TO authenticated;
+
+-- ============================================
 -- FINAL DEL SCHEMA
 -- ============================================

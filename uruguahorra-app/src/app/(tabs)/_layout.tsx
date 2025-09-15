@@ -49,6 +49,15 @@ function TabLayoutContent() {
         }}
       />
       <Tabs.Screen
+        name="education"
+        options={{
+          title: 'Academia',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="school" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="analytics"
         options={{
           title: 'Análisis',

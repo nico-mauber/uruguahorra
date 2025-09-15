@@ -573,7 +573,8 @@ export type Database = {
             | 'contribution'
             | 'challenge_complete'
             | 'daily_streak'
-            | 'quest_complete';
+            | 'quest_complete'
+            | 'education_card';
           xp_earned: number;
           event_data: Record<string, unknown>;
           created_at: string;
@@ -585,7 +586,8 @@ export type Database = {
             | 'contribution'
             | 'challenge_complete'
             | 'daily_streak'
-            | 'quest_complete';
+            | 'quest_complete'
+            | 'education_card';
           xp_earned: number;
           event_data?: Record<string, unknown>;
           created_at?: string;
@@ -597,7 +599,8 @@ export type Database = {
             | 'contribution'
             | 'challenge_complete'
             | 'daily_streak'
-            | 'quest_complete';
+            | 'quest_complete'
+            | 'education_card';
           xp_earned?: number;
           event_data?: Record<string, unknown>;
           created_at?: string;

@@ -162,7 +162,7 @@ export default function PaywallScreen() {
     },
     {
       icon: 'analytics',
-      title: 'Reportes avanzados',
+      title: 'Reportes avanzados generados con IA',
       description: 'Análisis detallado de tus gastos',
     },
     {
@@ -174,16 +174,6 @@ export default function PaywallScreen() {
       icon: 'school',
       title: 'Contenido educativo completo',
       description: 'Acceso a todos los cursos',
-    },
-    {
-      icon: 'cloud-upload',
-      title: 'Importaciones ilimitadas',
-      description: 'Sube todos tus CSV',
-    },
-    {
-      icon: 'flash',
-      title: 'Retos exclusivos',
-      description: 'Desafíos especiales con más XP',
     },
   ];
 

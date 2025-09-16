@@ -19,11 +19,16 @@
     "jsx": "react-native",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022"],
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": false,
+    "allowImportingTsExtensions": false
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }

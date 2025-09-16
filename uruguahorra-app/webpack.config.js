@@ -12,6 +12,22 @@ module.exports = async function (env, argv) {
     argv
   );
 
+  // Add webpack plugin to replace import.meta
+  config.plugins.push(
+    new (require('webpack')).DefinePlugin({
+      'import.meta': JSON.stringify({
+        url: 'http://localhost:8081',
+        env: {
+          MODE: 'development',
+          DEV: true,
+          PROD: false,
+          BASE_URL: '/',
+          SSR: false,
+        },
+      }),
+    })
+  );
+
   // Configurar source maps para desarrollo
   if (env.mode === 'development') {
     config.devtool = 'cheap-module-source-map'; // Source maps rápidos y precisos

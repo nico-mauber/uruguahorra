@@ -72,7 +72,8 @@
       "Bash(npm --version)",
       "Bash(npx @expo/cli install --fix)",
       "Bash(npx typescript:*)",
-      "Bash(nvm:*)"
+      "Bash(nvm:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],

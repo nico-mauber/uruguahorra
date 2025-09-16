@@ -10,6 +10,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@theme';
@@ -145,7 +146,7 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
             styles.modalContent,
             {
               backgroundColor: colors.background,
-              maxHeight: screenHeight * 0.85,
+              height: screenHeight * 0.85,
             },
           ]}
         >
@@ -163,8 +164,14 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Formulario */}
-          <Card style={styles.formCard}>
+          {/* Contenido scrolleable */}
+          <ScrollView 
+            style={styles.scrollContent} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContainer}
+          >
+            {/* Formulario */}
+            <Card style={styles.formCard}>
             {/* Nombre del squad */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text.primary }]}>
@@ -270,19 +277,22 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({
               </Text>
             </View>
           </View>
+          </ScrollView>
 
-          {/* Botones */}
+          {/* Botones fijos */}
           <View style={styles.buttonContainer}>
             <Button
               title="Cancelar"
               variant="outline"
+              size="small"
               onPress={handleClose}
               style={styles.button}
               disabled={isCreating}
             />
             <Button
-              title={isCreating ? 'Creando...' : 'Crear Pod'}
+              title={isCreating ? 'Creando...' : 'Crear'}
               variant={isFormValid && isMaxMembersValid ? 'primary' : 'outline'}
+              size="small"
               onPress={handleCreateSquad}
               style={styles.button}
               disabled={!isFormValid || !isMaxMembersValid || isCreating}
@@ -307,7 +317,7 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 20,
+    padding: 24,
   },
   header: {
     flexDirection: 'row',
@@ -361,13 +371,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContainer: {
+    paddingBottom: 0,
+  },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
+    paddingTop: 8,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    marginBottom: 12,
   },
   button: {
     flex: 1,
     borderRadius: 10,
-    paddingVertical: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
 });

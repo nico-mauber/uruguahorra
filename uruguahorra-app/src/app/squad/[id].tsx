@@ -833,12 +833,11 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginBottom: 8,
-    flex: 1,
-    minWidth: 100,
-    maxWidth: 120,
+    minWidth: 80,
+    maxWidth: 100,
     borderWidth: 1,
     borderRadius: 8,
     borderColor: 'rgba(0,0,0,0.2)',
@@ -846,8 +845,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: 13,
+    marginLeft: 6,
     fontWeight: '500',
   },
   leaveButton: {

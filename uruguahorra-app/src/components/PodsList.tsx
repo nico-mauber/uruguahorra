@@ -67,14 +67,16 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
     return (
       <View style={[styles.container, style]}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            🏛️ Pods de Ahorro
-          </Text>
-          <Text
-            style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
-          >
-            Ahorra junto a otros usuarios
-          </Text>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              🏛️ Pods de Ahorro
+            </Text>
+            <Text
+              style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
+            >
+              Ahorra junto a otros usuarios
+            </Text>
+          </View>
         </View>
         <Card style={styles.loadingCard}>
           <View style={styles.loadingContent}>
@@ -94,14 +96,16 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
     return (
       <View style={[styles.container, style]}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            🏛️ Pods de Ahorro
-          </Text>
-          <Text
-            style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
-          >
-            Ahorra junto a otros usuarios
-          </Text>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              🏛️ Pods de Ahorro
+            </Text>
+            <Text
+              style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
+            >
+              Ahorra junto a otros usuarios
+            </Text>
+          </View>
         </View>
 
         <Card style={styles.emptyCard}>
@@ -125,12 +129,14 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
               <Button
                 title="Crear Pod"
                 variant="primary"
+                size="small"
                 onPress={() => setShowCreateModal(true)}
                 style={styles.actionButton}
               />
               <Button
                 title="Unirse con Código"
                 variant="outline"
+                size="small"
                 onPress={() => setShowJoinModal(true)}
                 style={styles.actionButton}
               />
@@ -157,9 +163,16 @@ export const PodsList: React.FC<PodsListProps> = ({ style }) => {
   return (
     <View style={[styles.container, style]}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-          🏛️ Pods de Ahorro ({userSquads.length})
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+            🏛️ Pods de Ahorro ({userSquads.length})
+          </Text>
+          <Text
+            style={[styles.sectionSubtitle, { color: colors.text.secondary }]}
+          >
+            Ahorra junto a otros usuarios
+          </Text>
+        </View>
         <TouchableOpacity onPress={() => setShowCreateModal(true)}>
           <Ionicons
             name="add-circle-outline"
@@ -305,9 +318,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
     paddingHorizontal: 4,
+  },
+  titleContainer: {
+    flex: 1,
   },
   sectionTitle: {
     fontSize: 20,

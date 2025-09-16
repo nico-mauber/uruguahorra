@@ -233,13 +233,15 @@ export const JoinSquadModal: React.FC<JoinSquadModalProps> = ({
             <Button
               title="Cancelar"
               variant="outline"
+              size="small"
               onPress={handleClose}
               style={styles.button}
               disabled={isJoining}
             />
             <Button
-              title={isJoining ? 'Uniéndose...' : 'Unirse al Pod'}
+              title={isJoining ? 'Uniendo...' : 'Unirse'}
               variant={isCodeValid ? 'primary' : 'outline'}
+              size="small"
               onPress={handleJoinSquad}
               style={styles.button}
               disabled={!isCodeValid || isJoining}
@@ -321,11 +323,12 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   button: {
     flex: 1,
     borderRadius: 10,
-    paddingVertical: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
 });

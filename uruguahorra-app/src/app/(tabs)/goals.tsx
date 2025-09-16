@@ -140,31 +140,43 @@ export default function GoalsScreen() {
     },
     statsContainer: {
       flexDirection: 'row',
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingBottom: 20,
-      gap: 12,
+      gap: 8,
     },
     statCard: {
       flex: 1,
-      backgroundColor: colors.savings.background,
-      borderRadius: 16,
+      backgroundColor: 'rgba(34, 197, 94, 0.08)',
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: colors.savings.light,
+      borderColor: 'rgba(34, 197, 94, 0.2)',
+      shadowColor: '#22C55E',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     statCardContent: {
       alignItems: 'center',
-      padding: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      minHeight: 65,
+      justifyContent: 'center',
     },
     statValue: {
-      fontSize: 24,
+      fontSize: 16,
       fontWeight: 'bold',
-      color: colors.savings.primary,
-      marginBottom: 4,
+      color: '#047857',
+      marginBottom: 2,
+      textAlign: 'center',
     },
     statLabel: {
-      fontSize: 12,
-      color: colors.text.secondary,
+      fontSize: 10,
+      color: '#059669',
       fontWeight: '600',
+      textAlign: 'center',
+      lineHeight: 12,
+      opacity: 0.9,
     },
     scrollContent: {
       padding: 20,
@@ -342,26 +354,26 @@ export default function GoalsScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <Card style={styles.statCard} padding="none">
+        <View style={styles.statCard}>
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>🎯 {activeGoals.length}</Text>
-            <Text style={styles.statLabel}>Metas Activas</Text>
+            <Text style={styles.statValue}>{activeGoals.length}</Text>
+            <Text style={styles.statLabel}>Activas</Text>
           </View>
-        </Card>
-        <Card style={styles.statCard} padding="none">
+        </View>
+        <View style={styles.statCard}>
           <View style={styles.statCardContent}>
             <Text style={styles.statValue}>
-              💰 ${getTotalSaved().toFixed(0)}
+              ${getTotalSaved().toFixed(0)}
             </Text>
-            <Text style={styles.statLabel}>Total Ahorrado</Text>
+            <Text style={styles.statLabel}>Ahorrado</Text>
           </View>
-        </Card>
-        <Card style={styles.statCard} padding="none">
+        </View>
+        <View style={styles.statCard}>
           <View style={styles.statCardContent}>
-            <Text style={styles.statValue}>🏆 {completedGoals}</Text>
-            <Text style={styles.statLabel}>Completadas</Text>
+            <Text style={styles.statValue}>{completedGoals}</Text>
+            <Text style={styles.statLabel}>Completas</Text>
           </View>
-        </Card>
+        </View>
       </View>
 
       <ScrollView

@@ -20,6 +20,7 @@ import {
   TransactionFAB,
 } from '@components';
 import { GoalSelectionModal } from '@/components/GoalSelectionModal';
+import { GoalDetailModal } from '@/components/GoalDetailModal';
 import { useTheme } from '@theme';
 import { useAuth } from '@/contexts';
 import { useGoalsStore } from '@store/useGoalsStore';
@@ -59,6 +60,8 @@ export default function DashboardScreen() {
   const [manualAmount, setManualAmount] = React.useState('');
   const [showManualInput, setShowManualInput] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [selectedGoalForDetail, setSelectedGoalForDetail] = React.useState<any>(null);
+  const [showGoalDetail, setShowGoalDetail] = React.useState(false);
 
   // Usar useRef para rastrear si ya se cargaron las metas
   const goalsLoadedRef = useRef(false);
@@ -430,6 +433,22 @@ export default function DashboardScreen() {
     setPendingSaveAmount(0);
   };
 
+  const handleGoalCardPress = (goal: any) => {
+    setSelectedGoalForDetail(goal);
+    setShowGoalDetail(true);
+  };
+
+  const handleGoalDetailClose = () => {
+    setShowGoalDetail(false);
+    setSelectedGoalForDetail(null);
+  };
+
+  const handleGoalUpdate = async () => {
+    if (user?.id) {
+      await fetchGoals(user.id, true);
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -473,21 +492,26 @@ export default function DashboardScreen() {
     statsRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 24,
+      marginBottom: 20,
+      paddingHorizontal: 8,
     },
     statCard: {
       flex: 1,
-      marginHorizontal: 6,
+      marginHorizontal: 4,
+      paddingVertical: 8,
+      paddingHorizontal: 8,
     },
     statLabel: {
-      fontSize: 12,
+      fontSize: 11,
       color: colors.text.secondary,
-      marginBottom: 4,
+      marginBottom: 2,
+      textAlign: 'center',
     },
     statValue: {
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: 'bold',
       color: colors.text.primary,
+      textAlign: 'center',
     },
     statUnit: {
       fontSize: 14,
@@ -782,19 +806,19 @@ export default function DashboardScreen() {
         )}
 
         <View style={styles.statsRow}>
-          <Card style={styles.statCard} padding="small">
+          <Card style={styles.statCard}>
             <Text style={styles.statLabel}>Nivel</Text>
             <Text style={styles.statValue}>
               {gamificationStats?.level || 1}
             </Text>
           </Card>
-          <Card style={styles.statCard} padding="small">
+          <Card style={styles.statCard}>
             <Text style={styles.statLabel}>XP Total</Text>
             <Text style={styles.statValue}>
               {gamificationStats?.totalXP || 0}
             </Text>
           </Card>
-          <Card style={styles.statCard} padding="small">
+          <Card style={styles.statCard}>
             <Text style={styles.statLabel}>Ahorrado</Text>
             <Text style={styles.statValue}>${getTotalSaved().toFixed(0)}</Text>
           </Card>
@@ -905,7 +929,7 @@ export default function DashboardScreen() {
                     style={{ flex: 1 }}
                   />
                   <Button
-                    title="Ahorrar"
+                    title={isSaving ? "Ahorrando..." : "Ahorrar"}
                     variant="primary"
                     onPress={handleManualSave}
                     style={{ flex: 1 }}
@@ -931,28 +955,34 @@ export default function DashboardScreen() {
             {goals.slice(0, 3).map((goal) => {
               const progress = (goal.savedAmount / goal.targetAmount) * 100;
               return (
-                <Card key={goal.id} style={styles.goalCard}>
-                  <View style={styles.goalCardContent}>
-                    <View style={styles.goalHeader}>
-                      <Text style={styles.goalName} numberOfLines={1}>
-                        {goal.name}
-                      </Text>
-                      <Text style={styles.goalAmount}>
-                        ${goal.savedAmount.toFixed(0)} / $
-                        {goal.targetAmount.toFixed(0)}
-                      </Text>
+                <TouchableOpacity
+                  key={goal.id}
+                  onPress={() => handleGoalCardPress(goal)}
+                  activeOpacity={0.7}
+                >
+                  <Card style={styles.goalCard}>
+                    <View style={styles.goalCardContent}>
+                      <View style={styles.goalHeader}>
+                        <Text style={styles.goalName} numberOfLines={1}>
+                          {goal.name}
+                        </Text>
+                        <Text style={styles.goalAmount}>
+                          ${goal.savedAmount.toFixed(0)} / $
+                          {goal.targetAmount.toFixed(0)}
+                        </Text>
+                      </View>
+                      <View style={styles.goalProgress}>
+                        <ProgressBar
+                          progress={progress}
+                          showLabel
+                          color={
+                            progress >= 100 ? colors.success : colors.primary
+                          }
+                        />
+                      </View>
                     </View>
-                    <View style={styles.goalProgress}>
-                      <ProgressBar
-                        progress={progress}
-                        showLabel
-                        color={
-                          progress >= 100 ? colors.success : colors.primary
-                        }
-                      />
-                    </View>
-                  </View>
-                </Card>
+                  </Card>
+                </TouchableOpacity>
               );
             })}
             {goals.length > 3 && (
@@ -992,6 +1022,15 @@ export default function DashboardScreen() {
         onSelectGoal={handleGoalSelection}
         pendingAmount={pendingSaveAmount}
       />
+
+      {selectedGoalForDetail && (
+        <GoalDetailModal
+          visible={showGoalDetail}
+          goal={selectedGoalForDetail}
+          onClose={handleGoalDetailClose}
+          onGoalUpdate={handleGoalUpdate}
+        />
+      )}
     </SafeAreaView>
   );
 }

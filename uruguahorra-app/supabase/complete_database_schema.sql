@@ -1861,21 +1861,28 @@ INSERT INTO public.challenge_categories (name, description, icon, color, sort_or
 ('Educación Financiera', 'Mejora tus conocimientos y habilidades financieras', '📚', '#FF9800', 6)
 ON CONFLICT (name) DO NOTHING;
 
--- Challenges básicos actualizados con Challenge System V2
+-- ============================================
+-- RETOS DIVERTIDOS Y MOTIVANTES - VERSIÓN COMPLETA
+-- Más de 70 retos distribuidos en todas las categorías ordenados por dificultad
+-- ============================================
 DO $$
 DECLARE
     gastos_diarios_id UUID;
     entretenimiento_id UUID;
+    ropa_accesorios_id UUID;
     ahorro_sistematico_id UUID;
     inversiones_id UUID;
+    educacion_financiera_id UUID;
 BEGIN
-    -- Obtener IDs de categorías
+    -- Obtener IDs de categorías existentes
     SELECT id INTO gastos_diarios_id FROM public.challenge_categories WHERE name = 'Gastos Diarios';
     SELECT id INTO entretenimiento_id FROM public.challenge_categories WHERE name = 'Entretenimiento';
+    SELECT id INTO ropa_accesorios_id FROM public.challenge_categories WHERE name = 'Ropa y Accesorios';
     SELECT id INTO ahorro_sistematico_id FROM public.challenge_categories WHERE name = 'Ahorro Sistemático';
     SELECT id INTO inversiones_id FROM public.challenge_categories WHERE name = 'Inversiones';
+    SELECT id INTO educacion_financiera_id FROM public.challenge_categories WHERE name = 'Educación Financiera';
     
-    -- Limpiar retos de ejemplo anteriores para evitar duplicados
+    -- Limpiar retos existentes para evitar duplicados
     DELETE FROM public.challenges WHERE title IN (
         'Primer Ahorro', 'Ahorro Semanal', 'Meta Alcanzada', 'Ahorrador Constante', 'Maestro del Ahorro',
         'No Delivery Challenge', 'Marca Blanca Only', 'Comidas Caseras 100%',
@@ -1884,7 +1891,7 @@ BEGIN
         'Primera Inversión', 'Inversión Mensual'
     );
     
-    -- Retos básicos actualizados
+    -- Retos básicos actualizados (mantener para compatibilidad)
     INSERT INTO public.challenges (title, description, type, difficulty, xp_reward, target_value, duration_days) VALUES
     ('Primer Ahorro', 'Realiza tu primera contribución a cualquier meta', 'savings', 'easy', 50, 1, 7),
     ('Ahorro Semanal', 'Ahorra durante 7 días consecutivos', 'savings', 'medium', 100, 7, 7),
@@ -1892,48 +1899,205 @@ BEGIN
     ('Ahorrador Constante', 'Realiza 10 contribuciones en un mes', 'savings', 'hard', 300, 10, 30),
     ('Maestro del Ahorro', 'Completa 5 metas diferentes', 'savings', 'hard', 500, 5, 90);
     
-    -- Retos de Gastos Diarios
+    -- ============================================
+    -- RETOS DE GASTOS DIARIOS (11 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
     IF gastos_diarios_id IS NOT NULL THEN
         INSERT INTO public.challenges (
             title, description, type, category_id, category_name, difficulty, 
             xp_reward, icon, color, tags, min_duration_days, max_duration_days
         ) VALUES
-        ('No Delivery Challenge', 'Evita pedir delivery y cocina en casa para ahorrar dinero', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 25, 'home', '#FF5722', '{"delivery", "cocina", "ahorro"}', 7, 30),
-        ('Marca Blanca Only', 'Compra solo productos de marca blanca durante el período', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 50, 'shopping-cart', '#FF5722', '{"supermercado", "marca-blanca"}', 15, 60),
-        ('Comidas Caseras 100%', 'Prepara todas las comidas en casa, sin excepciones', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'hard', 100, 'chef-hat', '#FF5722', '{"cocina", "comida-casera"}', 7, 90);
+        -- EASY (4 retos)
+        ('🍕 Reto No-Pizza Week', 'Una semana completa sin pedir pizza. ¡Tu billetera te lo agradecerá!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 30, 'pizza', '#FF5722', '{"pizza", "delivery", "auto-control"}', 7, 14),
+        ('🥤 Hidratación Gratis', '21 días tomando solo agua del grifo (o filtrada). ¡Bye bye bebidas caras!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 35, 'water', '#FF5722', '{"agua", "hidratación", "bebidas"}', 21, 60),
+        ('☕ Café Casero Master', 'Prepara todo tu café en casa durante 2 semanas. ¡Conviértete en tu propio barista!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 40, 'coffee', '#FF5722', '{"café", "casero", "ahorro-diario"}', 14, 30),
+        ('🥗 Ensalada Power Month', 'Reemplaza una comida principal por ensalada 20 días. ¡Salud y ahorro!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'easy', 50, 'salad', '#FF5722', '{"ensalada", "salud", "comida-saludable"}', 20, 40),
+        
+        -- MEDIUM (5 retos)
+        ('🚫 Cero Snacks Challenge', '10 días sin comprar snacks empaquetados. ¡Fruta power!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 45, 'apple', '#FF5722', '{"snacks", "comida-saludable", "auto-control"}', 10, 30),
+        ('🛒 Cupón Master Challenge', 'Usa cupones o descuentos en el 80% de tus compras durante 15 días', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 55, 'coupon', '#FF5722', '{"cupones", "descuentos", "compras-inteligentes"}', 15, 45),
+        ('🥪 Almuerzo Ninja', '15 días llevando almuerzo preparado desde casa. ¡Sé un ninja del meal prep!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 60, 'sandwich', '#FF5722', '{"almuerzo", "meal-prep", "planificación"}', 15, 45),
+        ('🍳 Desayuno Casero Champion', 'Mes completo desayunando en casa. ¡Empieza el día ahorrando!', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 70, 'breakfast', '#FF5722', '{"desayuno", "rutina-matutina", "ahorro-diario"}', 30, 60),
+        ('🛒 Lista Inteligente Challenge', 'Usa lista de compras por 30 días y no compres nada fuera de ella', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'medium', 80, 'list', '#FF5722', '{"lista-compras", "planificación", "disciplina"}', 30, 60),
+        
+        -- HARD (2 retos)
+        ('💳 Efectivo Only Week', 'Una semana pagando solo en efectivo. Redescubre el valor real del dinero', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'hard', 90, 'money', '#FF5722', '{"efectivo", "conciencia-gasto", "método-sobres"}', 7, 21),
+        ('🛍️ Super Planificado', '30 días comprando solo los sábados con lista predefinida', 'daily_expenses', gastos_diarios_id, 'Gastos Diarios', 'hard', 100, 'calendar', '#FF5722', '{"compras-planificadas", "supermercado", "rutina"}', 30, 90);
     END IF;
-    
-    -- Retos de Entretenimiento
+
+    -- ============================================
+    -- RETOS DE ENTRETENIMIENTO (12 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
     IF entretenimiento_id IS NOT NULL THEN
         INSERT INTO public.challenges (
             title, description, type, category_id, category_name, difficulty, 
             xp_reward, icon, color, tags, min_duration_days, max_duration_days
         ) VALUES
-        ('Entretenimiento Gratuito', 'Disfruta solo de entretenimiento gratuito', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 25, 'smile', '#9C27B0', '{"entretenimiento", "gratuito"}', 7, 30),
-        ('Cero Suscripciones', 'Cancela al menos una suscripción no esencial', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 50, 'x-circle', '#9C27B0', '{"suscripciones", "gastos-fijos"}', 30, 365),
-        ('Mes Sin Cine', 'Evita ir al cine durante todo el período', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 25, 'film', '#9C27B0', '{"cine", "entretenimiento"}', 15, 60);
+        -- EASY (4 retos)
+        ('🎮 Retro Gaming Week', 'Una semana jugando solo juegos gratis o que ya tienes', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 25, 'game-controller', '#9C27B0', '{"gaming", "juegos-gratis", "entretenimiento"}', 7, 21),
+        ('🎵 Music Free Flow', '15 días escuchando solo música gratuita (radio, YouTube, Spotify free)', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 30, 'musical-note', '#9C27B0', '{"música", "gratuito", "streaming"}', 15, 45),
+        ('📚 Bookworm Challenge', '30 días leyendo solo libros gratis (biblioteca, PDFs, intercambio)', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 40, 'book', '#9C27B0', '{"lectura", "biblioteca", "entretenimiento-gratuito"}', 30, 90),
+        ('📺 YouTube University', '21 días aprendiendo solo con contenido gratuito de YouTube', 'entertainment', entretenimiento_id, 'Entretenimiento', 'easy', 45, 'play', '#9C27B0', '{"aprendizaje", "youtube", "educación-gratuita"}', 21, 60),
+        
+        -- MEDIUM (5 retos)
+        ('👥 Social Gratuito', '2 semanas de planes sociales solo gratuitos (parques, casa de amigos, etc)', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 50, 'users', '#9C27B0', '{"social", "amigos", "planes-gratis"}', 14, 30),
+        ('🎭 Cultura Gratuita', '21 días disfrutando solo eventos culturales gratuitos', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 60, 'theater-masks', '#9C27B0', '{"cultura", "eventos-gratis", "arte"}', 21, 45),
+        ('🏃 Outdoor Adventure Month', '30 días de entretenimiento solo al aire libre y gratuito', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 80, 'leaf', '#9C27B0', '{"outdoor", "naturaleza", "ejercicio", "gratis"}', 30, 60),
+        ('🏠 Home Entertainment Pro', 'Mes completo divirtiéndote solo en casa con lo que ya tienes', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 85, 'home', '#9C27B0', '{"casa", "entretenimiento-casero", "creatividad"}', 30, 60),
+        ('🎬 Streaming Detective', 'Audita y cancela al menos 2 suscripciones que no uses realmente', 'entertainment', entretenimiento_id, 'Entretenimiento', 'medium', 100, 'tv', '#9C27B0', '{"suscripciones", "streaming", "auditoría"}', 7, 30),
+        
+        -- HARD (3 retos)
+        ('🎪 Weekend Warrior', '6 fines de semana creativos sin gastar en entretenimiento', 'entertainment', entretenimiento_id, 'Entretenimiento', 'hard', 110, 'star', '#9C27B0', '{"creatividad", "fin-de-semana", "gratuito"}', 42, 90),
+        ('📱 Digital Detox Weekend', '4 fines de semana sin pagar por entretenimiento digital', 'entertainment', entretenimiento_id, 'Entretenimiento', 'hard', 120, 'smartphone', '#9C27B0', '{"detox-digital", "entretenimiento", "fin-de-semana"}', 28, 90),
+        ('🎨 DIY Master Challenge', '30 días creando tu propio entretenimiento (manualidades, arte, etc)', 'entertainment', entretenimiento_id, 'Entretenimiento', 'hard', 95, 'brush', '#9C27B0', '{"DIY", "creatividad", "arte", "manualidades"}', 30, 90);
     END IF;
-    
-    -- Retos de Ahorro Sistemático
+
+    -- ============================================
+    -- RETOS DE ROPA Y ACCESORIOS (10 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
+    IF ropa_accesorios_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        -- EASY (3 retos)
+        ('🧵 Fashion Detective', 'Semana analizando tu armario: documenta qué usas realmente', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'easy', 35, 'search', '#E91E63', '{"análisis", "armario", "uso-real"}', 7, 14),
+        ('💍 Accesorios Caseros', '30 días usando solo accesorios DIY o que ya tienes', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'easy', 40, 'gem', '#E91E63', '{"accesorios", "DIY", "creatividad"}', 30, 60),
+        ('👔 Armario Remix Challenge', '30 días creando outfits solo con ropa que ya tienes', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'easy', 50, 'shirt', '#E91E63', '{"armario", "creatividad", "ropa-existente"}', 30, 60),
+        
+        -- MEDIUM (5 retos)
+        ('👟 Zapato Único Challenge', '21 días usando solo un par de zapatos (rotando entre 2 máximo)', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'medium', 45, 'shoe', '#E91E63', '{"zapatos", "minimalismo", "cuidado"}', 21, 45),
+        ('✂️ DIY Fashion Week', '14 días customizando o arreglando ropa que ya tienes', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'medium', 60, 'scissors', '#E91E63', '{"DIY", "customización", "reparación"}', 14, 30),
+        ('🔄 Intercambio Social', '60 días probando intercambio de ropa con amigos/familia antes de comprar', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'medium', 65, 'refresh', '#E91E63', '{"intercambio", "social", "compartir"}', 60, 120),
+        ('🧥 Abrigo Inteligente', 'Toda la temporada con máximo 3 abrigos/chaquetas', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'medium', 70, 'coat', '#E91E63', '{"abrigos", "temporada", "planificación"}', 90, 180),
+        ('♻️ Second Hand Hero', '60 días comprando solo ropa de segunda mano si necesitas algo', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'medium', 80, 'recycle', '#E91E63', '{"segunda-mano", "sostenible", "ahorro"}', 60, 120),
+        
+        -- HARD (1 reto)
+        ('🛍️ Shopping Ban Challenge', '90 días sin comprar ropa nueva (solo reparaciones permitidas)', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'hard', 120, 'x-circle', '#E91E63', '{"no-compras", "reparaciones", "mindful"}', 90, 180),
+        
+        -- EXPERT (1 reto)
+        ('👗 One Month, One Outfit Style', 'Reto extremo: 30 días con solo 10 piezas de ropa en rotación', 'spending_habits', ropa_accesorios_id, 'Ropa y Accesorios', 'expert', 150, 'minimize', '#E91E63', '{"minimalismo", "capsule-wardrobe", "extremo"}', 30, 90);
+    END IF;
+
+    -- ============================================
+    -- RETOS DE AHORRO SISTEMÁTICO (13 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
     IF ahorro_sistematico_id IS NOT NULL THEN
         INSERT INTO public.challenges (
             title, description, type, category_id, category_name, difficulty, 
             xp_reward, icon, color, tags, min_duration_days, max_duration_days
         ) VALUES
-        ('Ahorro 5% Mensual', 'Ahorra el 5% de tus ingresos mensuales', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 50, 'piggy-bank', '#4CAF50', '{"ahorro", "porcentaje", "sistemático"}', 30, 365),
-        ('Ahorro 20% Extremo', 'Desafío experto: ahorra el 20% de tus ingresos', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'expert', 200, 'target', '#4CAF50', '{"ahorro", "experto", "alto-porcentaje"}', 30, 365),
-        ('Monedas del Día', 'Guarda todas las monedas que recibas como vuelto', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'easy', 25, 'coins', '#4CAF50', '{"monedas", "vuelto", "micro-ahorro"}', 7, 90);
+        -- EASY (3 retos)
+        ('⏰ Ahorro Express', 'Cada vez que llegues temprano a algún lado, ahorra $200', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'easy', 35, 'clock', '#4CAF50', '{"puntualidad", "recompensa", "hábito-positivo"}', 30, 90),
+        ('🎯 Meta Flash Week', 'Crea y alcanza una micro-meta en solo 7 días', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'easy', 45, 'target', '#4CAF50', '{"meta-rápida", "motivación", "logro"}', 7, 14),
+        ('🪙 Moneda Mágica Challenge', '100 días guardando toda moneda que recibas', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'easy', 60, 'coins', '#4CAF50', '{"monedas", "micro-ahorro", "constancia"}', 100, 365),
+        
+        -- MEDIUM (5 retos)
+        ('🎊 Celebración Inteligente', 'Por cada logro personal, ahorra en lugar de gastar extra', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 55, 'celebration', '#4CAF50', '{"logros", "celebración", "auto-recompensa"}', 30, 180),
+        ('🍯 Método Abeja', '21 días ahorrando el 20% de cualquier dinero extra que recibas', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 70, 'bee', '#4CAF50', '{"porcentaje", "dinero-extra", "oportunidad"}', 21, 60),
+        ('📱 App Ahorro Diario', '30 días transfiriendo $50 diarios automáticamente', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 80, 'smartphone', '#4CAF50', '{"ahorro-diario", "automático", "constancia"}', 30, 90),
+        ('🎲 Ahorro Aleatorio', '30 días ahorrando una cantidad aleatoria entre $100-500 diarios', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 85, 'dice', '#4CAF50', '{"aleatorio", "sorpresa", "diversión"}', 30, 60),
+        ('🌙 Ahorro Nocturno', '60 días ahorrando $300 antes de dormir', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'medium', 90, 'moon', '#4CAF50', '{"rutina-nocturna", "hábito", "constancia"}', 60, 120),
+        
+        -- HARD (3 retos)
+        ('🎯 Sniper Saver', 'Identifica 3 gastos hormiga y ahorra ese dinero por 45 días', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'hard', 110, 'crosshair', '#4CAF50', '{"gastos-hormiga", "identificación", "redirección"}', 45, 90),
+        ('📈 Escalera del Éxito', 'Incrementa tu ahorro semanal en $100 cada semana por 10 semanas', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'hard', 150, 'trending-up', '#4CAF50', '{"incremental", "escalera", "progresivo"}', 70, 100),
+        ('💯 100 Days Saver', 'Ahorra algo (aunque sea $10) durante 100 días consecutivos', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'hard', 200, 'hundred', '#4CAF50', '{"100-días", "constancia", "hábito"}', 100, 150),
+        
+        -- EXPERT (2 retos)
+        ('🔥 Ahorro Intensivo', '14 días ahorrando el doble de lo que normalmente ahorras', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'expert', 140, 'fire', '#4CAF50', '{"intensivo", "doble", "desafío-extremo"}', 14, 30),
+        ('🌟 52 Week Challenge', 'Ahorro progresivo: semana 1=$100, semana 2=$200... hasta semana 52', 'savings', ahorro_sistematico_id, 'Ahorro Sistemático', 'expert', 500, 'trophy', '#4CAF50', '{"52-semanas", "progresivo", "desafío-anual"}', 364, 400);
     END IF;
-    
-    -- Retos de Inversiones
+
+    -- ============================================
+    -- RETOS DE INVERSIONES (9 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
     IF inversiones_id IS NOT NULL THEN
         INSERT INTO public.challenges (
             title, description, type, category_id, category_name, difficulty, 
             xp_reward, icon, color, tags, min_duration_days, max_duration_days
         ) VALUES
-        ('Primera Inversión', 'Realiza tu primera inversión en instrumentos financieros', 'investments', inversiones_id, 'Inversiones', 'medium', 75, 'trending-up', '#2196F3', '{"primera-inversión", "instrumentos-financieros"}', 7, 30),
-        ('Inversión Mensual', 'Invierte un monto fijo cada mes', 'investments', inversiones_id, 'Inversiones', 'hard', 100, 'bar-chart', '#2196F3', '{"inversión-mensual", "sistemático"}', 30, 365);
+        -- EASY (1 reto)
+        ('📚 Investor Student', '21 días estudiando inversiones: lee 1 artículo diario sobre finanzas', 'investments', inversiones_id, 'Inversiones', 'easy', 60, 'book-open', '#2196F3', '{"educación", "finanzas", "aprendizaje"}', 21, 45),
+        
+        -- MEDIUM (2 retos)
+        ('📈 Market Watcher', '30 días monitoreando y analizando el mercado diariamente', 'investments', inversiones_id, 'Inversiones', 'medium', 80, 'bar-chart', '#2196F3', '{"análisis", "mercado", "monitoreo"}', 30, 60),
+        ('📊 Primer Paso Inversor', 'Abre tu primera cuenta de inversiones y haz tu primera operación', 'investments', inversiones_id, 'Inversiones', 'medium', 100, 'trending-up', '#2196F3', '{"primera-inversión", "cuenta", "inicio"}', 30, 60),
+        
+        -- HARD (3 retos)
+        ('🌍 Diversificación Global', 'Invierte en al menos 3 países/mercados diferentes en 60 días', 'investments', inversiones_id, 'Inversiones', 'hard', 160, 'globe', '#2196F3', '{"diversificación", "global", "mercados"}', 60, 120),
+        ('⚖️ Risk Manager Pro', 'Diversifica tu portafolio en al menos 5 tipos de activos diferentes', 'investments', inversiones_id, 'Inversiones', 'hard', 170, 'balance', '#2196F3', '{"diversificación", "gestión-riesgo", "activos"}', 45, 90),
+        ('💎 Dollar Cost Averaging', '90 días invirtiendo la misma cantidad cada semana', 'investments', inversiones_id, 'Inversiones', 'hard', 180, 'gem', '#2196F3', '{"DCA", "sistemático", "disciplina"}', 90, 180),
+        
+        -- EXPERT (3 retos)
+        ('🏦 Crypto Curious', 'Dedica $50.000 a aprender sobre criptomonedas con inversión práctica', 'investments', inversiones_id, 'Inversiones', 'expert', 200, 'bitcoin', '#2196F3', '{"criptomonedas", "blockchain", "tecnología"}', 30, 90),
+        ('🎯 ROI Hunter', 'Busca y realiza una inversión con potencial de 15%+ anual', 'investments', inversiones_id, 'Inversiones', 'expert', 250, 'target', '#2196F3', '{"ROI", "análisis", "rentabilidad"}', 60, 120),
+        ('🚀 Growth Investor', '120 días invirtiendo en empresas de crecimiento tecnológico', 'investments', inversiones_id, 'Inversiones', 'expert', 300, 'rocket', '#2196F3', '{"crecimiento", "tecnología", "largo-plazo"}', 120, 365);
     END IF;
+
+    -- ============================================
+    -- RETOS DE EDUCACIÓN FINANCIERA (11 retos - ORDENADOS POR DIFICULTAD)
+    -- ============================================
+    IF educacion_financiera_id IS NOT NULL THEN
+        INSERT INTO public.challenges (
+            title, description, type, category_id, category_name, difficulty, 
+            xp_reward, icon, color, tags, min_duration_days, max_duration_days
+        ) VALUES
+        -- EASY (4 retos)
+        ('🎧 Podcast Financial Week', 'Escucha 1 podcast de finanzas diario por 14 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'easy', 50, 'headphones', '#FF9800', '{"podcast", "audio", "aprendizaje"}', 14, 30),
+        ('📱 FinTech Explorer', 'Prueba 3 apps financieras diferentes en 21 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'easy', 55, 'smartphone', '#FF9800', '{"fintech", "tecnología", "herramientas"}', 21, 45),
+        ('📝 Money Journal Master', '30 días escribiendo reflexiones diarias sobre tus hábitos financieros', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'easy', 65, 'edit', '#FF9800', '{"journal", "reflexión", "hábitos"}', 30, 60),
+        ('🧠 Financial Brain Boost', '30 días leyendo 15 minutos diarios sobre finanzas personales', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'easy', 75, 'brain', '#FF9800', '{"lectura", "finanzas", "aprendizaje"}', 30, 60),
+        
+        -- MEDIUM (4 retos)
+        ('🔍 Financial Audit Week', 'Analiza profundamente todos tus productos financieros en 7 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'medium', 70, 'search', '#FF9800', '{"auditoría", "productos", "análisis"}', 7, 14),
+        ('📊 Expense Tracker Pro', '45 días registrando meticulosamente todos tus gastos', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'medium', 85, 'pie-chart', '#FF9800', '{"gastos", "registro", "análisis"}', 45, 90),
+        ('🏆 Financial Goal Setter', 'Define 5 metas financieras SMART y crea plan de acción', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'medium', 90, 'target', '#FF9800', '{"metas", "SMART", "planificación"}', 7, 30),
+        ('📖 Libro Financiero Month', 'Lee completamente 1 libro de finanzas en 30 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'medium', 100, 'book', '#FF9800', '{"libro", "finanzas", "conocimiento"}', 30, 60),
+        
+        -- HARD (2 retos)
+        ('💡 Budget Master Class', 'Crea y sigue un presupuesto detallado por 60 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'hard', 120, 'lightbulb', '#FF9800', '{"presupuesto", "planificación", "disciplina"}', 60, 120),
+        ('💳 Credit Score Guardian', 'Monitorea y mejora tu score crediticio por 90 días', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'hard', 130, 'credit-card', '#FF9800', '{"crédito", "score", "historial"}', 90, 180),
+        
+        -- EXPERT (1 reto)
+        ('🎓 Financial Advisor DIY', '60 días tomando decisiones como si fueras tu propio asesor', 'financial_education', educacion_financiera_id, 'Educación Financiera', 'expert', 150, 'graduation-cap', '#FF9800', '{"asesoría", "decisiones", "autonomía"}', 60, 120);
+    END IF;
+
+    -- ============================================
+    -- RETOS GENERALES MOTIVACIONALES (8 retos especiales - ORDENADOS POR DIFICULTAD)
+    -- ============================================
+    
+    -- Retos sin categoría específica pero súper motivantes
+    INSERT INTO public.challenges (
+        title, description, type, difficulty, 
+        xp_reward, icon, color, tags, min_duration_days, max_duration_days
+    ) VALUES
+    -- MEDIUM (3 retos)
+    ('🌈 Rainbow Challenge', '7 días, 7 categorías diferentes de ahorro (una por cada color del arcoíris)', 'savings', 'medium', 80, 'rainbow', '#E74C3C', '{"variedad", "categorías", "colores"}', 7, 14),
+    ('🎪 Circo del Ahorro', '21 días haciendo un "acto circense" de ahorro diferente cada día', 'savings', 'medium', 95, 'tent', '#9B59B6', '{"creatividad", "diversión", "variedad"}', 21, 30),
+    ('🎮 Ahorro Gamificado', '30 días convirtiendo cada ahorro en puntos de un videojuego personal', 'savings', 'medium', 110, 'gamepad', '#3498DB', '{"gamificación", "puntos", "diversión"}', 30, 45),
+    
+    -- HARD (1 reto)
+    ('🎯 Bullseye Precision', 'Alcanza exactamente 5 micro-metas sin pasarte ni quedarte corto', 'savings', 'hard', 160, 'crosshair', '#27AE60', '{"precisión", "exactitud", "micro-metas"}', 60, 90),
+    
+    -- EXPERT (4 retos)
+    ('⚡ Flash Saver', 'Ahorra $10.000 en solo 5 días con creatividad extrema', 'savings', 'expert', 200, 'zap', '#FFD700', '{"flash", "creatividad", "meta-rápida"}', 5, 7),
+    ('🌟 Estrella Financiera', 'Combina ahorro + inversión + educación por 45 días', 'savings', 'expert', 280, 'star', '#F39C12', '{"combinado", "holístico", "estrella"}', 45, 90),
+    ('🏃‍♂️ Maratón Financiero', '42 días (como los 42km de un maratón) de disciplina financiera extrema', 'budgeting', 'expert', 350, 'flag', '#E67E22', '{"maratón", "disciplina", "resistencia"}', 42, 60),
+    ('🔥 Transformación Total', '90 días cambiando 3 hábitos financieros malos por buenos', 'savings', 'expert', 400, 'flame', '#FF6B35', '{"transformación", "hábitos", "cambio-total"}', 90, 120);
+
+    -- Mensaje de confirmación de retos insertados
+    RAISE NOTICE '🎉 RETOS DIVERTIDOS INSERTADOS EXITOSAMENTE! 🎉';
+    RAISE NOTICE 'Se han agregado más de 70 retos distribuidos en todas las categorías:';
+    RAISE NOTICE '- 11 retos de Gastos Diarios 🛒';  
+    RAISE NOTICE '- 12 retos de Entretenimiento 🎬';
+    RAISE NOTICE '- 10 retos de Ropa y Accesorios 👕';
+    RAISE NOTICE '- 13 retos de Ahorro Sistemático 🐷';
+    RAISE NOTICE '- 9 retos de Inversiones 📈';
+    RAISE NOTICE '- 11 retos de Educación Financiera 📚';
+    RAISE NOTICE '- 8 retos especiales motivacionales ⚡';
+    RAISE NOTICE 'Todos organizados por dificultad: Easy → Medium → Hard → Expert';
+
 END $$;
 
 -- Contenido educativo básico

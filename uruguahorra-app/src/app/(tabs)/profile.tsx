@@ -83,25 +83,30 @@ export default function ProfileScreen() {
       flexDirection: 'row',
       flexWrap: 'wrap',
       marginBottom: 24,
-      marginHorizontal: -6,
+      marginHorizontal: -4,
     },
     statCard: {
       width: '50%',
-      padding: 6,
+      padding: 4,
     },
     statContent: {
       alignItems: 'center',
-      padding: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      minHeight: 70,
+      justifyContent: 'center',
     },
     statValue: {
-      fontSize: 24,
+      fontSize: 20,
       fontWeight: 'bold',
       color: colors.text.primary,
-      marginBottom: 4,
+      marginBottom: 2,
     },
     statLabel: {
-      fontSize: 12,
+      fontSize: 11,
       color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 14,
     },
     section: {
       marginBottom: 24,
@@ -186,7 +191,7 @@ export default function ProfileScreen() {
             <Card>
               <View style={styles.statContent}>
                 <Text style={styles.statValue}>{user?.streak || 0}</Text>
-                <Text style={styles.statLabel}>Días de racha</Text>
+                <Text style={styles.statLabel}>Racha</Text>
               </View>
             </Card>
           </View>
@@ -194,7 +199,7 @@ export default function ProfileScreen() {
             <Card>
               <View style={styles.statContent}>
                 <Text style={styles.statValue}>{user?.totalXP || 0}</Text>
-                <Text style={styles.statLabel}>XP Total</Text>
+                <Text style={styles.statLabel}>Experiencia</Text>
               </View>
             </Card>
           </View>
@@ -202,7 +207,7 @@ export default function ProfileScreen() {
             <Card>
               <View style={styles.statContent}>
                 <Text style={styles.statValue}>3</Text>
-                <Text style={styles.statLabel}>Metas activas</Text>
+                <Text style={styles.statLabel}>Metas{'\n'}Activas</Text>
               </View>
             </Card>
           </View>
@@ -210,7 +215,7 @@ export default function ProfileScreen() {
             <Card>
               <View style={styles.statContent}>
                 <Text style={styles.statValue}>12</Text>
-                <Text style={styles.statLabel}>Retos completados</Text>
+                <Text style={styles.statLabel}>Retos{'\n'}Completados</Text>
               </View>
             </Card>
           </View>

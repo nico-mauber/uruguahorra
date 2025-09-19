@@ -194,15 +194,12 @@ export interface AppConfig {
     retries: number;
   };
   features: {
-    csvImport: boolean;
     gamification: boolean;
     socialFeatures: boolean;
     premiumFeatures: boolean;
   };
   limits: {
     maxGoals: number;
-    maxTransactionsPerImport: number;
-    maxFileSize: number;
   };
   ui: {
     theme: 'light' | 'dark' | 'auto';
@@ -374,9 +371,3 @@ export const HTTP_STATUS = {
   SERVICE_UNAVAILABLE: 503,
 } as const;
 
-export const MIME_TYPES = {
-  CSV: 'text/csv',
-  JSON: 'application/json',
-  PDF: 'application/pdf',
-  EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-} as const;

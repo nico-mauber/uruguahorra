@@ -216,7 +216,6 @@ logger.setLevel(LogLevel.DEBUG);
 - **Total end-to-end**: 3-10 seconds
 
 ### Optimization Strategies
-- Audio compression for faster upload
 - Streaming transcription for real-time feedback
 - Local caching of frequent categories
 - Batch API calls when possible

@@ -231,24 +231,6 @@ describe('SecureLogger Sanitization', () => {
 
 // Ejemplos de uso en el código real
 describe('Real-world Usage Examples', () => {
-  test('CSV import error should not expose raw data', () => {
-    const csvError = {
-      rowIndex: 5,
-      error: {
-        message: 'Invalid format',
-        rowData: {
-          date: '2024-01-01',
-          description: 'Payment',
-          amount: 100,
-          account_token: 'secret-account-token',
-        },
-      },
-    };
-
-    const sanitized = SecureLogger.sanitizeData(csvError);
-    expect(sanitized.error.rowData.account_token).toBe('[REDACTED]');
-    expect(sanitized.error.rowData.amount).toBe(100);
-  });
 
   test('Auth service logging should not expose credentials', () => {
     const authLog = {

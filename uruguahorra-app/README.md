@@ -78,7 +78,6 @@ Copia el contenido de `supabase/complete_database_schema.sql` y ejecútalo en el
 
 ### 💳 **Gestión Financiera**
 
-- Importación de CSV bancarios
 - Análisis automático de gastos
 - Categorización inteligente
 - Reportes mensuales

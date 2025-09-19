@@ -176,11 +176,6 @@ export default function PaywallScreen() {
       description: 'Acceso a todos los cursos',
     },
     {
-      icon: 'cloud-upload',
-      title: 'Importaciones ilimitadas',
-      description: 'Sube todos tus CSV',
-    },
-    {
       icon: 'flash',
       title: 'Retos exclusivos',
       description: 'Desafíos especiales con más XP',

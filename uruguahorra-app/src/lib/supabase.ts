@@ -5,13 +5,44 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Obtener las variables de entorno
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-// Validar que las variables existan
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Validar que las variables existan con mensajes descriptivos
+function validateEnvironmentVariables() {
+  const missingVars: string[] = [];
+  
+  if (!supabaseUrl || supabaseUrl === 'https://your-project.supabase.co') {
+    missingVars.push('EXPO_PUBLIC_SUPABASE_URL');
+  }
+  
+  if (!supabaseAnonKey || supabaseAnonKey === 'your-supabase-anon-key-here') {
+    missingVars.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  
+  if (missingVars.length > 0) {
+    const errorMessage = `
+🚨 Missing or invalid Supabase environment variables:
+${missingVars.map(varName => `   - ${varName}`).join('\n')}
+
+To fix this error:
+1. Go to https://supabase.com/dashboard
+2. Select your project
+3. Go to Project Settings → API
+4. Copy the Project URL and anon public key
+5. Update your .env file with the real values
+
+Current values:
+- EXPO_PUBLIC_SUPABASE_URL: ${supabaseUrl || 'undefined'}
+- EXPO_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '[PRESENT]' : 'undefined'}
+    `.trim();
+    
+    throw new Error(errorMessage);
+  }
 }
+
+// Ejecutar validación
+validateEnvironmentVariables();
 
 // Adapter para SecureStore de Expo (solo móvil)
 const ExpoSecureStoreAdapter = {
@@ -46,7 +77,8 @@ const storageAdapter = Platform.select({
 });
 
 // Crear cliente de Supabase con persistencia segura
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Variables ya validadas, seguro usar non-null assertion
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
   auth: {
     storage: storageAdapter,
     autoRefreshToken: true,

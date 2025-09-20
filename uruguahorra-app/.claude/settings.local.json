@@ -73,7 +73,9 @@
       "Bash(npx @expo/cli install --fix)",
       "Bash(npx typescript:*)",
       "Bash(nvm:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(PORT=8082 npm start)",
+      "Bash(timeout 15s npm run web)"
     ],
     "deny": [],
     "ask": [],

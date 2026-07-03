@@ -306,3 +306,46 @@ export interface SquadContributionRow {
   source: string;
   created_at: string;
 }
+
+/**
+ * Fila de `budgets`. Fuente: docs/features/budgets/budgets-functional-specs.md.
+ * `spent` lo mantiene el trigger `update_budget_spent`; el cliente nunca lo escribe.
+ * `category` es el objeto anidado del join con `transaction_categories`.
+ */
+export interface BudgetRow {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  spent: number;
+  /** YYYY-MM-DD */
+  start_date: string;
+  /** YYYY-MM-DD */
+  end_date: string;
+  status: 'active' | 'expired';
+  renewed_from_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  /** Join anidado con `transaction_categories` (select `category:...`). */
+  category?: {
+    id: string;
+    name: string;
+    emoji: string | null;
+    color: string | null;
+  } | null;
+}
+
+/**
+ * Payload de INSERT de presupuesto (crear o renovar). Sólo los campos que el
+ * cliente envía; `spent` arranca en 0 por default de BD; `status` = 'active'.
+ */
+export interface BudgetInsert {
+  user_id: string;
+  category_id: string;
+  amount: number;
+  /** YYYY-MM-DD */
+  start_date: string;
+  /** YYYY-MM-DD */
+  end_date: string;
+  renewed_from_id?: string | null;
+}

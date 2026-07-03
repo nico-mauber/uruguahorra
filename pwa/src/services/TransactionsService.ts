@@ -35,6 +35,7 @@ export interface CreateQuickTransactionInput {
   category_id?: string | null;
   description?: string;
   type: 'expense' | 'income' | 'transfer';
+  budget_id?: string | null;
 }
 
 /** Columnas de la categoría anidada en el listado (CU-1). */
@@ -115,6 +116,7 @@ export class TransactionsService {
       type: input.type,
       transaction_date: new Date().toISOString().slice(0, 10),
       xp_earned: 5,
+      budget_id: input.budget_id ?? null,
     };
     const optimistic = () => ({ ...payload, created_at: new Date().toISOString() }) as unknown as TransactionRow;
 

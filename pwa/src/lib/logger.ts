@@ -8,6 +8,7 @@ export enum LogModule {
   DB = 'DB',
   GOALS = 'GOALS',
   TRANSACTIONS = 'TRANSACTIONS',
+  BUDGETS = 'BUDGETS',
   UI = 'UI',
   NAV = 'NAV',
   STORE = 'STORE',

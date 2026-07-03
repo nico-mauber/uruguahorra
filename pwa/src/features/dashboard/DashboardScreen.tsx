@@ -172,6 +172,26 @@ export function DashboardScreen() {
         <Icon name="flag" size={18} color="#fff" />
       </button>
 
+      {/* Ver Presupuestos */}
+      <button
+        onClick={() => navigate('/budgets')}
+        style={{
+          width: '100%', cursor: 'pointer', textAlign: 'left',
+          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+          borderRadius: 16, padding: 16,
+          display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20,
+        }}
+      >
+        <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'color-mix(in srgb, var(--color-primary) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="wallet" size={22} color="var(--color-primary)" />
+        </span>
+        <span style={{ flex: 1 }}>
+          <span style={{ display: 'block', fontSize: 18, fontWeight: 600 }}>Presupuestos</span>
+          <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: 14 }}>Controlá tus límites por categoría</span>
+        </span>
+        <Icon name="arrow-forward" size={18} color="var(--color-text-secondary)" />
+      </button>
+
       {/* Ahorro rápido (solo si hay metas) */}
       {active.length > 0 && (
         <div style={{ marginBottom: 20 }}>

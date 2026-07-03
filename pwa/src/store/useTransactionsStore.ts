@@ -77,6 +77,7 @@ interface TransactionsState {
       category_id?: string | null;
       description?: string;
       type: 'expense' | 'income' | 'transfer';
+      budget_id?: string | null;
     }
   ) => Promise<void>;
   remove: (id: string, userId: string) => Promise<void>;

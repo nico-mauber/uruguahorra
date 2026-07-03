@@ -60,21 +60,7 @@ export function ProfilePage() {
 
 export { OnboardingScreen as OnboardingPage } from '@/features/auth/OnboardingScreen';
 
-export function TransactionsPage() {
-  const navigate = useNavigate();
-  return pageWrap(
-    <EmptyState
-      icon="receipt"
-      title="Transacciones"
-      text="Placeholder — Fase 05."
-      action={
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          Volver
-        </Button>
-      }
-    />
-  );
-}
+export { TransactionsScreen as TransactionsPage } from '@/features/transactions/TransactionsScreen';
 
 export { CreateGoalScreen as CreateGoalPage } from '@/features/goals/CreateGoalScreen';
 

@@ -247,3 +247,62 @@ export interface DailyCheckinRow {
   completed: boolean;
   note: string | null;
 }
+
+/**
+ * Fila de `squads` (pods de ahorro). Fuente:
+ * docs/api/contracts-and-data-mapping.md §2.8.
+ * `total_saved` lo mantiene el trigger `update_squad_totals`; el cliente nunca
+ * lo escribe. El cliente sí genera `invite_code` (6 chars A-Z0-9).
+ */
+export interface SquadRow {
+  id: string;
+  name: string;
+  description: string | null;
+  max_members: number;
+  created_by: string;
+  owner_id: string;
+  invite_code: string;
+  is_active: boolean;
+  goal_amount: number;
+  total_saved: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+/**
+ * Fila de `squad_members`. Fuente: §2.8.
+ * Sistema democrático: todos los miembros tienen rol `admin`.
+ * `total_saved`/`monthly_saved` los mantiene el trigger; el cliente no los
+ * escribe. UNIQUE(squad_id, user_id).
+ * `user` es el objeto anidado del join opcional con `users`.
+ */
+export interface SquadMemberRow {
+  id: string;
+  squad_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  total_saved: number;
+  monthly_saved: number;
+  /** Join anidado con `users` (select `user:users(id,email,premium)`). */
+  user?: {
+    id: string;
+    email: string;
+    premium: boolean;
+  } | null;
+}
+
+/**
+ * Fila de `squad_contributions`. Fuente: §2.8.
+ * El INSERT dispara el trigger `update_squad_totals` que recalcula los
+ * agregados del pod y del miembro y otorga 15 XP.
+ */
+export interface SquadContributionRow {
+  id: string;
+  squad_id: string;
+  user_id: string;
+  amount: number;
+  description: string | null;
+  source: string;
+  created_at: string;
+}

@@ -11,6 +11,7 @@ import {
 } from '@/features/goals/goalHelpers';
 import { useApplySaving } from '@/features/goals/useApplySaving';
 import { GoalDetailModal } from '@/features/goals/GoalDetailModal';
+import { PodsList } from '@/features/pods/PodsList';
 import { GoalSelectionModal } from './GoalSelectionModal';
 
 /**
@@ -241,6 +242,9 @@ export function DashboardScreen() {
           )}
         </div>
       )}
+
+      {/* Pods */}
+      <PodsList />
 
       <Fab icon="add" label="Nueva transacción" onClick={() => navigate('/transactions')} />
 

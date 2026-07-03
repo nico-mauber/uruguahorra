@@ -66,11 +66,7 @@ export function PaywallPage() {
   );
 }
 
-export function SquadDetailPage() {
-  return pageWrap(
-    <EmptyState icon="people" title="Pod de Ahorro" text="Placeholder — Fase 07." />
-  );
-}
+export { SquadDetailScreen as SquadDetailPage } from '@/features/pods/SquadDetailScreen';
 
 export function NotificationsPage() {
   return pageWrap(

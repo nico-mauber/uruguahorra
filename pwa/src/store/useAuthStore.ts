@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
 import { useUIStore } from './useUIStore';
+import { BillingService } from '@/services/BillingService';
 import type { UserRow } from '@/types/database';
 
 /**
@@ -23,6 +24,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   loadProfile: (userId: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshPremiumStatus: () => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -95,6 +97,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const profileRow = data as UserRow | null;
       if (profileRow) {
         set({ profile: profileRow, isPremium: profileRow.premium === true });
+        // Si no es premium por perfil, verificar suscripción vigente (§CU-4).
+        if (profileRow.premium !== true) void get().refreshPremiumStatus();
         return;
       }
       if (error) {
@@ -140,6 +144,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error cargando perfil', error);
     }
+  },
+
+  // §CU-4: premium = profile.premium O suscripción activa/trial vigente.
+  refreshPremiumStatus: async () => {
+    const { user, profile } = get();
+    if (!user) return;
+    if (profile?.premium === true) {
+      set({ isPremium: true });
+      return;
+    }
+    const hasSub = await BillingService.isPremiumUser(user.id);
+    set({ isPremium: hasSub });
   },
 
   refreshProfile: async () => {

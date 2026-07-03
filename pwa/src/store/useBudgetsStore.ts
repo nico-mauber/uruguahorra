@@ -39,7 +39,7 @@ function toBudget(row: BudgetRow): Budget {
 
 /** Hoy en formato YYYY-MM-DD (local). */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('en-CA'); // en-CA => YYYY-MM-DD in local time
 }
 
 /** Un presupuesto activo está "vencido" si su end_date ya pasó. */

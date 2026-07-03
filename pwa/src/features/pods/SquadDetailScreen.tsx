@@ -87,7 +87,7 @@ export function SquadDetailScreen() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: 16, borderBottom: '1px solid var(--color-border)' }}>
         <button onClick={() => navigate(-1)} aria-label="Volver" style={{ background: 'none', border: 'none', cursor: 'pointer', width: 40, color: 'var(--color-text-primary)' }}>
-          <Icon name="flag" size={24} />
+          <Icon name="arrow-back" size={24} />
         </button>
         <h1 style={{ flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 600 }}>Detalle del Grupo</h1>
         <span style={{ width: 40 }} />

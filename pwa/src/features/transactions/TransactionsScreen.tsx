@@ -40,7 +40,7 @@ export function TransactionsScreen() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: 16, borderBottom: '1px solid var(--color-border)' }}>
         <button onClick={() => navigate(-1)} aria-label="Volver" style={{ background: 'none', border: 'none', cursor: 'pointer', width: 40, color: 'var(--color-text-primary)' }}>
-          <Icon name="flag" size={24} />
+          <Icon name="arrow-back" size={24} />
         </button>
         <h1 style={{ flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 600 }}>Transacciones</h1>
         <span style={{ width: 40 }} />
@@ -51,17 +51,17 @@ export function TransactionsScreen() {
         <Card>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Balance del período</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <label style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            <label style={{ flex: '1 1 0', minWidth: 0, fontSize: 12, color: 'var(--color-text-secondary)' }}>
               Desde
               <input type="date" value={startDate} max={endDate} min={isoDaysAgo(730)}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: '100%', marginTop: 4, padding: 8, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: 4, padding: '8px 4px', fontSize: 12, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
             </label>
-            <label style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            <label style={{ flex: '1 1 0', minWidth: 0, fontSize: 12, color: 'var(--color-text-secondary)' }}>
               Hasta
               <input type="date" value={endDate} max={isoToday()} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{ width: '100%', marginTop: 4, padding: 8, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: 4, padding: '8px 4px', fontSize: 12, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
             </label>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>

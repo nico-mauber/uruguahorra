@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { GoalsService } from '@/services/GoalsService';
 import { logger, LogModule } from '@/lib/logger';
+import { cacheGetByUser, cachePut } from '@/lib/idb';
 import type { GoalRow } from '@/types/database';
 
 /**
@@ -70,16 +71,24 @@ export const useGoalsStore = create<GoalsState>((set, get) => ({
     }
 
     set({ isLoading: true, error: null });
+
+    // Cache-then-network: hidratar desde IndexedDB al instante (§4.1).
+    if (get().goals.length === 0) {
+      try {
+        const cached = await cacheGetByUser('cache-goals', userId);
+        if (cached.length > 0) set({ goals: (cached as unknown as GoalRow[]).map(toGoal) });
+      } catch { /* caché opcional */ }
+    }
+
     try {
       const rows = await GoalsService.fetchGoals(userId);
-      set({
-        goals: rows.map(toGoal),
-        lastFetchUserId: userId,
-        isLoading: false,
-      });
+      set({ goals: rows.map(toGoal), lastFetchUserId: userId, isLoading: false });
+      // Persistir snapshot para lecturas offline.
+      void cachePut('cache-goals', rows as unknown as Record<string, unknown>[]);
     } catch (error) {
       logger.error(LogModule.GOALS, 'Error cargando metas', error);
-      set({ isLoading: false, error: 'No se pudieron cargar las metas' });
+      // Offline/red: conservar lo hidratado desde caché; sólo marcar error si vacío.
+      set((s) => ({ isLoading: false, error: s.goals.length === 0 ? 'No se pudieron cargar las metas' : null }));
     }
   },
 

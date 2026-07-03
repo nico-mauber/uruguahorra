@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { TransactionsService } from '@/services/TransactionsService';
 import { logger, LogModule } from '@/lib/logger';
+import { cacheGetByUser, cachePut } from '@/lib/idb';
 import type {
   FrequentTransaction,
   TransactionCategoryRow,
@@ -119,6 +120,14 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
         endDate: endDate ?? null,
       },
     });
+    // Cache-then-network: hidratar desde IndexedDB (§4.1).
+    if (get().transactions.length === 0) {
+      try {
+        const cached = await cacheGetByUser('cache-transactions', userId);
+        if (cached.length > 0) set({ transactions: (cached as unknown as TransactionRow[]).map(toTransaction) });
+      } catch { /* caché opcional */ }
+    }
+
     try {
       const rows = await TransactionsService.getUserTransactions({
         user_id: userId,
@@ -128,9 +137,11 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
         limit: 1000,
       });
       set({ transactions: rows.map(toTransaction), isLoading: false });
+      // Persistir últimas transacciones para lecturas offline (§4).
+      void cachePut('cache-transactions', rows as unknown as Record<string, unknown>[]);
     } catch (error) {
       logger.error(LogModule.TRANSACTIONS, 'Error cargando transacciones', error);
-      set({ isLoading: false, error: 'No se pudieron cargar las transacciones' });
+      set((s) => ({ isLoading: false, error: s.transactions.length === 0 ? 'No se pudieron cargar las transacciones' : null }));
     }
   },
 

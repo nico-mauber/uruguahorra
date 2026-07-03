@@ -39,7 +39,8 @@ export function getDB(): Promise<IDBPDatabase<UruguahorraDB>> {
 
         for (const name of ['cache-goals', 'cache-transactions', 'cache-sessions'] as const) {
           const store = db.createObjectStore(name, { keyPath: 'id' });
-          store.createIndex('userId', 'userId');
+          // Índice 'userId' → campo real snake_case `user_id` de las filas de BD.
+          store.createIndex('userId', 'user_id');
         }
         db.createObjectStore('cache-categories', { keyPath: 'id' });
         db.createObjectStore('cache-profile', { keyPath: 'id' });

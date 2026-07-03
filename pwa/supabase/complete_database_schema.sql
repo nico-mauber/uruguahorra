@@ -3873,3 +3873,82 @@ GRANT EXECUTE ON FUNCTION get_analytics_stats(UUID) TO authenticated;
 -- ============================================
 -- FINAL DEL SCHEMA
 -- ============================================
+-- ============ PRESUPUESTOS (budgets) ============
+-- Fuente: docs/features/budgets/. Aplicado en Supabase via migración `add_budgets`.
+CREATE TABLE public.budgets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES public.transaction_categories(id),
+    amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
+    spent DECIMAL(12,2) NOT NULL DEFAULT 0,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','expired')),
+    renewed_from_id UUID REFERENCES public.budgets(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT valid_budget_date_range CHECK (end_date >= start_date)
+);
+
+CREATE UNIQUE INDEX one_active_budget_per_category
+    ON public.budgets (user_id, category_id)
+    WHERE status = 'active';
+CREATE INDEX idx_budgets_user_status ON public.budgets(user_id, status);
+
+ALTER TABLE public.transactions
+    ADD COLUMN budget_id UUID REFERENCES public.budgets(id) ON DELETE SET NULL;
+CREATE INDEX idx_transactions_budget_id ON public.transactions(budget_id) WHERE budget_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION public.update_budget_spent()
+RETURNS TRIGGER AS $$
+DECLARE
+    affected_budget UUID;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        affected_budget := OLD.budget_id;
+    ELSE
+        affected_budget := NEW.budget_id;
+        IF TG_OP = 'UPDATE'
+           AND OLD.budget_id IS DISTINCT FROM NEW.budget_id
+           AND OLD.budget_id IS NOT NULL THEN
+            UPDATE public.budgets
+            SET spent = (
+                SELECT COALESCE(SUM(amount), 0) FROM public.transactions
+                WHERE budget_id = OLD.budget_id AND deleted_at IS NULL
+            ), updated_at = NOW()
+            WHERE id = OLD.budget_id;
+        END IF;
+    END IF;
+
+    IF affected_budget IS NOT NULL THEN
+        UPDATE public.budgets
+        SET spent = (
+            SELECT COALESCE(SUM(amount), 0) FROM public.transactions
+            WHERE budget_id = affected_budget AND deleted_at IS NULL
+        ), updated_at = NOW()
+        WHERE id = affected_budget;
+    END IF;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_budget_spent_on_tx_insert
+    AFTER INSERT ON public.transactions
+    FOR EACH ROW EXECUTE FUNCTION public.update_budget_spent();
+CREATE TRIGGER update_budget_spent_on_tx_update
+    AFTER UPDATE ON public.transactions
+    FOR EACH ROW EXECUTE FUNCTION public.update_budget_spent();
+CREATE TRIGGER update_budget_spent_on_tx_delete
+    AFTER DELETE ON public.transactions
+    FOR EACH ROW EXECUTE FUNCTION public.update_budget_spent();
+
+CREATE TRIGGER update_budgets_updated_at
+    BEFORE UPDATE ON public.budgets
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "budgets_all_own" ON public.budgets
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);

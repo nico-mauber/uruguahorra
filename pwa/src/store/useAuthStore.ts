@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
 import { useUIStore } from './useUIStore';
 import { BillingService } from '@/services/BillingService';
+import { messageSW } from '@/lib/pwa';
 import type { UserRow } from '@/types/database';
 
 /**
@@ -169,7 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       logger.error(LogModule.AUTH, 'Error en signOut', error);
     }
-    // Limpiar estado. (IndexedDB/caches: se limpiarán en Fase 11.)
+    // Limpiar estado + caché de API del SW (§3.2). IndexedDB: fase offline.
     set({
       user: null,
       profile: null,
@@ -177,6 +178,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isPremium: false,
     });
     useUIStore.setState({ toasts: [] });
+    messageSW('CLEAR_API_CACHE');
   },
 
   // Registro. Contrato §1: signUp con metadata país/moneda; auto sign-in (Confirm

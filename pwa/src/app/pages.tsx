@@ -29,11 +29,7 @@ export { GoalsScreen as GoalsPage } from '@/features/goals/GoalsScreen';
 
 export { ChallengesScreen as ChallengesPage } from '@/features/challenges/ChallengesScreen';
 
-export function AnalyticsPage() {
-  return pageWrap(
-    <EmptyState icon="analytics" title="Análisis" text="Placeholder — Fase 08." />
-  );
-}
+export { AnalyticsScreen as AnalyticsPage } from '@/features/analytics/AnalyticsScreen';
 
 export function ProfilePage() {
   const { isDark, toggle } = useTheme();
@@ -78,15 +74,7 @@ export function NotificationsPage() {
   );
 }
 
-export function AnalyticsSettingsPage() {
-  return pageWrap(
-    <EmptyState
-      icon="analytics"
-      title="Configuración de Análisis"
-      text="Placeholder — Fase 08."
-    />
-  );
-}
+export { AnalyticsSettingsScreen as AnalyticsSettingsPage } from '@/features/analytics/AnalyticsSettingsScreen';
 
 export function PrivacyPolicyPage() {
   return pageWrap(

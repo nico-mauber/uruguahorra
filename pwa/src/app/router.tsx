@@ -18,6 +18,7 @@ import {
   SubscriptionSuccessPage,
   SubscriptionFailurePage,
   SubscriptionPendingPage,
+  BudgetsPage,
 } from './pages';
 
 /** Router. Mapa 1:1 con docs/architecture/pwa-and-offline-strategy §7. */
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       },
       // Privadas sin tab bar
       { path: '/transactions', element: <TransactionsPage /> },
+      { path: '/budgets', element: <BudgetsPage /> },
       { path: '/create-goal', element: <CreateGoalPage /> },
       { path: '/paywall', element: <PaywallPage /> },
       { path: '/squad/:id', element: <SquadDetailPage /> },

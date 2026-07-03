@@ -32,3 +32,5 @@ export { PrivacyPolicyScreen as PrivacyPolicyPage } from '@/features/profile/Pri
 export { SubscriptionSuccessScreen as SubscriptionSuccessPage } from '@/features/billing/SubscriptionReturnScreens';
 export { SubscriptionFailureScreen as SubscriptionFailurePage } from '@/features/billing/SubscriptionReturnScreens';
 export { SubscriptionPendingScreen as SubscriptionPendingPage } from '@/features/billing/SubscriptionReturnScreens';
+
+export { BudgetsScreen as BudgetsPage } from '@/features/budgets/BudgetsScreen';

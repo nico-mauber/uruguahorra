@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { EmptyState, Button, Card } from '@/components';
-import { useTheme } from '@/theme/useTheme';
-import { useAuthStore } from '@/store/useAuthStore';
+import { EmptyState, Button } from '@/components';
 
 /**
  * Páginas placeholder de la Fase 01. Cada una se reemplaza por su feature real
@@ -31,24 +29,7 @@ export { ChallengesScreen as ChallengesPage } from '@/features/challenges/Challe
 
 export { AnalyticsScreen as AnalyticsPage } from '@/features/analytics/AnalyticsScreen';
 
-export function ProfilePage() {
-  const { isDark, toggle } = useTheme();
-  const { user, signOut } = useAuthStore();
-  return pageWrap(
-    <Card>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Perfil</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-        {user?.email ?? 'Sesión de ejemplo'} · Placeholder — Fase 09.
-      </p>
-      <Button variant="outline" onClick={toggle} style={{ marginBottom: 12 }}>
-        Tema: {isDark ? 'Oscuro' : 'Claro'} (tocar para alternar)
-      </Button>
-      <Button variant="ghost" onClick={() => void signOut()}>
-        Cerrar sesión
-      </Button>
-    </Card>
-  );
-}
+export { ProfileScreen as ProfilePage } from '@/features/profile/ProfileScreen';
 
 export { OnboardingScreen as OnboardingPage } from '@/features/auth/OnboardingScreen';
 
@@ -64,23 +45,11 @@ export function PaywallPage() {
 
 export { SquadDetailScreen as SquadDetailPage } from '@/features/pods/SquadDetailScreen';
 
-export function NotificationsPage() {
-  return pageWrap(
-    <EmptyState
-      icon="notifications"
-      title="Notificaciones"
-      text="Placeholder — Fase 09."
-    />
-  );
-}
+export { NotificationsScreen as NotificationsPage } from '@/features/profile/NotificationsScreen';
 
 export { AnalyticsSettingsScreen as AnalyticsSettingsPage } from '@/features/analytics/AnalyticsSettingsScreen';
 
-export function PrivacyPolicyPage() {
-  return pageWrap(
-    <EmptyState icon="shield" title="Privacidad" text="Política — placeholder." />
-  );
-}
+export { PrivacyPolicyScreen as PrivacyPolicyPage } from '@/features/profile/PrivacyPolicyScreen';
 
 function SubscriptionResult({ emoji, title, text }: { emoji: string; title: string; text: string }) {
   const navigate = useNavigate();

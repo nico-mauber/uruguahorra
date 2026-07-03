@@ -284,4 +284,20 @@ export class ChallengesService {
       logger.warn(LogModule.DB, 'Error expirando sesiones de retos', error);
     }
   }
+
+  /** Cantidad de sesiones completadas del usuario (para el perfil). Best-effort → 0. */
+  static async getCompletedSessionsCount(userId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('user_challenge_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+      if (error) throw error;
+      return count ?? 0;
+    } catch (error) {
+      logger.warn(LogModule.DB, 'Error contando retos completados', error);
+      return 0;
+    }
+  }
 }

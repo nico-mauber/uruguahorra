@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
+import { useUIStore } from '@/store/useUIStore';
 import { money } from './txHelpers';
 import { QuickTransactionModal } from './QuickTransactionModal';
+import { VoiceTransactionModal } from './VoiceTransactionModal';
 
 /**
  * FAB expandible de transacciones. Fuente: docs/features/transactions §CU-3, ui-ux §TransactionFAB.
- * Voz: pendiente de la Edge Function `ai-transcribe` (fase final); botón deshabilitado.
+ * Voz: Edge Function `ai-transcribe` (requiere deploy con OPENAI_API_KEY); deshabilitada offline.
  */
 interface Props {
   onCreated?: () => void;
@@ -17,11 +19,13 @@ type ModalState = { type: 'expense' | 'income'; preset?: { description?: string;
 
 export function TransactionFAB({ onCreated }: Props) {
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const isOnline = useUIStore((s) => s.isOnline);
   const frequent = useTransactionsStore((s) => s.frequent);
   const fetchFrequent = useTransactionsStore((s) => s.fetchFrequent);
 
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   useEffect(() => {
     if (open && userId) void fetchFrequent(userId);
@@ -72,7 +76,9 @@ export function TransactionFAB({ onCreated }: Props) {
 
           <Pill color="var(--color-expense)" label="Gasto" icon="warning" onClick={() => launch('expense')} />
           <Pill color="var(--color-savings)" label="Ingreso" icon="add" onClick={() => launch('income')} />
-          <Pill color="var(--color-neutral)" label="Voz (pronto)" icon="person" disabled />
+          <Pill color="var(--color-primary)" label={isOnline ? 'Voz' : 'Voz (sin conexión)'} icon="person"
+            disabled={!isOnline}
+            onClick={() => { setVoiceOpen(true); setOpen(false); }} />
         </div>
       )}
 
@@ -96,6 +102,13 @@ export function TransactionFAB({ onCreated }: Props) {
           preset={modal.preset}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); onCreated?.(); }}
+        />
+      )}
+
+      {voiceOpen && (
+        <VoiceTransactionModal
+          onClose={() => setVoiceOpen(false)}
+          onDone={() => { setVoiceOpen(false); onCreated?.(); }}
         />
       )}
     </>

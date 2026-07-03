@@ -23,15 +23,7 @@ function pageWrap(children: React.ReactNode) {
   );
 }
 
-export function DashboardPage() {
-  return pageWrap(
-    <EmptyState
-      icon="home"
-      title="Dashboard"
-      text="Placeholder — se construye en la Fase 03 (dashboard + metas)."
-    />
-  );
-}
+export { DashboardScreen as DashboardPage } from '@/features/dashboard/DashboardScreen';
 
 export { GoalsScreen as GoalsPage } from '@/features/goals/GoalsScreen';
 

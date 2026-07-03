@@ -40,3 +40,17 @@ export interface UserBasicStats {
   /** Quests semanales: fase posterior. Por ahora vacío. */
   quests: unknown[];
 }
+
+/**
+ * Progreso normalizado de una sesión de reto. Fuente: RPC
+ * `calculate_challenge_session_progress` (contrato §3).
+ * Progreso = días completados / ((end−start)+1); `isOnTrack` si el progreso
+ * es ≥ 80% del esperado por días transcurridos.
+ */
+export interface SessionProgress {
+  /** Porcentaje 0-100. */
+  currentProgress: number;
+  daysCompleted: number;
+  totalDaysRequired: number;
+  isOnTrack: boolean;
+}

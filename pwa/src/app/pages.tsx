@@ -27,11 +27,7 @@ export { DashboardScreen as DashboardPage } from '@/features/dashboard/Dashboard
 
 export { GoalsScreen as GoalsPage } from '@/features/goals/GoalsScreen';
 
-export function ChallengesPage() {
-  return pageWrap(
-    <EmptyState icon="trophy" title="Retos" text="Placeholder — Fase 06." />
-  );
-}
+export { ChallengesScreen as ChallengesPage } from '@/features/challenges/ChallengesScreen';
 
 export function AnalyticsPage() {
   return pageWrap(

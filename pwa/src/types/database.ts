@@ -174,3 +174,76 @@ export interface FrequentTransaction {
   count: number;
   avgAmount: number;
 }
+
+/**
+ * Fila de `challenge_categories` (lectura pública, casi estática). Fuente:
+ * docs/api/contracts-and-data-mapping.md §2.7.
+ */
+export interface ChallengeCategoryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Emoji o nombre de ionicon. */
+  icon: string | null;
+  color: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+/**
+ * Fila de `challenges` (catálogo, lectura pública). Fuente: §2.7.
+ */
+export interface ChallengeRow {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string | null;
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  xp_reward: number;
+  category_id: string | null;
+  tags: string[] | null;
+  icon: string | null;
+  color: string | null;
+  min_duration_days: number | null;
+  max_duration_days: number | null;
+  is_active: boolean;
+}
+
+/**
+ * Fila de `user_challenge_sessions`. Fuente: §2.7.
+ * `progress`/`xp_earned`/`status` los mantienen los RPC/triggers de BD; el
+ * cliente sólo actualiza `progress` de forma best-effort tras un check-in.
+ * `challenge` es el objeto anidado del join con `challenges`.
+ */
+export interface UserChallengeSessionRow {
+  id: string;
+  user_id: string;
+  challenge_id: string;
+  status: 'active' | 'completed' | 'expired' | 'renewed' | 'cancelled';
+  duration_type: '1_week' | '15_days' | '30_days' | '1_year';
+  start_date: string;
+  end_date: string;
+  progress: number;
+  xp_earned: number;
+  completed_at: string | null;
+  renewed_from_session_id: string | null;
+  notification_settings: unknown | null;
+  progress_log: unknown[] | null;
+  metadata: unknown | null;
+  /** Join anidado con `challenges` (select `challenge:challenges(*)`). */
+  challenge?: ChallengeRow | null;
+}
+
+/**
+ * Fila de `daily_challenge_checkins`. Fuente: §2.7.
+ * UNIQUE(user_id, session_id, checkin_date). El INSERT/UPSERT lo hace el RPC
+ * `record_challenge_daily_checkin`.
+ */
+export interface DailyCheckinRow {
+  id: string;
+  user_id: string;
+  session_id: string;
+  checkin_date: string;
+  completed: boolean;
+  note: string | null;
+}

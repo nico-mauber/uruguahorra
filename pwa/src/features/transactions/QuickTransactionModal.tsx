@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, Button } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
-import { useBudgetsStore, isExpired } from '@/store/useBudgetsStore';
+import { useBudgetsStore, isVigente } from '@/store/useBudgetsStore';
 import { ToastService } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errors';
 import { money } from './txHelpers';
@@ -43,7 +43,7 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
 
   const budgetUserId = useAuthStore((s) => s.user?.id ?? null);
   const fetchActiveBudgets = useBudgetsStore((s) => s.fetchActive);
-  const getActiveForCategory = useBudgetsStore((s) => s.getActiveForCategory);
+  const activeBudgets = useBudgetsStore((s) => s.active);
   const [linkBudget, setLinkBudget] = useState(false);
 
   useEffect(() => {
@@ -55,9 +55,12 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
     if (type === 'expense' && budgetUserId) void fetchActiveBudgets(budgetUserId);
   }, [type, budgetUserId, fetchActiveBudgets]);
 
-  const activeBudget = categoryId && type === 'expense' ? getActiveForCategory(categoryId) : null;
-  const budgetVigente = activeBudget ? !isExpired(activeBudget) : false;
-  const budgetRestante = activeBudget ? activeBudget.amount - activeBudget.spent : 0;
+  const activeBudget =
+    categoryId && type === 'expense'
+      ? (activeBudgets.find((b) => b.categoryId === categoryId && b.status === 'active') ?? null)
+      : null;
+  const budgetVigente = activeBudget ? isVigente(activeBudget) : false;
+  const budgetRestante = activeBudget ? Math.max(0, activeBudget.amount - activeBudget.spent) : 0;
 
   const typeCategories = useMemo(
     () => categories.filter((c) => c.type === type),

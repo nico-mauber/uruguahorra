@@ -47,6 +47,12 @@ export function isExpired(b: Budget): boolean {
   return b.endDate < todayIso();
 }
 
+/** Un presupuesto está vigente si hoy está dentro de [startDate, endDate]. */
+export function isVigente(b: Budget): boolean {
+  const today = todayIso();
+  return b.startDate <= today && today <= b.endDate;
+}
+
 interface BudgetsState {
   active: Budget[];
   history: Budget[];

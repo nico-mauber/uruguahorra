@@ -12,6 +12,8 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
+import { uuid } from '@/lib/idb';
+import { OfflineQueueService } from './OfflineQueueService';
 import type {
   GoalInsert,
   GoalRow,
@@ -136,26 +138,36 @@ export class GoalsService {
   static async addContribution(
     input: AddContributionInput
   ): Promise<MicroContributionRow> {
-    try {
-      const payload = {
-        user_id: input.user_id,
-        goal_id: input.goal_id,
-        amount: input.amount,
-        source: input.source ?? 'manual',
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-      };
+    const id = uuid();
+    const payload = {
+      id,
+      user_id: input.user_id,
+      goal_id: input.goal_id,
+      amount: input.amount,
+      source: input.source ?? 'manual',
+      ...(input.description !== undefined ? { description: input.description } : {}),
+    };
 
+    // Offline: encolar + fila optimista (§4.2). El trigger recalcula al sincronizar.
+    if (!navigator.onLine) {
+      await OfflineQueueService.enqueue({ id, entity: 'contribution', operation: 'insert', table: 'micro_contributions', payload });
+      return { ...payload, description: input.description ?? null, created_at: new Date().toISOString() } as MicroContributionRow;
+    }
+
+    try {
       const { data, error } = await supabase
         .from('micro_contributions')
         .insert(payload)
         .select()
         .single();
-
       if (error) throw error;
       return data as MicroContributionRow;
     } catch (error) {
+      // Fallo de red → encolar y seguir optimista.
+      if (error instanceof TypeError) {
+        await OfflineQueueService.enqueue({ id, entity: 'contribution', operation: 'insert', table: 'micro_contributions', payload });
+        return { ...payload, description: input.description ?? null, created_at: new Date().toISOString() } as MicroContributionRow;
+      }
       logger.error(LogModule.GOALS, 'Error registrando contribución', error);
       throw error;
     }

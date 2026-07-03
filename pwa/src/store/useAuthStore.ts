@@ -5,6 +5,7 @@ import { logger, LogModule } from '@/lib/logger';
 import { useUIStore } from './useUIStore';
 import { BillingService } from '@/services/BillingService';
 import { messageSW } from '@/lib/pwa';
+import { clearAllStores } from '@/lib/idb';
 import type { UserRow } from '@/types/database';
 
 /**
@@ -179,6 +180,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     useUIStore.setState({ toasts: [] });
     messageSW('CLEAR_API_CACHE');
+    // Borrar cachés + cola de IndexedDB (§4).
+    void clearAllStores();
   },
 
   // Registro. Contrato §1: signUp con metadata país/moneda; auto sign-in (Confirm

@@ -15,6 +15,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
+import { OfflineQueueService } from './OfflineQueueService';
 import type {
   ChallengeCategoryRow,
   ChallengeRow,
@@ -195,17 +196,28 @@ export class ChallengesService {
     completed: boolean,
     note?: string
   ): Promise<void> {
-    try {
-      const { error } = await supabase.rpc('record_challenge_daily_checkin', {
-        p_user_id: userId,
-        p_session_id: sessionId,
-        p_completed: completed,
-        p_checkin_date: todayISO(),
-        p_note: note ?? null,
-      });
+    const params = {
+      p_user_id: userId,
+      p_session_id: sessionId,
+      p_completed: completed,
+      p_checkin_date: todayISO(), // Fecha fijada en el gesto (§4.2).
+      p_note: note ?? null,
+    };
 
+    // Offline: encolar el RPC (§4.2). El progreso real se recalcula al sincronizar.
+    if (!navigator.onLine) {
+      await OfflineQueueService.enqueue({ entity: 'checkin', operation: 'rpc', rpcName: 'record_challenge_daily_checkin', payload: params });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('record_challenge_daily_checkin', params);
       if (error) throw error;
     } catch (error) {
+      if (error instanceof TypeError) {
+        await OfflineQueueService.enqueue({ entity: 'checkin', operation: 'rpc', rpcName: 'record_challenge_daily_checkin', payload: params });
+        return;
+      }
       logger.error(LogModule.DB, 'Error registrando check-in diario', error);
       throw error;
     }

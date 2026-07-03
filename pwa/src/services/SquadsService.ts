@@ -16,6 +16,8 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
+import { uuid } from '@/lib/idb';
+import { OfflineQueueService } from './OfflineQueueService';
 import type {
   SquadContributionRow,
   SquadMemberRow,
@@ -279,26 +281,36 @@ export class SquadsService {
   static async addSquadContribution(
     input: AddSquadContributionInput
   ): Promise<SquadContributionRow> {
-    try {
-      const payload = {
-        squad_id: input.squadId,
-        user_id: input.userId,
-        amount: input.amount,
-        source: input.source ?? 'manual',
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-      };
+    const id = uuid();
+    const payload = {
+      id,
+      squad_id: input.squadId,
+      user_id: input.userId,
+      amount: input.amount,
+      source: input.source ?? 'manual',
+      ...(input.description !== undefined ? { description: input.description } : {}),
+    };
+    const optimistic = () => ({ ...payload, description: input.description ?? null, created_at: new Date().toISOString() }) as SquadContributionRow;
 
+    // Offline: encolar + fila optimista (§4.2). El trigger recalcula totales/XP al sincronizar.
+    if (!navigator.onLine) {
+      await OfflineQueueService.enqueue({ id, entity: 'squad_contribution', operation: 'insert', table: 'squad_contributions', payload });
+      return optimistic();
+    }
+
+    try {
       const { data, error } = await supabase
         .from('squad_contributions')
         .insert(payload)
         .select()
         .single();
-
       if (error) throw error;
       return data as SquadContributionRow;
     } catch (error) {
+      if (error instanceof TypeError) {
+        await OfflineQueueService.enqueue({ id, entity: 'squad_contribution', operation: 'insert', table: 'squad_contributions', payload });
+        return optimistic();
+      }
       logger.error(LogModule.DB, 'Error registrando contribución al pod', error);
       throw error;
     }

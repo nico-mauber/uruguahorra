@@ -11,6 +11,8 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
+import { uuid } from '@/lib/idb';
+import { OfflineQueueService } from './OfflineQueueService';
 import type {
   FrequentTransaction,
   TransactionCategoryRow,
@@ -103,26 +105,38 @@ export class TransactionsService {
     userId: string,
     input: CreateQuickTransactionInput
   ): Promise<TransactionRow> {
-    try {
-      const payload: TransactionInsert = {
-        user_id: userId,
-        amount: input.amount,
-        category_id: input.category_id ?? null,
-        description: input.description ?? null,
-        type: input.type,
-        transaction_date: new Date().toISOString().slice(0, 10),
-        xp_earned: 5,
-      };
+    const id = uuid();
+    const payload: TransactionInsert & { id: string } = {
+      id,
+      user_id: userId,
+      amount: input.amount,
+      category_id: input.category_id ?? null,
+      description: input.description ?? null,
+      type: input.type,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      xp_earned: 5,
+    };
+    const optimistic = () => ({ ...payload, created_at: new Date().toISOString() }) as unknown as TransactionRow;
 
+    // Offline: encolar + fila optimista (§4.2).
+    if (!navigator.onLine) {
+      await OfflineQueueService.enqueue({ id, entity: 'transaction', operation: 'insert', table: 'transactions', payload: payload as unknown as Record<string, unknown> });
+      return optimistic();
+    }
+
+    try {
       const { data, error } = await supabase
         .from('transactions')
         .insert(payload)
         .select()
         .single();
-
       if (error) throw error;
       return data as TransactionRow;
     } catch (error) {
+      if (error instanceof TypeError) {
+        await OfflineQueueService.enqueue({ id, entity: 'transaction', operation: 'insert', table: 'transactions', payload: payload as unknown as Record<string, unknown> });
+        return optimistic();
+      }
       logger.error(LogModule.TRANSACTIONS, 'Error creando transacción', error);
       throw error;
     }

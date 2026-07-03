@@ -162,6 +162,8 @@ export interface TransactionInsert {
   /** YYYY-MM-DD */
   transaction_date: string;
   xp_earned: number;
+  /** Vínculo opt-in a un presupuesto (CU-3 de budgets). */
+  budget_id?: string | null;
 }
 
 /**

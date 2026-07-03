@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, Button } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
+import { useBudgetsStore, isExpired } from '@/store/useBudgetsStore';
 import { ToastService } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errors';
 import { money } from './txHelpers';
@@ -40,9 +41,23 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
   const [description, setDescription] = useState(preset?.description ?? '');
   const [saving, setSaving] = useState(false);
 
+  const budgetUserId = useAuthStore((s) => s.user?.id ?? null);
+  const fetchActiveBudgets = useBudgetsStore((s) => s.fetchActive);
+  const getActiveForCategory = useBudgetsStore((s) => s.getActiveForCategory);
+  const [linkBudget, setLinkBudget] = useState(false);
+
   useEffect(() => {
     void fetchCategories();
   }, [fetchCategories]);
+
+  useEffect(() => {
+    // Solo para gastos: cargar presupuestos activos para poder ofrecer el toggle.
+    if (type === 'expense' && budgetUserId) void fetchActiveBudgets(budgetUserId);
+  }, [type, budgetUserId, fetchActiveBudgets]);
+
+  const activeBudget = categoryId && type === 'expense' ? getActiveForCategory(categoryId) : null;
+  const budgetVigente = activeBudget ? !isExpired(activeBudget) : false;
+  const budgetRestante = activeBudget ? activeBudget.amount - activeBudget.spent : 0;
 
   const typeCategories = useMemo(
     () => categories.filter((c) => c.type === type),
@@ -79,6 +94,7 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
         category_id: categoryId,
         description: description.trim() || undefined,
         type,
+        budget_id: linkBudget && budgetVigente && activeBudget ? activeBudget.id : null,
       });
       ToastService.success(
         '¡Listo! 💚',
@@ -163,6 +179,20 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
                 }}>{selectedCat.emoji}</span>
                 <span style={{ fontWeight: 600 }}>{selectedCat.name}</span>
               </div>
+            </div>
+          )}
+          {type === 'expense' && activeBudget && budgetVigente && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={linkBudget} onChange={(e) => setLinkBudget(e.target.checked)} />
+              <span style={{ fontSize: 13 }}>
+                Descontar de presupuesto {selectedCat?.emoji} {selectedCat?.name}{' '}
+                <span style={{ color: 'var(--color-text-secondary)' }}>({money(budgetRestante)} restante)</span>
+              </span>
+            </label>
+          )}
+          {type === 'expense' && activeBudget && !budgetVigente && (
+            <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>
+              Presupuesto de «{selectedCat?.name}» vencido — renovalo en Presupuestos.
             </div>
           )}
           <div>

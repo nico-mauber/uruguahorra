@@ -1,0 +1,36 @@
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input {
+  width: 100%;
+  min-height: var(--touch-preferred);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  font-size: 16px;
+  color: var(--color-text-primary);
+  transition: border-color var(--duration-fast) var(--easing-standard);
+}
+.input::placeholder {
+  color: var(--color-text-tertiary);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  border-width: 2px;
+  padding: calc(var(--space-lg) - 1px);
+}
+.withPrefix {
+  padding-left: 36px;
+}
+.prefix {
+  position: absolute;
+  left: var(--space-lg);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}

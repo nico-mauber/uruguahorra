@@ -1,0 +1,20 @@
+.fab {
+  position: fixed;
+  bottom: calc(var(--touch-fab) + var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  right: var(--screen-margin);
+  width: var(--touch-fab);
+  height: var(--touch-fab);
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-fixed);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+.fab:active {
+  transform: scale(0.95);
+}

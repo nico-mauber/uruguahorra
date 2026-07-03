@@ -1,0 +1,24 @@
+.wrap {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  background: var(--color-background);
+}
+.icon {
+  color: var(--color-error);
+}
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.text {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  max-width: 320px;
+}

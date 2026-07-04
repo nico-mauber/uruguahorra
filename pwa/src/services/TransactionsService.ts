@@ -11,7 +11,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logger, LogModule } from '@/lib/logger';
-import { uuid } from '@/lib/idb';
+import { uuid, cacheDelete } from '@/lib/idb';
 import { OfflineQueueService } from './OfflineQueueService';
 import type {
   FrequentTransaction,
@@ -144,7 +144,11 @@ export class TransactionsService {
     }
   }
 
-  /** Soft delete: marca la transacción como eliminada (CU-4). */
+  /**
+   * Soft delete: marca la transacción como eliminada (CU-4). También purga la
+   * fila de la caché offline para que no reaparezca (flash) en la próxima
+   * hidratación cache-then-network.
+   */
   static async deleteTransaction(id: string): Promise<void> {
     try {
       const { error } = await supabase
@@ -153,6 +157,7 @@ export class TransactionsService {
         .eq('id', id);
 
       if (error) throw error;
+      await cacheDelete('cache-transactions', id);
     } catch (error) {
       logger.error(LogModule.TRANSACTIONS, 'Error eliminando transacción', error);
       throw error;

@@ -65,6 +65,12 @@ export function PaywallScreen() {
 
   return (
     <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: 20, paddingBottom: 'var(--space-4xl)' }}>
+      {/* Botón volver */}
+      <button onClick={() => navigate(-1)} aria-label="Volver"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-primary)', marginBottom: 8 }}>
+        <Icon name="arrow-back" size={24} />
+      </button>
+
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: 'color-mix(in srgb, var(--color-warning) 12%, transparent)', color: 'var(--color-warning)', fontSize: 14, fontWeight: 600 }}>PREMIUM</span>

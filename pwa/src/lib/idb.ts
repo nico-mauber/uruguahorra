@@ -112,6 +112,12 @@ export async function cacheGetAll(store: CacheStore): Promise<Record<string, unk
   return db.getAll(store);
 }
 
+/** Borra una fila puntual de la caché (p.ej. tras soft-delete server-side). */
+export async function cacheDelete(store: CacheStore, id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete(store, id);
+}
+
 /** Borra TODAS las stores (logout). §4 */
 export async function clearAllStores(): Promise<void> {
   const db = await getDB();

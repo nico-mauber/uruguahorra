@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Icon, Spinner, EmptyState } from '@/components';
+import { Card, Icon, Spinner, EmptyState, Dialog, Button } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTransactionsStore } from '@/store/useTransactionsStore';
+import { useTransactionsStore, type Transaction } from '@/store/useTransactionsStore';
 import { ToastService } from '@/lib/toast';
 import { money, relativeDate, groupByDay, isoDaysAgo, isoToday } from './txHelpers';
 import { TransactionFAB } from './TransactionFAB';
@@ -21,6 +21,8 @@ export function TransactionsScreen() {
 
   const [startDate, setStartDate] = useState(isoDaysAgo(30));
   const [endDate, setEndDate] = useState(isoToday());
+  const [toDelete, setToDelete] = useState<Transaction | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (userId) void fetchTransactions(userId, { startDate, endDate, force: true });
@@ -29,10 +31,16 @@ export function TransactionsScreen() {
   const { income, expenses, balance } = getBalance();
   const groups = groupByDay(transactions);
 
-  async function handleDelete(id: string) {
-    if (!userId) return;
-    await remove(id, userId);
-    ToastService.success('Transacción eliminada');
+  async function confirmDelete() {
+    if (!userId || !toDelete) return;
+    setDeleting(true);
+    try {
+      await remove(toDelete.id, userId);
+      ToastService.success('Transacción eliminada');
+      setToDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -117,7 +125,7 @@ export function TransactionsScreen() {
                       <div style={{ fontSize: 16, fontWeight: 700, color: t.type === 'income' ? '#51CF66' : '#FF6B6B' }}>
                         {t.type === 'income' ? '+' : '-'}{money(t.amount)}
                       </div>
-                      <button onClick={() => void handleDelete(t.id)} aria-label="Eliminar"
+                      <button onClick={() => setToDelete(t)} aria-label="Eliminar"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 2 }}>
                         🗑
                       </button>
@@ -131,6 +139,23 @@ export function TransactionsScreen() {
       )}
 
       <TransactionFAB onCreated={() => userId && void fetchTransactions(userId, { startDate, endDate, force: true })} />
+
+      <Dialog open={!!toDelete} onClose={() => setToDelete(null)} title="Eliminar transacción">
+        {toDelete && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+              ¿Eliminar {toDelete.type === 'income' ? '+' : '-'}{money(toDelete.amount)}
+              {toDelete.description ? ` — "${toDelete.description}"` : ''}? Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="ghost" style={{ flex: 1 }} onClick={() => setToDelete(null)}>Cancelar</Button>
+              <Button style={{ flex: 1, background: 'var(--color-error)' }} loading={deleting} onClick={() => void confirmDelete()}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -121,11 +121,13 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
         endDate: endDate ?? null,
       },
     });
-    // Cache-then-network: hidratar desde IndexedDB (§4.1).
+    // Cache-then-network: hidratar desde IndexedDB (§4.1). Filtra soft-deleted
+    // por si la fila quedó en caché de una sesión anterior a la purga en delete.
     if (get().transactions.length === 0) {
       try {
         const cached = await cacheGetByUser('cache-transactions', userId);
-        if (cached.length > 0) set({ transactions: (cached as unknown as TransactionRow[]).map(toTransaction) });
+        const fresh = (cached as unknown as TransactionRow[]).filter((r) => !r.deleted_at);
+        if (fresh.length > 0) set({ transactions: fresh.map(toTransaction) });
       } catch { /* caché opcional */ }
     }
 

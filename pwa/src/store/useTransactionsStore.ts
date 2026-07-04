@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TransactionsService } from '@/services/TransactionsService';
 import { logger, LogModule } from '@/lib/logger';
-import { cacheGetByUser, cachePut } from '@/lib/idb';
+import { cacheGetByUser, cacheReplaceByUser } from '@/lib/idb';
 import type {
   FrequentTransaction,
   TransactionCategoryRow,
@@ -140,8 +140,9 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
         limit: 1000,
       });
       set({ transactions: rows.map(toTransaction), isLoading: false });
-      // Persistir últimas transacciones para lecturas offline (§4).
-      void cachePut('cache-transactions', rows as unknown as Record<string, unknown>[]);
+      // Persistir set autoritativo para lecturas offline; reconcilia (borra filas
+      // que dejaron el servidor, p.ej. soft-deleted) para no reaparecer como flash (§4).
+      void cacheReplaceByUser('cache-transactions', userId, rows as unknown as Record<string, unknown>[]);
     } catch (error) {
       logger.error(LogModule.TRANSACTIONS, 'Error cargando transacciones', error);
       set((s) => ({ isLoading: false, error: s.transactions.length === 0 ? 'No se pudieron cargar las transacciones' : null }));

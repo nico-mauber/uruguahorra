@@ -99,6 +99,32 @@ export async function cachePut(store: CacheStore, rows: Record<string, unknown>[
   await tx.done;
 }
 
+/**
+ * Reemplaza el conjunto cacheado de un usuario por `rows` (fuente autoritativa
+ * de una lectura completa). Borra las filas del usuario que ya NO están en
+ * `rows` —p.ej. soft-deleted server-side— y hace upsert de las frescas.
+ *
+ * Necesario porque `cachePut` es sólo upsert (nunca elimina): una fila que dejó
+ * el servidor pero quedó en caché reaparecía como "flash" en cada hidratación
+ * cache-then-network. Reconciliar en cada fetch hace la caché auto-sanable.
+ */
+export async function cacheReplaceByUser(
+  store: 'cache-goals' | 'cache-transactions' | 'cache-sessions',
+  userId: string,
+  rows: Record<string, unknown>[]
+): Promise<void> {
+  const db = await getDB();
+  const freshIds = new Set(rows.map((r) => r.id as string));
+  // Lectura de claves primarias del usuario (transacción propia, auto-commit).
+  const existingKeys = (await db.getAllKeysFromIndex(store, 'userId', userId)) as string[];
+  const tx = db.transaction(store, 'readwrite');
+  await Promise.all([
+    ...existingKeys.filter((k) => !freshIds.has(k)).map((k) => tx.store.delete(k)),
+    ...rows.map((r) => tx.store.put(r)),
+  ]);
+  await tx.done;
+}
+
 export async function cacheGetByUser(
   store: 'cache-goals' | 'cache-transactions' | 'cache-sessions',
   userId: string

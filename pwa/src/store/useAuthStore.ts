@@ -22,6 +22,8 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPremium: boolean;
+  /** true justo tras un signIn/signUp exitoso; el Dashboard lo consume una vez para el toast de bienvenida. */
+  justSignedIn: boolean;
 
   initialize: () => Promise<void>;
   loadProfile: (userId: string) => Promise<void>;
@@ -50,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   isAuthenticated: false,
   isPremium: false,
+  justSignedIn: false,
 
   initialize: async () => {
     try {
@@ -177,6 +180,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       profile: null,
       isAuthenticated: false,
       isPremium: false,
+      justSignedIn: false,
     });
     useUIStore.setState({ toasts: [] });
     messageSW('CLEAR_API_CACHE');
@@ -204,7 +208,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (data.session?.user) {
-      set({ user: data.session.user, isAuthenticated: true });
+      set({ user: data.session.user, isAuthenticated: true, justSignedIn: true });
       // El trigger on_auth_user_created crea users + user_streaks; dar margen.
       await new Promise((r) => setTimeout(r, 1000));
       await get().loadProfile(data.session.user.id);
@@ -228,7 +232,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (data.session?.user) {
-      set({ user: data.session.user, isAuthenticated: true });
+      set({ user: data.session.user, isAuthenticated: true, justSignedIn: true });
       await get().loadProfile(data.session.user.id);
       return true;
     }

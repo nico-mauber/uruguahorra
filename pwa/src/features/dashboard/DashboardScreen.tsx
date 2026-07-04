@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, ProgressBar, Icon, Spinner, Fab } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -20,6 +20,7 @@ import { GoalSelectionModal } from './GoalSelectionModal';
 export function DashboardScreen() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const justSignedIn = useAuthStore((s) => s.justSignedIn);
   const userId = user?.id ?? null;
   const displayName = user?.email?.split('@')[0] ?? '';
 
@@ -38,7 +39,6 @@ export function DashboardScreen() {
   const [amount, setAmount] = useState('');
   const [selectGoal, setSelectGoal] = useState<Goal | null>(null);
   const [selectionAmount, setSelectionAmount] = useState<number | null>(null);
-  const welcomed = useRef(false);
 
   // Carga inicial (una vez por sesión de pantalla).
   useEffect(() => {
@@ -47,13 +47,15 @@ export function DashboardScreen() {
     void loadStats(userId);
   }, [userId, fetchGoals, loadStats]);
 
-  // Toast de bienvenida (una sola vez, a 1.5s).
+  // Toast de bienvenida: solo justo tras un login/signup (flag del auth store,
+  // no un ref local — este componente remonta en cada navegación al tab).
+  // Se consume inmediatamente para que no reaparezca en visitas posteriores.
   useEffect(() => {
-    if (welcomed.current || !displayName) return;
-    welcomed.current = true;
+    if (!justSignedIn || !displayName) return;
+    useAuthStore.setState({ justSignedIn: false });
     const t = setTimeout(() => ToastService.welcome(displayName), 1500);
     return () => clearTimeout(t);
-  }, [displayName]);
+  }, [justSignedIn, displayName]);
 
   const active = goals.filter((g) => g.isActive);
   const totalSaved = getTotalSaved();

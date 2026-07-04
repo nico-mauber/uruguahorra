@@ -32,6 +32,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
   const [result, setResult] = useState<VoiceResult | null>(null);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [saving, setSaving] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -95,6 +96,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
       setResult(res);
       setAmount(res.parsed.amount ? String(res.parsed.amount) : '');
       setDescription(res.parsed.description ?? '');
+      setType(res.parsed.type === 'income' ? 'income' : 'expense');
       setPhase('result');
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
@@ -111,14 +113,14 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
     }
     // Mapear category_hint → categoría por nombre; si no matchea, dejar null (trigger auto-categoriza).
     const hint = result.parsed.category_hint?.toLowerCase() ?? '';
-    const match = categories.find((c) => c.type === result.parsed.type && c.name.toLowerCase().includes(hint));
+    const match = categories.find((c) => c.type === type && c.name.toLowerCase().includes(hint));
     setSaving(true);
     try {
       await createQuick(userId, {
         amount: n,
         category_id: match?.id ?? null,
         description: description.trim() || undefined,
-        type: result.parsed.type,
+        type,
       });
       ToastService.success('¡Listo! 💚', `Transacción de $${Math.floor(n)} registrada`);
       onDone();
@@ -158,7 +160,34 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', textAlign: 'left' }}>
             <p style={{ fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>«{result.transcript}»</p>
             {badge && <span style={{ alignSelf: 'flex-start', padding: '2px 10px', borderRadius: 999, background: `color-mix(in srgb, ${badge.color} 15%, transparent)`, color: badge.color, fontSize: 12, fontWeight: 600 }}>{badge.text}</span>}
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Tipo: {result.parsed.type === 'income' ? 'Ingreso' : 'Gasto'} · Categoría sugerida: {result.parsed.category_hint || '—'}</div>
+            <div style={{ display: 'flex', gap: 8 }} role="group" aria-label="Tipo de transacción">
+              {(['income', 'expense'] as const).map((t) => {
+                const selected = type === t;
+                const color = t === 'income' ? 'var(--color-success)' : 'var(--color-error)';
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    aria-pressed={selected}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-md, 10px)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      border: `1px solid ${selected ? color : 'var(--color-border)'}`,
+                      background: selected ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                      color: selected ? color : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {t === 'income' ? 'Ingreso' : 'Gasto'}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Categoría sugerida: {result.parsed.category_hint || '—'}</div>
             <Input type="number" inputMode="numeric" prefix="$" placeholder="Monto" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} />
             <div style={{ display: 'flex', gap: 8 }}>

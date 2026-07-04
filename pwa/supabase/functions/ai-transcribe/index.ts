@@ -92,6 +92,12 @@ Deno.serve(async (req: Request) => {
             content:
               '{"amount":250,"description":"Supermercado","type":"expense","category_hint":"Supermercado","confidence":0.95}',
           },
+          { role: 'user', content: 'Tuve una ganancia de quince mil pesos' },
+          {
+            role: 'assistant',
+            content:
+              '{"amount":15000,"description":"Ganancia","type":"income","category_hint":"Ingresos","confidence":0.9}',
+          },
           { role: 'user', content: transcript ?? '' },
         ],
       }),
@@ -139,13 +145,15 @@ function normalizeEs(text: string): string {
 function detectType(text: string): 'income' | 'expense' | null {
   const t = ' ' + normalizeEs(text).replace(/[^a-z0-9]+/g, ' ') + ' ';
   const INCOME = [
-    'pagaron', 'cobre', 'cobraron', 'sueldo', 'salario', 'aguinaldo', 'deposito',
-    'depositaron', 'ingreso', 'ingresaron', 'transfirieron', 'recibi', 'gane',
-    'jubilacion', 'propina', 'reembolso', 'devolvieron',
+    'pagaron', 'cobre', 'cobro', 'cobraron', 'sueldo', 'salario', 'aguinaldo',
+    'deposito', 'depositaron', 'ingreso', 'ingrese', 'ingresaron', 'transfirieron',
+    'recibi', 'gane', 'ganancia', 'ganancias', 'jubilacion', 'propina', 'premio',
+    'bono', 'reembolso', 'reintegro', 'devolvieron', 'vendi', 'venta', 'ventas',
+    'honorarios', 'entro', 'entraron',
   ];
   const EXPENSE = [
-    'gaste', 'pague', 'compre', 'gasto', 'costo', 'abone', 'invertí', 'inverti',
-    'gastando', 'comprando', 'pagando',
+    'gaste', 'pague', 'compre', 'compra', 'compras', 'gasto', 'costo', 'abone',
+    'inverti', 'gastando', 'comprando', 'pagando',
   ];
   for (const k of INCOME) if (t.includes(' ' + k + ' ')) return 'income';
   for (const k of EXPENSE) if (t.includes(' ' + k + ' ')) return 'expense';

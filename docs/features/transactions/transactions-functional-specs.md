@@ -35,7 +35,7 @@ Botón basura en cada ítem → soft delete (`deleted_at = now`) → toast "Tran
    - 0.6–0.8 → precargar y resaltar campos dudosos.
    - < 0.3 → "No entendí el audio, intenta de nuevo".
 5. Usuario confirma → CU-2 paso de persistencia con los datos parseados (mapear `category_hint` a categoría por nombre; si no matchea → dejar sin categoría y que el trigger auto-categorice).
-6. **Vínculo a presupuesto**: si el tipo es `expense` y la categoría matcheada tiene un presupuesto `active` y vigente, se muestra el mismo toggle "Descontar de presupuesto [emoji][nombre] ($restante restante)" que en QuickTransactionModal (budgets §CU-3), apagado por defecto. Si el usuario cambia el tipo a `income`, el toggle desaparece.
+6. **Vínculo a presupuesto**: si el tipo es `expense`, se lista **todos** los presupuestos activos+vigentes del usuario (no sólo el de la categoría matcheada) — igual que QuickTransactionModal (budgets §CU-3). Elegir uno de la lista fuerza la categoría de la transacción a la de ese presupuesto, sobreescribiendo el `category_hint`. Ninguno seleccionado por defecto; si el usuario cambia el tipo a `income`, la lista y la selección se limpian.
 7. Estados de error: sin permiso de micrófono → instrucciones para habilitarlo; sin conexión → deshabilitar voz (requiere red); timeout 15s transcripción → reintentar.
 
 ## CU-6: Editar transacción

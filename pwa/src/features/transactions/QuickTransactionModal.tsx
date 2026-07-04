@@ -3,6 +3,7 @@ import { Dialog, Button } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
 import { useBudgetsStore, isVigente } from '@/store/useBudgetsStore';
+import type { Budget } from '@/store/useBudgetsStore';
 import { ToastService } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errors';
 import { money } from './txHelpers';
@@ -44,23 +45,31 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
   const budgetUserId = useAuthStore((s) => s.user?.id ?? null);
   const fetchActiveBudgets = useBudgetsStore((s) => s.fetchActive);
   const activeBudgets = useBudgetsStore((s) => s.active);
-  const [linkBudget, setLinkBudget] = useState(false);
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchCategories();
   }, [fetchCategories]);
 
   useEffect(() => {
-    // Solo para gastos: cargar presupuestos activos para poder ofrecer el toggle.
+    // Solo para gastos: cargar presupuestos activos para poder ofrecer el vínculo.
     if (type === 'expense' && budgetUserId) void fetchActiveBudgets(budgetUserId);
   }, [type, budgetUserId, fetchActiveBudgets]);
 
-  const activeBudget =
-    categoryId && type === 'expense'
-      ? (activeBudgets.find((b) => b.categoryId === categoryId && b.status === 'active') ?? null)
-      : null;
-  const budgetVigente = activeBudget ? isVigente(activeBudget) : false;
-  const budgetRestante = activeBudget ? Math.max(0, activeBudget.amount - activeBudget.spent) : 0;
+  // Todos los presupuestos activos+vigentes (no sólo el de la categoría elegida):
+  // el usuario puede haber elegido mal la categoría en el paso 2, así que se
+  // ofrecen todos y elegir uno fuerza la categoría de la transacción.
+  const vigentBudgets = useMemo(
+    () => (type === 'expense' ? activeBudgets.filter(isVigente) : []),
+    [activeBudgets, type]
+  );
+  const selectedBudget: Budget | null =
+    vigentBudgets.find((b) => b.id === selectedBudgetId) ?? null;
+
+  function selectBudget(b: Budget) {
+    setSelectedBudgetId((prev) => (prev === b.id ? null : b.id));
+    if (selectedBudgetId !== b.id) setCategoryId(b.categoryId);
+  }
 
   const typeCategories = useMemo(
     () => categories.filter((c) => c.type === type),
@@ -97,7 +106,7 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
         category_id: categoryId,
         description: description.trim() || undefined,
         type,
-        budget_id: linkBudget && budgetVigente && activeBudget ? activeBudget.id : null,
+        budget_id: selectedBudget?.id ?? null,
       });
       ToastService.success(
         '¡Listo! 💚',
@@ -148,7 +157,14 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
             {typeCategories.map((c) => (
               <button
                 key={c.id}
-                onClick={() => { setCategoryId(c.id); setStep(3); }}
+                onClick={() => {
+                  setCategoryId(c.id);
+                  setSelectedBudgetId((prev) => {
+                    const linked = vigentBudgets.find((b) => b.id === prev);
+                    return linked && linked.categoryId !== c.id ? null : prev;
+                  });
+                  setStep(3);
+                }}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                   padding: 12, borderRadius: 12, cursor: 'pointer',
@@ -184,18 +200,36 @@ export function QuickTransactionModal({ type, preset, onClose, onDone }: Props) 
               </div>
             </div>
           )}
-          {type === 'expense' && activeBudget && budgetVigente && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={linkBudget} onChange={(e) => setLinkBudget(e.target.checked)} />
-              <span style={{ fontSize: 13 }}>
-                Descontar de presupuesto {selectedCat?.emoji} {selectedCat?.name}{' '}
-                <span style={{ color: 'var(--color-text-secondary)' }}>({money(budgetRestante)} restante)</span>
-              </span>
-            </label>
-          )}
-          {type === 'expense' && activeBudget && !budgetVigente && (
-            <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>
-              Presupuesto de «{selectedCat?.name}» vencido — renovalo en Presupuestos.
+          {type === 'expense' && vigentBudgets.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>
+                Vincular a presupuesto
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {vigentBudgets.map((b) => {
+                  const selected = b.id === selectedBudgetId;
+                  const restante = Math.max(0, b.amount - b.spent);
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => selectBudget(b)}
+                      aria-pressed={selected}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                        borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                        border: `1px solid ${selected ? accent : 'var(--color-border)'}`,
+                        background: selected ? `color-mix(in srgb, ${accent} 15%, transparent)` : 'var(--color-surface)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      <span>{b.categoryEmoji}</span>
+                      <span style={{ flex: 1, fontSize: 13 }}>{b.categoryName}</span>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{money(restante)} restante</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
           <div>

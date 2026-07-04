@@ -28,7 +28,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
   const fetchCategories = useTransactionsStore((s) => s.fetchCategories);
   const createQuick = useTransactionsStore((s) => s.createQuick);
   const fetchActiveBudgets = useBudgetsStore((s) => s.fetchActive);
-  const getActiveForCategory = useBudgetsStore((s) => s.getActiveForCategory);
+  const activeBudgets = useBudgetsStore((s) => s.active);
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [seconds, setSeconds] = useState(0);
@@ -37,7 +37,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
-  const [linkBudget, setLinkBudget] = useState(false);
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -50,19 +50,28 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
     return () => stopTimer();
   }, [fetchCategories, fetchActiveBudgets, userId]);
 
-  // Categoría matcheada por category_hint dentro del tipo elegido (misma lógica
-  // que usa confirm). Base para detectar el presupuesto asociado.
+  // Categoría matcheada por category_hint dentro del tipo elegido (sugerencia
+  // por defecto; el usuario puede forzarla eligiendo un presupuesto abajo).
   const matchedCat = useMemo(() => {
     const hint = result?.parsed.category_hint?.toLowerCase() ?? '';
     if (!hint) return null;
     return categories.find((c) => c.type === type && c.name.toLowerCase().includes(hint)) ?? null;
   }, [categories, type, result]);
 
-  // Presupuesto activo+vigente de la categoría matcheada (sólo gastos).
-  const activeBudget =
-    type === 'expense' && matchedCat ? getActiveForCategory(matchedCat.id) : null;
-  const budgetVigente = activeBudget ? isVigente(activeBudget) : false;
-  const budgetRestante = activeBudget ? Math.max(0, activeBudget.amount - activeBudget.spent) : 0;
+  // Todos los presupuestos activos+vigentes (sólo aplica a gastos): se muestran
+  // siempre, sin importar la categoría matcheada, porque el auto-match puede
+  // errarle a la categoría real que el usuario quiso decir.
+  const vigentBudgets = useMemo(
+    () => (type === 'expense' ? activeBudgets.filter(isVigente) : []),
+    [activeBudgets, type]
+  );
+  const selectedBudget = vigentBudgets.find((b) => b.id === selectedBudgetId) ?? null;
+
+  // Elegir un presupuesto fuerza la categoría de la transacción a la de ese presupuesto
+  // (resuelto en confirm() vía selectedBudget.categoryId). Tocar de nuevo deselecciona.
+  function selectBudget(budgetId: string) {
+    setSelectedBudgetId((prev) => (prev === budgetId ? null : budgetId));
+  }
 
   function stopTimer() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -117,7 +126,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
       setAmount(res.parsed.amount ? String(res.parsed.amount) : '');
       setDescription(res.parsed.description ?? '');
       setType(res.parsed.type === 'income' ? 'income' : 'expense');
-      setLinkBudget(false);
+      setSelectedBudgetId(null);
       setPhase('result');
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
@@ -132,15 +141,16 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
       ToastService.warning('Monto inválido', 'Ingresa un monto válido mayor a 0');
       return;
     }
-    // Categoría matcheada (matchedCat) → si no matchea, dejar null (trigger auto-categoriza).
+    // Un presupuesto elegido fuerza su categoría; si no, se usa la matcheada
+    // (o null, y el trigger auto-categoriza).
     setSaving(true);
     try {
       await createQuick(userId, {
         amount: n,
-        category_id: matchedCat?.id ?? null,
+        category_id: selectedBudget?.categoryId ?? matchedCat?.id ?? null,
         description: description.trim() || undefined,
         type,
-        budget_id: linkBudget && budgetVigente && activeBudget ? activeBudget.id : null,
+        budget_id: selectedBudget?.id ?? null,
       });
       ToastService.success('¡Listo! 💚', `Transacción de $${Math.floor(n)} registrada`);
       onDone();
@@ -188,7 +198,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
                   <button
                     key={t}
                     type="button"
-                    onClick={() => setType(t)}
+                    onClick={() => { setType(t); if (t === 'income') setSelectedBudgetId(null); }}
                     aria-pressed={selected}
                     style={{
                       flex: 1,
@@ -207,15 +217,42 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
                 );
               })}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Categoría sugerida: {result.parsed.category_hint || '—'}</div>
-            {activeBudget && budgetVigente && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={linkBudget} onChange={(e) => setLinkBudget(e.target.checked)} />
-                <span style={{ fontSize: 13 }}>
-                  Descontar de presupuesto {activeBudget.categoryEmoji} {activeBudget.categoryName}{' '}
-                  <span style={{ color: 'var(--color-text-secondary)' }}>({money(budgetRestante)} restante)</span>
-                </span>
-              </label>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              Categoría: {selectedBudget
+                ? `${selectedBudget.categoryEmoji} ${selectedBudget.categoryName}`
+                : (result.parsed.category_hint || '—')}
+            </div>
+            {vigentBudgets.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Vincular a presupuesto
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {vigentBudgets.map((b) => {
+                    const selected = b.id === selectedBudgetId;
+                    const restante = Math.max(0, b.amount - b.spent);
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => selectBudget(b.id)}
+                        aria-pressed={selected}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                          borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                          border: `1px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                          background: selected ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'var(--color-surface)',
+                          color: 'var(--color-text-primary)',
+                        }}
+                      >
+                        <span>{b.categoryEmoji}</span>
+                        <span style={{ flex: 1, fontSize: 13 }}>{b.categoryName}</span>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{money(restante)} restante</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
             <Input type="number" inputMode="numeric" prefix="$" placeholder="Monto" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} />

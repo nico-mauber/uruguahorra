@@ -1465,25 +1465,92 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Función para auto-categorizar transacciones sin categoría
+-- Categorizador consciente del tipo: asigna una categoría DEL MISMO tipo elegido.
+-- (income tiene sus keywords y default 'Otros Ingresos'; expense reusa la lógica de
+-- 1 argumento; transfer -> 'Transferencia'.) Ver migración fix_autocategorize_respect_type.
+CREATE OR REPLACE FUNCTION public.auto_categorize_transaction(description_text TEXT, txn_type TEXT)
+RETURNS UUID AS $$
+DECLARE
+    cat_id UUID;
+    d TEXT;
+    kw TEXT;
+    keywords TEXT[];
+BEGIN
+    d := LOWER(TRIM(COALESCE(description_text, '')));
+
+    IF txn_type = 'expense' THEN
+        RETURN public.auto_categorize_transaction(description_text);
+
+    ELSIF txn_type = 'income' THEN
+        keywords := ARRAY['sueldo','salario','aguinaldo','jubilacion','jubilación','pension','pensión','nomina','nómina'];
+        FOREACH kw IN ARRAY keywords LOOP
+            IF d LIKE '%' || kw || '%' THEN
+                SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Salario' LIMIT 1;
+                RETURN cat_id;
+            END IF;
+        END LOOP;
+
+        keywords := ARRAY['freelance','honorarios','factura','consultoria','consultoría'];
+        FOREACH kw IN ARRAY keywords LOOP
+            IF d LIKE '%' || kw || '%' THEN
+                SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Freelance' LIMIT 1;
+                RETURN cat_id;
+            END IF;
+        END LOOP;
+
+        keywords := ARRAY['inversion','inversión','dividendo','interes','interés','accion','acción','cripto','bitcoin','renta'];
+        FOREACH kw IN ARRAY keywords LOOP
+            IF d LIKE '%' || kw || '%' THEN
+                SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Inversiones' LIMIT 1;
+                RETURN cat_id;
+            END IF;
+        END LOOP;
+
+        keywords := ARRAY['regalo','obsequio','herencia'];
+        FOREACH kw IN ARRAY keywords LOOP
+            IF d LIKE '%' || kw || '%' THEN
+                SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Regalos Recibidos' LIMIT 1;
+                RETURN cat_id;
+            END IF;
+        END LOOP;
+
+        keywords := ARRAY['reembolso','reintegro','devolucion','devolución','devolvieron'];
+        FOREACH kw IN ARRAY keywords LOOP
+            IF d LIKE '%' || kw || '%' THEN
+                SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Reembolsos' LIMIT 1;
+                RETURN cat_id;
+            END IF;
+        END LOOP;
+
+        SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Otros Ingresos' LIMIT 1;
+        RETURN cat_id;
+
+    ELSE
+        SELECT id INTO cat_id FROM public.transaction_categories WHERE name = 'Transferencia' LIMIT 1;
+        RETURN cat_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger: respeta el tipo elegido por el usuario; sólo completa la categoría si falta.
+-- NUNCA sobrescribe NEW.type (antes lo volcaba income->expense vía la categoría default).
 CREATE OR REPLACE FUNCTION public.auto_categorize_new_transaction()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Solo si no tiene categoría asignada
-    IF NEW.category_id IS NULL AND NEW.description IS NOT NULL THEN
-        NEW.category_id := public.auto_categorize_transaction(NEW.description);
-        
-        -- Actualizar campos de caché
+    -- Auto-asignar categoría sólo si no vino una, DEL MISMO tipo que eligió el usuario.
+    IF NEW.category_id IS NULL THEN
+        NEW.category_id := public.auto_categorize_transaction(COALESCE(NEW.description, ''), NEW.type);
+    END IF;
+
+    -- Refrescar cache de nombre/emoji desde la categoría resuelta (venga del cliente o auto).
+    IF NEW.category_id IS NOT NULL THEN
         SELECT name, emoji INTO NEW.category_name, NEW.category_emoji
         FROM public.transaction_categories
         WHERE id = NEW.category_id;
     END IF;
-    
-    -- Asegurar que el tipo coincida con la categoría
-    IF NEW.category_id IS NOT NULL THEN
-        SELECT type INTO NEW.type FROM public.transaction_categories WHERE id = NEW.category_id;
-    END IF;
-    
+
+    -- IMPORTANTE: NO se sobrescribe NEW.type. El tipo elegido por el usuario es la
+    -- fuente de verdad; la categoría se ajusta al tipo, nunca al revés.
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

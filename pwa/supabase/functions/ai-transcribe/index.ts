@@ -75,9 +75,22 @@ Deno.serve(async (req: Request) => {
               'Extrae de la frase del usuario una transacción financiera en JSON con estas claves EXACTAS: ' +
               'amount (number), description (string), type ("expense"|"income"), category_hint (string), confidence (0-1). ' +
               'Moneda: pesos uruguayos. amount es solo el número, sin símbolos.\n' +
+              'description es un concepto CORTO (1 a 3 palabras), NUNCA la frase completa.\n' +
               'TIPO: "me pagaron", "cobré", "sueldo", "me depositaron", "me transfirieron" => income. ' +
               '"gasté", "pagué", "compré", "me costó" => expense.\n' +
               'Si no estás seguro de un campo, baja la confidence. Responde SOLO el JSON.',
+          },
+          { role: 'user', content: 'Me pagaron ciento treinta mil quinientos cuarenta pesos de sueldo' },
+          {
+            role: 'assistant',
+            content:
+              '{"amount":130540,"description":"Sueldo","type":"income","category_hint":"Sueldo","confidence":0.95}',
+          },
+          { role: 'user', content: 'Gasté doscientos cincuenta pesos en el supermercado' },
+          {
+            role: 'assistant',
+            content:
+              '{"amount":250,"description":"Supermercado","type":"expense","category_hint":"Supermercado","confidence":0.95}',
           },
           { role: 'user', content: transcript ?? '' },
         ],
@@ -93,10 +106,21 @@ Deno.serve(async (req: Request) => {
       parsed = {};
     }
 
-    // Monto: el LLM es poco confiable convirtiendo palabras->dígitos. Parseamos el
-    // número directo de la transcripción (determinístico, exacto) y sobrescribimos.
+    // Overrides determinísticos: el LLM 8b se equivoca con montos y con ingreso/gasto.
+    // Monto: parseamos el número directo de la transcripción (exacto).
     const codeAmount = spanishAmount(transcript ?? '');
     if (codeAmount !== null) parsed.amount = codeAmount;
+
+    // Tipo: keywords español (más confiable que el LLM).
+    const codeType = detectType(transcript ?? '');
+    if (codeType !== null) parsed.type = codeType;
+
+    // Descripción: si el LLM volcó la transcripción entera (falla común), usar la
+    // categoría sugerida como concepto corto.
+    const desc = String(parsed.description ?? '').trim();
+    const hint = String(parsed.category_hint ?? '').trim();
+    const dumpedTranscript = desc.split(/\s+/).length > 5;
+    if ((!desc || dumpedTranscript) && hint) parsed.description = hint;
 
     const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0;
     return json({ transcript, parsed, confidence }, 200);
@@ -105,11 +129,35 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+// Minúsculas + sin acentos. Base para el parseo determinístico.
+function normalizeEs(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Detecta ingreso/gasto por palabras clave. Determinístico: el LLM se equivoca seguido.
+// Devuelve null si no hay señal clara (se deja lo que dijo el LLM).
+function detectType(text: string): 'income' | 'expense' | null {
+  const t = ' ' + normalizeEs(text).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  const INCOME = [
+    'pagaron', 'cobre', 'cobraron', 'sueldo', 'salario', 'aguinaldo', 'deposito',
+    'depositaron', 'ingreso', 'ingresaron', 'transfirieron', 'recibi', 'gane',
+    'jubilacion', 'propina', 'reembolso', 'devolvieron',
+  ];
+  const EXPENSE = [
+    'gaste', 'pague', 'compre', 'gasto', 'costo', 'abone', 'invertí', 'inverti',
+    'gastando', 'comprando', 'pagando',
+  ];
+  for (const k of INCOME) if (t.includes(' ' + k + ' ')) return 'income';
+  for (const k of EXPENSE) if (t.includes(' ' + k + ' ')) return 'expense';
+  return null;
+}
+
 // Convierte un monto en español (palabras o dígitos) a número. Determinístico.
 // Ej: "ciento treinta mil quinientos cuarenta" -> 130540. Devuelve null si no hay número.
 function spanishAmount(text: string): number | null {
+  // OJO: "un"/"una" NO van acá (suelen ser artículo: "un sueldo"). Se manejan aparte.
   const UNITS: Record<string, number> = {
-    cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6,
+    cero: 0, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6,
     siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14,
     quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
     veintiuno: 21, veintiun: 21, veintiuna: 21, veintidos: 22, veintitres: 23,
@@ -125,21 +173,31 @@ function spanishAmount(text: string): number | null {
     novecientas: 900,
   };
 
-  // Normaliza: minúsculas, sin acentos, sin puntuación (salvo dígitos).
-  const norm = text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-  const tokens = norm.split(/[^a-z0-9]+/).filter(Boolean);
+  // Normaliza y limpia formato numérico ANTES de tokenizar:
+  // - "130.540" -> "130540" (Whisper escribe el separador de miles como ".")
+  // - "1.500,50" -> "1500" (colapsa miles, descarta centavos; pesos enteros)
+  const clean = normalizeEs(text)
+    .replace(/(?<=\d)\.(?=\d{3})/g, '') // separador de miles
+    .replace(/(?<=\d),\d+/g, ''); // centavos
+  const tokens = clean.split(/[^a-z0-9]+/).filter(Boolean);
+
+  const isScale = (t?: string) => t === 'mil' || t === 'millon' || t === 'millones';
 
   let total = 0;
   let current = 0;
   let found = false;
 
-  for (const t of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
     if (t === 'y') continue;
+
+    // "un"/"una": artículo, salvo que preceda a mil/millón ("treinta y un mil" = 31000).
+    if (t === 'un' || t === 'una') {
+      if (isScale(tokens[i + 1])) { current += 1; found = true; }
+      continue;
+    }
+
     if (/^\d+$/.test(t)) {
-      // Dígitos directos de Whisper (ej "130540" o separados por miles ya unidos).
       current += parseInt(t, 10);
       found = true;
     } else if (t in UNITS) {

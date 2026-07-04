@@ -6,6 +6,7 @@ import { useTransactionsStore, type Transaction } from '@/store/useTransactionsS
 import { ToastService } from '@/lib/toast';
 import { money, relativeDate, groupByDay, isoDaysAgo, isoToday } from './txHelpers';
 import { TransactionFAB } from './TransactionFAB';
+import { EditTransactionModal } from './EditTransactionModal';
 
 /**
  * Pantalla `/transactions`. Fuente: docs/features/transactions/{functional §CU-1/CU-4, ui-ux}.
@@ -22,6 +23,7 @@ export function TransactionsScreen() {
   const [startDate, setStartDate] = useState(isoDaysAgo(30));
   const [endDate, setEndDate] = useState(isoToday());
   const [toDelete, setToDelete] = useState<Transaction | null>(null);
+  const [toEdit, setToEdit] = useState<Transaction | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -125,10 +127,16 @@ export function TransactionsScreen() {
                       <div style={{ fontSize: 16, fontWeight: 700, color: t.type === 'income' ? '#51CF66' : '#FF6B6B' }}>
                         {t.type === 'income' ? '+' : '-'}{money(t.amount)}
                       </div>
-                      <button onClick={() => setToDelete(t)} aria-label="Eliminar"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 2 }}>
-                        🗑
-                      </button>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 2 }}>
+                        <button onClick={() => setToEdit(t)} aria-label="Editar"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                          ✏️
+                        </button>
+                        <button onClick={() => setToDelete(t)} aria-label="Eliminar"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                          🗑
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -156,6 +164,14 @@ export function TransactionsScreen() {
           </div>
         )}
       </Dialog>
+
+      {toEdit && (
+        <EditTransactionModal
+          transaction={toEdit}
+          onClose={() => setToEdit(null)}
+          onDone={() => setToEdit(null)}
+        />
+      )}
     </div>
   );
 }

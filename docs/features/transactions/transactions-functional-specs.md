@@ -35,7 +35,16 @@ Botón basura en cada ítem → soft delete (`deleted_at = now`) → toast "Tran
    - 0.6–0.8 → precargar y resaltar campos dudosos.
    - < 0.3 → "No entendí el audio, intenta de nuevo".
 5. Usuario confirma → CU-2 paso de persistencia con los datos parseados (mapear `category_hint` a categoría por nombre; si no matchea → dejar sin categoría y que el trigger auto-categorice).
-6. Estados de error: sin permiso de micrófono → instrucciones para habilitarlo; sin conexión → deshabilitar voz (requiere red); timeout 15s transcripción → reintentar.
+6. **Vínculo a presupuesto**: si el tipo es `expense` y la categoría matcheada tiene un presupuesto `active` y vigente, se muestra el mismo toggle "Descontar de presupuesto [emoji][nombre] ($restante restante)" que en QuickTransactionModal (budgets §CU-3), apagado por defecto. Si el usuario cambia el tipo a `income`, el toggle desaparece.
+7. Estados de error: sin permiso de micrófono → instrucciones para habilitarlo; sin conexión → deshabilitar voz (requiere red); timeout 15s transcripción → reintentar.
+
+## CU-6: Editar transacción
+1. Botón lápiz (✏️) en cada ítem del listado → abre **EditTransactionModal** con los datos actuales precargados.
+2. Campos editables: **tipo** (toggle Ingreso/Gasto), **monto** (>0), **concepto** (máx 100 chars), **categoría** (grid filtrado por el tipo elegido, selección opcional). Cambiar el tipo deselecciona la categoría si dejó de pertenecer al nuevo tipo.
+3. Persistencia: `update(id, userId, {amount, type, description, category_id, category_name, category_emoji, budget_id})` → UPDATE. Como el trigger de auto-categoría es BEFORE INSERT (no corre en UPDATE), el cliente escribe también los derivados `category_name`/`category_emoji`.
+4. **Presupuesto**: el `budget_id` original se preserva sólo si la transacción sigue siendo un gasto en la misma categoría; si cambia el tipo o la categoría, se desvincula (`budget_id = null`). El trigger `update_budget_spent` (AFTER UPDATE) recalcula el `spent` del presupuesto afectado — incluye editar el monto de un gasto vinculado.
+5. Feedback éxito: "Transacción actualizada" → refetch del rango vigente.
+6. Requiere conexión (esta fase no encola edición offline; si está offline, aviso "Editar una transacción requiere conexión").
 
 ## Reglas de negocio
 - Montos siempre positivos; el signo lo da `type`.
@@ -46,5 +55,6 @@ Botón basura en cada ítem → soft delete (`deleted_at = now`) → toast "Tran
 ## Offline
 - Crear transacción rápida offline: permitido (encolar + optimista con `_pending`).
 - Eliminar offline: permitido (encolar update de `deleted_at`).
+- Editar offline: bloqueado con mensaje (esta fase no encola edición).
 - Voz offline: bloqueado con mensaje.
 - Listado offline: últimas 500 transacciones desde `cache-transactions`; balance calculado sobre lo cacheado con etiqueta "datos locales".

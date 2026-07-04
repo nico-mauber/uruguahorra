@@ -28,6 +28,7 @@ export interface Transaction {
   categoryEmoji: string | null;
   categoryColor: string | null;
   type: 'expense' | 'income' | 'transfer';
+  budgetId: string | null;
   xpEarned: number;
   createdAt: string;
 }
@@ -47,6 +48,7 @@ function toTransaction(row: TransactionRow): Transaction {
     categoryEmoji: joined?.emoji ?? row.category_emoji,
     categoryColor: joined?.color ?? null,
     type: row.type,
+    budgetId: row.budget_id ?? null,
     xpEarned: row.xp_earned,
     createdAt: row.created_at,
   };
@@ -77,6 +79,19 @@ interface TransactionsState {
       category_id?: string | null;
       description?: string;
       type: 'expense' | 'income' | 'transfer';
+      budget_id?: string | null;
+    }
+  ) => Promise<void>;
+  update: (
+    id: string,
+    userId: string,
+    patch: {
+      amount: number;
+      type: 'expense' | 'income' | 'transfer';
+      description?: string | null;
+      category_id?: string | null;
+      category_name?: string | null;
+      category_emoji?: string | null;
       budget_id?: string | null;
     }
   ) => Promise<void>;
@@ -158,6 +173,22 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       throw error;
     }
     // Refetch del rango vigente (force para saltar el guard de reentrada).
+    const { startDate, endDate } = get().range;
+    await get().fetchTransactions(userId, {
+      startDate: startDate ?? undefined,
+      endDate: endDate ?? undefined,
+      force: true,
+    });
+  },
+
+  update: async (id, userId, patch) => {
+    try {
+      await TransactionsService.updateTransaction(id, patch);
+    } catch (error) {
+      logger.error(LogModule.TRANSACTIONS, 'Error actualizando transacción', error);
+      set({ error: 'No se pudo actualizar la transacción' });
+      throw error;
+    }
     const { startDate, endDate } = get().range;
     await get().fetchTransactions(userId, {
       startDate: startDate ?? undefined,

@@ -114,6 +114,8 @@ export interface TransactionRow {
   category_name: string | null;
   category_emoji: string | null;
   type: 'expense' | 'income' | 'transfer';
+  /** Vínculo opt-in a un presupuesto (CU-3 de budgets). */
+  budget_id: string | null;
   mood_before: number | null;
   mood_after: number | null;
   regret_level: number | null;

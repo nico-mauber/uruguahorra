@@ -38,6 +38,18 @@ export interface CreateQuickTransactionInput {
   budget_id?: string | null;
 }
 
+export interface UpdateTransactionInput {
+  amount: number;
+  type: 'expense' | 'income' | 'transfer';
+  description?: string | null;
+  category_id?: string | null;
+  /** Derivados de categoría: el cliente los setea porque el trigger de
+   * auto-categoría es BEFORE INSERT y no corre en UPDATE. */
+  category_name?: string | null;
+  category_emoji?: string | null;
+  budget_id?: string | null;
+}
+
 /** Columnas de la categoría anidada en el listado (CU-1). */
 const CATEGORY_JOIN = '*, category:transaction_categories(id,name,emoji,type,color)';
 
@@ -140,6 +152,43 @@ export class TransactionsService {
         return optimistic();
       }
       logger.error(LogModule.TRANSACTIONS, 'Error creando transacción', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Edita una transacción existente (monto, tipo, concepto, categoría). Como el
+   * trigger `auto_categorize_new_transaction` es BEFORE INSERT y no corre en
+   * UPDATE, el cliente escribe también los derivados de categoría
+   * (`category_name`/`category_emoji`). El trigger `update_budget_spent`
+   * (AFTER UPDATE) recalcula el `spent` del presupuesto vinculado.
+   * Requiere conexión (esta fase no encola edición offline).
+   */
+  static async updateTransaction(
+    id: string,
+    patch: UpdateTransactionInput
+  ): Promise<TransactionRow> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          amount: patch.amount,
+          type: patch.type,
+          description: patch.description ?? null,
+          category_id: patch.category_id ?? null,
+          category_name: patch.category_name ?? null,
+          category_emoji: patch.category_emoji ?? null,
+          budget_id: patch.budget_id ?? null,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      // Purga la fila de caché para que la próxima hidratación traiga la versión fresca.
+      await cacheDelete('cache-transactions', id);
+      return data as TransactionRow;
+    } catch (error) {
+      logger.error(LogModule.TRANSACTIONS, 'Error actualizando transacción', error);
       throw error;
     }
   }

@@ -23,8 +23,8 @@ Tabla `budgets`:
 3. Guardar → INSERT en `budgets` con `spent: 0`, `status: 'active'`.
 4. Feedback éxito + refresco de listado.
 
-## CU-3: Vincular gasto a presupuesto (desde QuickTransactionModal)
-1. En el paso 3 (confirmar) del modal de gasto, si la categoría elegida tiene un presupuesto `active` **y vigente** (hoy dentro de `[start_date, end_date]`), mostrar toggle: "Descontar de presupuesto [emoji] [nombre] (`$restante` restante)".
+## CU-3: Vincular gasto a presupuesto (desde QuickTransactionModal o VoiceTransactionModal)
+1. En el paso de confirmación del modal de gasto (**QuickTransactionModal** paso 3, o **VoiceTransactionModal** tras transcribir), si la categoría elegida/matcheada tiene un presupuesto `active` **y vigente** (hoy dentro de `[start_date, end_date]`), mostrar toggle: "Descontar de presupuesto [emoji] [nombre] (`$restante` restante)". En voz, la categoría se deriva de `category_hint`; si el usuario cambia el tipo a ingreso, el toggle desaparece.
 2. Si el presupuesto de esa categoría existe pero está vencido, el toggle no se muestra; en su lugar, nota informativa: "Presupuesto de «Categoría» vencido — renovalo en Presupuestos".
 3. Si el usuario confirma con el toggle activo, la transacción se crea con `budget_id` apuntando a ese presupuesto. El trigger de `transactions` recalcula `budgets.spent`.
 4. Toggle apagado por defecto (opt-in explícito en cada gasto, no automático).

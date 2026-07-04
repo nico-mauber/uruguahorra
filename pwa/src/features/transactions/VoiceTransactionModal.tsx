@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, Button, Spinner, Input } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionsStore } from '@/store/useTransactionsStore';
+import { useBudgetsStore, isVigente } from '@/store/useBudgetsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { ToastService } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errors';
+import { money } from './txHelpers';
 import { transcribeAudio, type VoiceResult } from './voiceService';
 
 /**
@@ -25,6 +27,8 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
   const categories = useTransactionsStore((s) => s.categories);
   const fetchCategories = useTransactionsStore((s) => s.fetchCategories);
   const createQuick = useTransactionsStore((s) => s.createQuick);
+  const fetchActiveBudgets = useBudgetsStore((s) => s.fetchActive);
+  const getActiveForCategory = useBudgetsStore((s) => s.getActiveForCategory);
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [seconds, setSeconds] = useState(0);
@@ -33,6 +37,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [linkBudget, setLinkBudget] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -41,8 +46,23 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
 
   useEffect(() => {
     void fetchCategories();
+    if (userId) void fetchActiveBudgets(userId);
     return () => stopTimer();
-  }, [fetchCategories]);
+  }, [fetchCategories, fetchActiveBudgets, userId]);
+
+  // Categoría matcheada por category_hint dentro del tipo elegido (misma lógica
+  // que usa confirm). Base para detectar el presupuesto asociado.
+  const matchedCat = useMemo(() => {
+    const hint = result?.parsed.category_hint?.toLowerCase() ?? '';
+    if (!hint) return null;
+    return categories.find((c) => c.type === type && c.name.toLowerCase().includes(hint)) ?? null;
+  }, [categories, type, result]);
+
+  // Presupuesto activo+vigente de la categoría matcheada (sólo gastos).
+  const activeBudget =
+    type === 'expense' && matchedCat ? getActiveForCategory(matchedCat.id) : null;
+  const budgetVigente = activeBudget ? isVigente(activeBudget) : false;
+  const budgetRestante = activeBudget ? Math.max(0, activeBudget.amount - activeBudget.spent) : 0;
 
   function stopTimer() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -97,6 +117,7 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
       setAmount(res.parsed.amount ? String(res.parsed.amount) : '');
       setDescription(res.parsed.description ?? '');
       setType(res.parsed.type === 'income' ? 'income' : 'expense');
+      setLinkBudget(false);
       setPhase('result');
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
@@ -111,16 +132,15 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
       ToastService.warning('Monto inválido', 'Ingresa un monto válido mayor a 0');
       return;
     }
-    // Mapear category_hint → categoría por nombre; si no matchea, dejar null (trigger auto-categoriza).
-    const hint = result.parsed.category_hint?.toLowerCase() ?? '';
-    const match = categories.find((c) => c.type === type && c.name.toLowerCase().includes(hint));
+    // Categoría matcheada (matchedCat) → si no matchea, dejar null (trigger auto-categoriza).
     setSaving(true);
     try {
       await createQuick(userId, {
         amount: n,
-        category_id: match?.id ?? null,
+        category_id: matchedCat?.id ?? null,
         description: description.trim() || undefined,
         type,
+        budget_id: linkBudget && budgetVigente && activeBudget ? activeBudget.id : null,
       });
       ToastService.success('¡Listo! 💚', `Transacción de $${Math.floor(n)} registrada`);
       onDone();
@@ -188,6 +208,15 @@ export function VoiceTransactionModal({ onClose, onDone }: Props) {
               })}
             </div>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Categoría sugerida: {result.parsed.category_hint || '—'}</div>
+            {activeBudget && budgetVigente && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={linkBudget} onChange={(e) => setLinkBudget(e.target.checked)} />
+                <span style={{ fontSize: 13 }}>
+                  Descontar de presupuesto {activeBudget.categoryEmoji} {activeBudget.categoryName}{' '}
+                  <span style={{ color: 'var(--color-text-secondary)' }}>({money(budgetRestante)} restante)</span>
+                </span>
+              </label>
+            )}
             <Input type="number" inputMode="numeric" prefix="$" placeholder="Monto" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input placeholder="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} />
             <div style={{ display: 'flex', gap: 8 }}>
